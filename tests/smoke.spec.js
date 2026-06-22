@@ -99,13 +99,22 @@ test.describe('Epohi browser smoke', () => {
     await expect(page.locator('#turnValue')).toHaveText('2');
     await page.locator('#menuBtn').click();
     await page.locator('#saveAsBtn').click();
+
     await page.locator('#saveQuickFromManager').click();
-    await expect(page.locator('#screenRoot')).toContainText('Быстрое сохранение');
+    const quicksaveCard = page.locator('.slot-card').filter({ hasText: 'Быстрое: Быстрое сохранение' });
+    await expect(quicksaveCard).toContainText('ход 2');
+
+    page.once('dialog', (dialog) => dialog.accept('Playwright test turn 2'));
+    await page.locator('#saveManualFromManager').click();
+    const manualSaveCard = page.locator('.slot-card').filter({ hasText: 'Ручное: Playwright test turn 2' });
+    await expect(manualSaveCard).toContainText('ход 2');
 
     await page.getByRole('button', { name: 'Назад в игру' }).click();
     await page.locator('#menuBtn').click();
     await page.locator('#loadCurrentCampaignBtn').click();
-    await page.locator('[data-load-save]').first().click();
+    const savedTurnTwoCard = page.locator('.slot-card').filter({ hasText: 'Ручное: Playwright test turn 2' });
+    await expect(savedTurnTwoCard).toContainText('ход 2');
+    await savedTurnTwoCard.getByRole('button', { name: 'Загрузить' }).click();
     await expect(page.locator('#gameApp')).toBeVisible();
     await expect(page.locator('#turnValue')).toHaveText('2');
     await expectNoConsoleProblems(problems);
