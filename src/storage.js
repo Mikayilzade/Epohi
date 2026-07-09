@@ -50,12 +50,30 @@
   function requestPromise(req) { return new Promise(function (resolve, reject) { req.onsuccess=function(){ resolve(req.result || null); }; req.onerror=function(){ reject(req.error); }; }); }
   function requestAll(req) { return new Promise(function (resolve, reject) { req.onsuccess=function(){ resolve(req.result || []); }; req.onerror=function(){ reject(req.error); }; }); }
 
+
+  function getCampaigns(storageAvailable) { return storageAvailable ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestAll(store.getAll()); }) : Promise.resolve([]); }
+  function getCampaign(id, storageAvailable) { return storageAvailable && id ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
+  function putCampaign(c) { return dbTx(CAMPAIGN_STORE, "readwrite", function(store){ store.put(c); }).then(function(){ return c; }); }
+  function deleteCampaign(id) { return dbTx([CAMPAIGN_STORE, SAVE_STORE], "readwrite", function(stores){ stores[0].delete(id); const idx=stores[1].index("campaignId"); idx.openCursor(IDBKeyRange.only(id)).onsuccess=function(e){ const cur=e.target.result; if(cur){ cur.delete(); cur.continue(); } }; }); }
+  function getCampaignSaves(campaignId, storageAvailable) { return storageAvailable && campaignId ? dbTx(SAVE_STORE, "readonly", function(store){ return requestAll(store.index("campaignId").getAll(campaignId)); }).then(function(list){ return list.sort(function(a,b){ return String(b.updatedAt).localeCompare(String(a.updatedAt)); }); }) : Promise.resolve([]); }
+  function getSaveRecord(id, storageAvailable) { return storageAvailable && id ? dbTx(SAVE_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
+  function putSaveRecord(record) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.put(record); }).then(function(){ return record; }); }
+  function deleteSaveRecord(id) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.delete(id); }); }
+
   window.EpohiStorage = {
     safeGet,
     safeSet,
     openDb,
     dbTx,
     requestPromise,
-    requestAll
+    requestAll,
+    getCampaigns,
+    getCampaign,
+    putCampaign,
+    deleteCampaign,
+    getCampaignSaves,
+    getSaveRecord,
+    putSaveRecord,
+    deleteSaveRecord
   };
 })();
