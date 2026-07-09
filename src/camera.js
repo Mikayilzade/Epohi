@@ -68,10 +68,24 @@
     }
   }
 
+  function tileCenter(mapEl, mapSizeCellsFn, x, y) {
+    const firstTile = mapEl.querySelector(".tile");
+    const mapStyle = getComputedStyle(mapEl);
+    const gap = parseFloat(mapStyle.columnGap) || 0;
+    const size = mapSize(mapEl);
+    const tileWidth = firstTile ? firstTile.offsetWidth : size.width / mapSizeCellsFn();
+    const tileHeight = firstTile ? firstTile.offsetHeight : size.height / mapSizeCellsFn();
+    return {
+      x: x * (tileWidth + gap) + tileWidth / 2,
+      y: y * (tileHeight + gap) + tileHeight / 2
+    };
+  }
+
   window.EpohiCamera = {
     viewportMetrics,
     pointerPoint,
     mapSize,
-    clampCamera
+    clampCamera,
+    tileCenter
   };
 })();
