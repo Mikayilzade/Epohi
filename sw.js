@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-1-refactor-utils-cache";
+  "epohi-v1-4-5-1-refactor-storage-cache";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_FILES = [
   "./src/config.js",
   "./src/data.js",
   "./src/utils.js",
+  "./src/storage.js",
   "./src/app.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",

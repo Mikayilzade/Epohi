@@ -13,6 +13,10 @@
     throw new Error("EpohiUtils must be loaded before app.js");
   }
 
+  if (!window.EpohiStorage) {
+    throw new Error("EpohiStorage must be loaded before app.js");
+  }
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
@@ -73,6 +77,15 @@
     growthNeed,
     yieldText
   } = window.EpohiUtils;
+
+  const {
+    safeGet,
+    safeSet,
+    openDb,
+    dbTx,
+    requestPromise,
+    requestAll
+  } = window.EpohiStorage;
 
   const screenRoot = document.getElementById("screenRoot");
   const gameApp = document.getElementById("gameApp");
@@ -338,14 +351,6 @@
     migrateBarbarianDirector144(candidate); candidate.version = 5; delete candidate.scout; return candidate;
   }
 
-  function safeGet(key) {
-    try { return localStorage.getItem(key); } catch (error) { return null; }
-  }
-
-  function safeSet(key, value) {
-    try { localStorage.setItem(key, value); return true; } catch (error) { return false; }
-  }
-
   function saveTypeLabel(type) {
     return { manual: "Ручное", autosave: "Авто", quicksave: "Быстрое" }[type] || type || "Сохранение";
   }
@@ -388,37 +393,6 @@
 
   function saveMetaLine(save) { return save ? escapeHtml(save.name) + " · ход " + save.turn + " · " + formatDate(save.updatedAt || save.createdAt) : "Пусто"; }
   function campaignLine(c, count, turn) { return escapeHtml(c.name) + " · ход " + (turn || 1) + " · " + c.mapSize + "×" + c.mapSize + " · " + formatDate(c.lastPlayedAt) + " · сохранений: " + count; }
-
-  function openDb() {
-    return new Promise(function (resolve, reject) {
-      if (!window.indexedDB) { reject(new Error("IndexedDB недоступна")); return; }
-      const request = indexedDB.open(DB_NAME, 2);
-      request.onupgradeneeded = function () {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(CAMPAIGN_STORE)) db.createObjectStore(CAMPAIGN_STORE, { keyPath: "campaignId" });
-        if (!db.objectStoreNames.contains(SAVE_STORE)) {
-          const saves = db.createObjectStore(SAVE_STORE, { keyPath: "saveId" });
-          saves.createIndex("campaignId", "campaignId", { unique: false });
-        } else {
-          const tx = request.transaction;
-          const saves = tx.objectStore(SAVE_STORE);
-          if (!saves.indexNames.contains("campaignId")) saves.createIndex("campaignId", "campaignId", { unique: false });
-        }
-      };
-      request.onsuccess = function () { resolve(request.result); };
-      request.onerror = function () { reject(request.error || new Error("Ошибка IndexedDB")); };
-    });
-  }
-
-  function dbTx(stores, mode, worker) {
-    return openDb().then(function (db) { return new Promise(function (resolve, reject) {
-      const tx = db.transaction(stores, mode); const access = Array.isArray(stores) ? stores.map(function(n){ return tx.objectStore(n); }) : tx.objectStore(stores); let result;
-      tx.oncomplete = function(){ db.close(); resolve(result); }; tx.onerror = function(){ db.close(); reject(tx.error || new Error("Ошибка хранилища")); };
-      result = worker(access);
-    }); });
-  }
-  function requestPromise(req) { return new Promise(function (resolve, reject) { req.onsuccess=function(){ resolve(req.result || null); }; req.onerror=function(){ reject(req.error); }; }); }
-  function requestAll(req) { return new Promise(function (resolve, reject) { req.onsuccess=function(){ resolve(req.result || []); }; req.onerror=function(){ reject(req.error); }; }); }
 
   function getCampaigns() { return storageAvailable ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestAll(store.getAll()); }) : Promise.resolve([]); }
   function getCampaign(id) { return storageAvailable && id ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
