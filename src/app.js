@@ -25,6 +25,10 @@
     throw new Error("EpohiCameraStorage must be loaded before app.js");
   }
 
+  if (!window.EpohiCamera) {
+    throw new Error("EpohiCamera must be loaded before app.js");
+  }
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
@@ -107,6 +111,13 @@
     saveCamera: saveCameraToStorage,
     scheduleCameraSave: scheduleCameraSaveWithTimer
   } = window.EpohiCameraStorage;
+
+  const {
+    viewportMetrics: getViewportMetrics,
+    pointerPoint: getPointerPoint,
+    mapSize: getMapSize,
+    clampCamera: clampCameraBounds
+  } = window.EpohiCamera;
 
   const {
     saveTypeLabel,
@@ -502,53 +513,19 @@
   }
 
   function viewportMetrics() {
-    const shellStyle = getComputedStyle(mapViewport);
-    const padLeft = parseFloat(shellStyle.paddingLeft) || 0;
-    const padRight = parseFloat(shellStyle.paddingRight) || 0;
-    const padTop = parseFloat(shellStyle.paddingTop) || 0;
-    const padBottom = parseFloat(shellStyle.paddingBottom) || 0;
-    return {
-      padLeft: padLeft,
-      padTop: padTop,
-      width: Math.max(1, mapViewport.clientWidth - padLeft - padRight),
-      height: Math.max(1, mapViewport.clientHeight - padTop - padBottom)
-    };
+    return getViewportMetrics(mapViewport);
   }
 
   function pointerPoint(event) {
-    const rect = mapViewport.getBoundingClientRect();
-    const viewport = viewportMetrics();
-    return {
-      x: event.clientX - rect.left - viewport.padLeft,
-      y: event.clientY - rect.top - viewport.padTop
-    };
+    return getPointerPoint(event, mapViewport);
   }
 
   function mapSize() {
-    return {
-      width: Math.max(1, mapEl.offsetWidth),
-      height: Math.max(1, mapEl.offsetHeight)
-    };
+    return getMapSize(mapEl);
   }
 
   function clampCamera() {
-    camera.scale = clamp(camera.scale, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE);
-    const viewport = viewportMetrics();
-    const size = mapSize();
-    const scaledWidth = size.width * camera.scale;
-    const scaledHeight = size.height * camera.scale;
-
-    if (scaledWidth <= viewport.width) {
-      camera.x = (viewport.width - scaledWidth) / 2;
-    } else {
-      camera.x = clamp(camera.x, viewport.width - scaledWidth, 0);
-    }
-
-    if (scaledHeight <= viewport.height) {
-      camera.y = (viewport.height - scaledHeight) / 2;
-    } else {
-      camera.y = clamp(camera.y, viewport.height - scaledHeight, 0);
-    }
+    clampCameraBounds(camera, mapViewport, mapEl);
   }
 
   function applyCamera(shouldSave) {

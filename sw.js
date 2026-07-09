@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-1-refactor-camera-storage-cache";
+  "epohi-v1-4-5-1-refactor-camera-helpers-cache";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -10,6 +10,7 @@ const APP_FILES = [
   "./src/storage.js",
   "./src/save-utils.js",
   "./src/camera-storage.js",
+  "./src/camera.js",
   "./src/app.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
