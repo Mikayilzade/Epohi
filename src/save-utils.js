@@ -11,7 +11,8 @@
 
   const {
     MANUAL_SAVE_IDS,
-    AUTOSAVE_IDS
+    AUTOSAVE_IDS,
+    GAME_VERSION
   } = window.EpohiConfig;
 
   const {
@@ -44,6 +45,12 @@
   function saveMetaLine(save) { return save ? escapeHtml(save.name) + " · ход " + save.turn + " · " + formatDate(save.updatedAt || save.createdAt) : "Пусто"; }
   function campaignLine(c, count, turn) { return escapeHtml(c.name) + " · ход " + (turn || 1) + " · " + c.mapSize + "×" + c.mapSize + " · " + formatDate(c.lastPlayedAt) + " · сохранений: " + count; }
 
+  function campaignFromState(gameState, name, id, createdAt, mapSize) {
+    const now = new Date().toISOString();
+    return { campaignId: id || makeCampaignId(), name: name || gameState.partyName || "Новая партия", createdAt: createdAt || now, lastPlayedAt: now,
+      mapSize: mapSize, mapSeed: gameState.mapSeed || null, status: gameState.victory ? "victory" : "active", gameVersion: GAME_VERSION, lastLoadedSaveId: null };
+  }
+
   window.EpohiSaveUtils = {
     saveTypeLabel,
     slotLabel,
@@ -51,6 +58,7 @@
     makeCampaignId,
     cloneState,
     saveMetaLine,
-    campaignLine
+    campaignLine,
+    campaignFromState
   };
 })();
