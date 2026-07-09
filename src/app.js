@@ -107,7 +107,8 @@
     cloneState,
     saveMetaLine,
     campaignLine,
-    campaignFromState: buildCampaignFromState
+    campaignFromState: buildCampaignFromState,
+    validateSaveState: validateSaveStateWithHelpers
   } = window.EpohiSaveUtils;
 
   const screenRoot = document.getElementById("screenRoot");
@@ -375,15 +376,7 @@
   }
 
   function validateSaveState(candidate) {
-    const migrated = migrateState(candidate);
-    if (!migrated) return null;
-    const size = mapSizeCells(migrated);
-    if (!size || !Array.isArray(migrated.map) || migrated.map.length !== size) return null;
-    if (!migrated.map.every(function (row) { return Array.isArray(row) && row.length === size; })) return null;
-    if (typeof migrated.turn !== "number" || migrated.turn < 1) return null;
-    if (!migrated.resources || ["food","production","gold","science"].some(function (k) { return typeof migrated.resources[k] !== "number"; })) return null;
-    if (!Array.isArray(migrated.units)) return null;
-    return migrated;
+    return validateSaveStateWithHelpers(candidate, migrateState, mapSizeCells);
   }
 
   function campaignFromState(gameState, name, id, createdAt) {
