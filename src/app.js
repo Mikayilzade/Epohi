@@ -84,7 +84,15 @@
     openDb,
     dbTx,
     requestPromise,
-    requestAll
+    requestAll,
+    getCampaigns: storageGetCampaigns,
+    getCampaign: storageGetCampaign,
+    putCampaign,
+    deleteCampaign: storageDeleteCampaign,
+    getCampaignSaves: storageGetCampaignSaves,
+    getSaveRecord: storageGetSaveRecord,
+    putSaveRecord,
+    deleteSaveRecord
   } = window.EpohiStorage;
 
   const screenRoot = document.getElementById("screenRoot");
@@ -394,14 +402,25 @@
   function saveMetaLine(save) { return save ? escapeHtml(save.name) + " · ход " + save.turn + " · " + formatDate(save.updatedAt || save.createdAt) : "Пусто"; }
   function campaignLine(c, count, turn) { return escapeHtml(c.name) + " · ход " + (turn || 1) + " · " + c.mapSize + "×" + c.mapSize + " · " + formatDate(c.lastPlayedAt) + " · сохранений: " + count; }
 
-  function getCampaigns() { return storageAvailable ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestAll(store.getAll()); }) : Promise.resolve([]); }
-  function getCampaign(id) { return storageAvailable && id ? dbTx(CAMPAIGN_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
-  function putCampaign(c) { return dbTx(CAMPAIGN_STORE, "readwrite", function(store){ store.put(c); }).then(function(){ return c; }); }
-  function deleteCampaign(id) { return dbTx([CAMPAIGN_STORE, SAVE_STORE], "readwrite", function(stores){ stores[0].delete(id); const idx=stores[1].index("campaignId"); idx.openCursor(IDBKeyRange.only(id)).onsuccess=function(e){ const cur=e.target.result; if(cur){ cur.delete(); cur.continue(); } }; }); }
-  function getCampaignSaves(campaignId) { return storageAvailable && campaignId ? dbTx(SAVE_STORE, "readonly", function(store){ return requestAll(store.index("campaignId").getAll(campaignId)); }).then(function(list){ return list.sort(function(a,b){ return String(b.updatedAt).localeCompare(String(a.updatedAt)); }); }) : Promise.resolve([]); }
-  function getSaveRecord(id) { return storageAvailable && id ? dbTx(SAVE_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
-  function putSaveRecord(record) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.put(record); }).then(function(){ return record; }); }
-  function deleteSaveRecord(id) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.delete(id); }); }
+  function getCampaigns() {
+    return storageGetCampaigns(storageAvailable);
+  }
+
+  function getCampaign(id) {
+    return storageGetCampaign(id, storageAvailable);
+  }
+
+  function deleteCampaign(id) {
+    return storageDeleteCampaign(id);
+  }
+
+  function getCampaignSaves(campaignId) {
+    return storageGetCampaignSaves(campaignId, storageAvailable);
+  }
+
+  function getSaveRecord(id) {
+    return storageGetSaveRecord(id, storageAvailable);
+  }
 
   function loadGame() { const raw = safeGet(SAVE_KEY); if (!raw) return null; try { return migrateState(JSON.parse(raw)); } catch (error) { return null; } }
   function setSaveStatus(text) { saveStatus = text; renderTop(); }
