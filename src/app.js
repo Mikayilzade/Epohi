@@ -9,6 +9,10 @@
     throw new Error("EpohiData must be loaded before app.js");
   }
 
+  if (!window.EpohiUtils) {
+    throw new Error("EpohiUtils must be loaded before app.js");
+  }
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
@@ -52,6 +56,23 @@
     AI_WEIGHTS,
     TECHS
   } = window.EpohiData;
+
+  const {
+    emptyYield,
+    addYield,
+    randomChoice,
+    neighborsOf,
+    passableTile,
+    clamp,
+    chebyshev,
+    isAdjacent,
+    escapeHtml,
+    formatDate,
+    formatCost,
+    nonProductionCost,
+    growthNeed,
+    yieldText
+  } = window.EpohiUtils;
 
   const screenRoot = document.getElementById("screenRoot");
   const gameApp = document.getElementById("gameApp");
@@ -119,22 +140,6 @@
   let suppressNextMapClick = false;
   let toastTimer = null;
 
-  function emptyYield() {
-    return { food: 0, production: 0, gold: 0, science: 0 };
-  }
-
-  function addYield(target, source, multiplier) {
-    const mult = multiplier == null ? 1 : multiplier;
-    ["food", "production", "gold", "science"].forEach(function (key) {
-      target[key] += (source && source[key] ? source[key] : 0) * mult;
-    });
-    return target;
-  }
-
-  function randomChoice(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
   function createTile(terrain) {
     return { terrain: terrain, revealed: false, improvement: null, feature: null, poi: null, camp: null, pillaged: false };
   }
@@ -144,16 +149,6 @@
     if (source && source.mapSize) return source.mapSize;
     if (source && Array.isArray(source.map)) return source.map.length;
     return DEFAULT_MAP_SIZE;
-  }
-
-  function neighborsOf(x, y, size) {
-    const list = [];
-    for (let yy = Math.max(0, y - 1); yy <= Math.min(size - 1, y + 1); yy++) {
-      for (let xx = Math.max(0, x - 1); xx <= Math.min(size - 1, x + 1); xx++) {
-        if (xx !== x || yy !== y) list.push({ x: xx, y: yy });
-      }
-    }
-    return list;
   }
 
   function generateMap(size) {
@@ -203,7 +198,6 @@
     return grid;
   }
 
-  function passableTile(tile) { return tile && tile.terrain !== "water"; }
   function poiTargetCount(size) { return Math.round(size * size / 39); }
   function barbarianRules(gs) { return BARBARIAN_ACTIVITY[(gs && gs.barbarianActivity) || "normal"] || BARBARIAN_ACTIVITY.normal; }
   function campTargetCount(size, activity) { const rules = BARBARIAN_ACTIVITY[activity||"normal"] || BARBARIAN_ACTIVITY.normal; if (!rules.camps) return 0; const base = size <= 20 ? 1 : (size < 24 ? 3 : size < 32 ? 5 : 7); return Math.min(4, Math.max(1, Math.round(base * rules.camps))); }
@@ -352,12 +346,6 @@
     try { localStorage.setItem(key, value); return true; } catch (error) { return false; }
   }
 
-  function escapeHtml(value) {
-    return String(value == null ? "" : value).replace(/[&<>"]/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch];
-    });
-  }
-
   function saveTypeLabel(type) {
     return { manual: "Ручное", autosave: "Авто", quicksave: "Быстрое" }[type] || type || "Сохранение";
   }
@@ -369,11 +357,6 @@
     const auto = AUTOSAVE_IDS.indexOf(id) + 1;
     if (auto) return "Автосохранение " + auto;
     return "Сохранение";
-  }
-
-  function formatDate(value) {
-    if (!value) return "—";
-    try { return new Date(value).toLocaleString("ru-RU", { day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit" }); } catch (e) { return "—"; }
   }
 
   function makeId(prefix) { return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
@@ -510,10 +493,6 @@
     return autosaveWriteLock;
   }
   function saveGame() { return autoSave(false); }
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
-  }
-
   function loadCamera() {
     const raw = safeGet(CAMERA_KEY);
     if (!raw) return null;
@@ -672,21 +651,11 @@
     return 1;
   }
 
-  function chebyshev(x1, y1, x2, y2) {
-    return Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2));
-  }
-
   function inTerritory(x, y) {
     if (chebyshev(x, y, state.city.x, state.city.y) <= territoryRadius()) return true;
     return state.settlements.some(function (settlement) {
       return chebyshev(x, y, settlement.x, settlement.y) <= 1;
     });
-  }
-
-  function isAdjacent(x1, y1, x2, y2) {
-    const dx = Math.abs(x1 - x2);
-    const dy = Math.abs(y1 - y2);
-    return dx <= 1 && dy <= 1 && (dx + dy > 0);
   }
 
   function hasTech(id) {
@@ -721,23 +690,6 @@
     });
   }
 
-  function formatCost(cost) {
-    const parts = [];
-    if (cost.production) parts.push("🔨 " + cost.production);
-    if (cost.gold) parts.push("🪙 " + cost.gold);
-    if (cost.food) parts.push("🍞 " + cost.food);
-    if (cost.science) parts.push("🔬 " + cost.science);
-    return parts.join(" · ");
-  }
-
-  function nonProductionCost(cost) {
-    const result = {};
-    Object.keys(cost || {}).forEach(function (key) {
-      if (key !== "production") result[key] = cost[key];
-    });
-    return result;
-  }
-
   function calculateIncome() {
     const income = { food: 2 + Math.floor(state.city.population / 2), production: 2 + (state.permanentBonuses.production || 0), gold: 1 + (state.permanentBonuses.gold || 0), science: 2 + (state.permanentBonuses.science || 0) };
     addYield(income, TERRAIN[state.map[state.city.y][state.city.x].terrain].base);
@@ -761,10 +713,6 @@
     return income;
   }
 
-  function growthNeed(population) {
-    return 12 + population * 7;
-  }
-
   function currentEra() {
     if (state.victory) return "Империя";
     if (hasTech("statehood")) return "Королевство";
@@ -780,16 +728,6 @@
     if (tile.feature && tile.feature !== "ruins" && tile.improvement) addYield(result, FEATURES[tile.feature].bonus);
     return result;
   }
-
-  function yieldText(yieldObj) {
-    const parts = [];
-    if (yieldObj.food) parts.push("🍞" + yieldObj.food);
-    if (yieldObj.production) parts.push("🔨" + yieldObj.production);
-    if (yieldObj.gold) parts.push("🪙" + yieldObj.gold);
-    if (yieldObj.science) parts.push("🔬" + yieldObj.science);
-    return parts.length ? parts.join(" ") : "нет дохода";
-  }
-
 
   function healthBar(hp, maxHp) {
     const bar = document.createElement("span");
