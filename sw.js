@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-1-refactor-camera-helpers-cache";
+  "epohi-v1-4-5-1-refactor-tile-center-cache";
 const APP_FILES = [
   "./",
   "./index.html",

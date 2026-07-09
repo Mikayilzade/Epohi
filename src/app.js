@@ -116,7 +116,8 @@
     viewportMetrics: getViewportMetrics,
     pointerPoint: getPointerPoint,
     mapSize: getMapSize,
-    clampCamera: clampCameraBounds
+    clampCamera: clampCameraBounds,
+    tileCenter: getTileCenter
   } = window.EpohiCamera;
 
   const {
@@ -537,15 +538,7 @@
   }
 
   function tileCenter(x, y) {
-    const firstTile = mapEl.querySelector(".tile");
-    const mapStyle = getComputedStyle(mapEl);
-    const gap = parseFloat(mapStyle.columnGap) || 0;
-    const tileWidth = firstTile ? firstTile.offsetWidth : mapSize().width / mapSizeCells();
-    const tileHeight = firstTile ? firstTile.offsetHeight : mapSize().height / mapSizeCells();
-    return {
-      x: x * (tileWidth + gap) + tileWidth / 2,
-      y: y * (tileHeight + gap) + tileHeight / 2
-    };
+    return getTileCenter(mapEl, mapSizeCells, x, y);
   }
 
   function centerCameraOnTile(x, y, shouldSave) {
