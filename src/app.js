@@ -17,6 +17,10 @@
     throw new Error("EpohiStorage must be loaded before app.js");
   }
 
+  if (!window.EpohiSaveUtils) {
+    throw new Error("EpohiSaveUtils must be loaded before app.js");
+  }
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
@@ -94,6 +98,16 @@
     putSaveRecord,
     deleteSaveRecord
   } = window.EpohiStorage;
+
+  const {
+    saveTypeLabel,
+    slotLabel,
+    makeId,
+    makeCampaignId,
+    cloneState,
+    saveMetaLine,
+    campaignLine
+  } = window.EpohiSaveUtils;
 
   const screenRoot = document.getElementById("screenRoot");
   const gameApp = document.getElementById("gameApp");
@@ -359,28 +373,6 @@
     migrateBarbarianDirector144(candidate); candidate.version = 5; delete candidate.scout; return candidate;
   }
 
-  function saveTypeLabel(type) {
-    return { manual: "Ручное", autosave: "Авто", quicksave: "Быстрое" }[type] || type || "Сохранение";
-  }
-
-  function slotLabel(id) {
-    if (id === "quicksave") return "Быстрое сохранение";
-    const manual = MANUAL_SAVE_IDS.indexOf(id) + 1;
-    if (manual) return "Ручное " + manual;
-    const auto = AUTOSAVE_IDS.indexOf(id) + 1;
-    if (auto) return "Автосохранение " + auto;
-    return "Сохранение";
-  }
-
-  function makeId(prefix) { return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
-  function makeCampaignId() {
-    if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
-    const bytes = new Uint32Array(4);
-    if (window.crypto && typeof window.crypto.getRandomValues === "function") window.crypto.getRandomValues(bytes);
-    return "campaign-" + Date.now().toString(36) + "-" + Array.from(bytes).map(function(n){ return n.toString(36); }).join("") + "-" + Math.random().toString(36).slice(2, 10);
-  }
-  function cloneState(source) { return JSON.parse(JSON.stringify(source)); }
-
   function validateSaveState(candidate) {
     const migrated = migrateState(candidate);
     if (!migrated) return null;
@@ -398,9 +390,6 @@
     return { campaignId: id || makeCampaignId(), name: name || gameState.partyName || "Новая партия", createdAt: createdAt || now, lastPlayedAt: now,
       mapSize: mapSizeCells(gameState), mapSeed: gameState.mapSeed || null, status: gameState.victory ? "victory" : "active", gameVersion: GAME_VERSION, lastLoadedSaveId: null };
   }
-
-  function saveMetaLine(save) { return save ? escapeHtml(save.name) + " · ход " + save.turn + " · " + formatDate(save.updatedAt || save.createdAt) : "Пусто"; }
-  function campaignLine(c, count, turn) { return escapeHtml(c.name) + " · ход " + (turn || 1) + " · " + c.mapSize + "×" + c.mapSize + " · " + formatDate(c.lastPlayedAt) + " · сохранений: " + count; }
 
   function getCampaigns() {
     return storageGetCampaigns(storageAvailable);
