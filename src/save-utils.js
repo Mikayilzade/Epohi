@@ -51,6 +51,18 @@
       mapSize: mapSize, mapSeed: gameState.mapSeed || null, status: gameState.victory ? "victory" : "active", gameVersion: GAME_VERSION, lastLoadedSaveId: null };
   }
 
+  function validateSaveState(candidate, migrateStateFn, mapSizeCellsFn) {
+    const migrated = migrateStateFn(candidate);
+    if (!migrated) return null;
+    const size = mapSizeCellsFn(migrated);
+    if (!size || !Array.isArray(migrated.map) || migrated.map.length !== size) return null;
+    if (!migrated.map.every(function (row) { return Array.isArray(row) && row.length === size; })) return null;
+    if (typeof migrated.turn !== "number" || migrated.turn < 1) return null;
+    if (!migrated.resources || ["food","production","gold","science"].some(function (k) { return typeof migrated.resources[k] !== "number"; })) return null;
+    if (!Array.isArray(migrated.units)) return null;
+    return migrated;
+  }
+
   window.EpohiSaveUtils = {
     saveTypeLabel,
     slotLabel,
@@ -59,6 +71,7 @@
     cloneState,
     saveMetaLine,
     campaignLine,
-    campaignFromState
+    campaignFromState,
+    validateSaveState
   };
 })();

@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-1-refactor-campaign-metadata-cache";
+  "epohi-v1-4-5-1-refactor-validate-save-state-cache";
 const APP_FILES = [
   "./",
   "./index.html",
