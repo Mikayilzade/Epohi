@@ -21,13 +21,16 @@
     throw new Error("EpohiSaveUtils must be loaded before app.js");
   }
 
+  if (!window.EpohiCameraStorage) {
+    throw new Error("EpohiCameraStorage must be loaded before app.js");
+  }
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
     GAME_VERSION,
     SAVE_SCHEMA_VERSION,
     SAVE_KEY,
-    CAMERA_KEY,
     TUTORIAL_KEY,
     UPDATE_KEY,
     DB_NAME,
@@ -98,6 +101,12 @@
     putSaveRecord,
     deleteSaveRecord
   } = window.EpohiStorage;
+
+  const {
+    loadCamera: loadCameraFromStorage,
+    saveCamera: saveCameraToStorage,
+    scheduleCameraSave: scheduleCameraSaveWithTimer
+  } = window.EpohiCameraStorage;
 
   const {
     saveTypeLabel,
@@ -481,33 +490,15 @@
   }
   function saveGame() { return autoSave(false); }
   function loadCamera() {
-    const raw = safeGet(CAMERA_KEY);
-    if (!raw) return null;
-    try {
-      const candidate = JSON.parse(raw);
-      if (!candidate || typeof candidate.x !== "number" ||
-          typeof candidate.y !== "number" || typeof candidate.scale !== "number") return null;
-      return {
-        x: candidate.x,
-        y: candidate.y,
-        scale: clamp(candidate.scale, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE)
-      };
-    } catch (error) {
-      return null;
-    }
+    return loadCameraFromStorage();
   }
 
   function saveCamera() {
-    safeSet(CAMERA_KEY, JSON.stringify({
-      x: Math.round(camera.x),
-      y: Math.round(camera.y),
-      scale: Math.round(camera.scale * 1000) / 1000
-    }));
+    saveCameraToStorage(camera);
   }
 
   function scheduleCameraSave() {
-    clearTimeout(cameraSaveTimer);
-    cameraSaveTimer = setTimeout(saveCamera, 180);
+    cameraSaveTimer = scheduleCameraSaveWithTimer(cameraSaveTimer, saveCamera);
   }
 
   function viewportMetrics() {
