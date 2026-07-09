@@ -108,7 +108,8 @@
     saveMetaLine,
     campaignLine,
     campaignFromState: buildCampaignFromState,
-    validateSaveState: validateSaveStateWithHelpers
+    validateSaveState: validateSaveStateWithHelpers,
+    buildSaveRecord
   } = window.EpohiSaveUtils;
 
   const screenRoot = document.getElementById("screenRoot");
@@ -437,7 +438,19 @@
     safeSet(SAVE_KEY, JSON.stringify(state)); setSaveStatus("Сохранение…");
     saveQueue = saveQueue.catch(function(){}).then(function(){ return ensureCampaign().then(function(campaign){
       const now = new Date().toISOString(); const valid = validateSaveState(cloneState(state)); if (!valid) throw new Error("Состояние повреждено и не сохранено");
-      valid.partyName = campaign.name; const saveId = fixedSaveId || makeId(type); const record = { id: saveId, saveId: saveId, campaignId: campaign.campaignId, name: name || slotLabel(saveId), gameState: valid, turn: valid.turn, type: type, createdAt: now, updatedAt: now, schemaVersion: SAVE_SCHEMA_VERSION, parentSaveId: parentSaveId || null, parentTurn: parentSaveId ? loadedSaveTurn : null };
+      valid.partyName = campaign.name;
+      const record = buildSaveRecord({
+        type: type,
+        name: name,
+        fixedSaveId: fixedSaveId,
+        parentSaveId: parentSaveId,
+        campaign: campaign,
+        gameState: valid,
+        now: now,
+        schemaVersion: SAVE_SCHEMA_VERSION,
+        loadedSaveTurn: loadedSaveTurn
+      });
+      const saveId = record.saveId;
       return putSaveRecord(record).then(function(){ campaign.lastPlayedAt = now; campaign.status = valid.victory ? "victory" : "active"; campaign.lastLoadedSaveId = saveId; campaign.mapSize = mapSizeCells(valid); activeSaveId = saveId; loadedSaveId = saveId; loadedSaveTurn = valid.turn; safeSet(ACTIVE_SAVE_KEY, saveId); return putCampaign(campaign).then(function(){ setSaveStatus("Сохранено"); return record; }); });
     }); }).catch(function(error){ setSaveStatus("Ошибка сохранения"); showToast("Не удалось сохранить: " + error.message, 3200); throw error; });
     return saveQueue;

@@ -63,6 +63,24 @@
     return migrated;
   }
 
+  function buildSaveRecord(options) {
+    const saveId = options.fixedSaveId || makeId(options.type);
+    return {
+      id: saveId,
+      saveId: saveId,
+      campaignId: options.campaign.campaignId,
+      name: options.name || slotLabel(saveId),
+      gameState: options.gameState,
+      turn: options.gameState.turn,
+      type: options.type,
+      createdAt: options.now,
+      updatedAt: options.now,
+      schemaVersion: options.schemaVersion,
+      parentSaveId: options.parentSaveId || null,
+      parentTurn: options.parentSaveId ? options.loadedSaveTurn : null
+    };
+  }
+
   window.EpohiSaveUtils = {
     saveTypeLabel,
     slotLabel,
@@ -72,6 +90,7 @@
     saveMetaLine,
     campaignLine,
     campaignFromState,
-    validateSaveState
+    validateSaveState,
+    buildSaveRecord
   };
 })();
