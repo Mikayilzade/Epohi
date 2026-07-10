@@ -1,0 +1,192 @@
+# Epohi Codex task queue
+
+This queue is processed manually/semi-automatically.
+
+Codex must take only the first unchecked task and stop after creating one Draft PR.
+
+## Current queue
+
+- [ ] Refactor: extract `hasTech` and `hasBuilding` into `src/selectors.js`
+  - Type: refactor-only
+  - Expected files:
+    - `src/app.js`
+    - `src/selectors.js`
+    - `sw.js`
+  - Goal:
+    - Move pure lookup helpers `hasTech(state, id)` and `hasBuilding(state, id)` to `src/selectors.js`.
+    - Keep thin wrappers in `src/app.js`.
+    - Do not change gameplay.
+    - Do not change tech/building logic.
+    - Update service worker cache because `src/selectors.js` changes.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] Refactor: extract affordability helper `canAfford` into `src/selectors.js`
+  - Type: refactor-only
+  - Expected files:
+    - `src/app.js`
+    - `src/selectors.js`
+    - `sw.js`
+  - Goal:
+    - Move pure helper `canAfford(state, cost)` to `src/selectors.js`.
+    - Keep thin wrapper `canAfford(cost)` in `src/app.js`.
+    - Do not move `pay` yet because it mutates state.
+    - Do not change resource logic.
+    - Update service worker cache because `src/selectors.js` changes.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] Refactor: extract territory helpers into a dedicated module
+  - Type: refactor-only
+  - Expected files:
+    - `index.html`
+    - `src/app.js`
+    - `src/territory.js`
+    - `sw.js`
+  - Goal:
+    - Create browser-global `src/territory.js`.
+    - Move pure territory helpers from `src/app.js` only if they can accept state as a parameter.
+    - Keep thin wrappers in `src/app.js`.
+    - Do not change settlement or border behavior.
+    - Add script before `src/app.js`.
+    - Add file to service worker cache.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] Refactor: extract tile yield helper into a dedicated economy module
+  - Type: refactor-only
+  - Expected files:
+    - `index.html`
+    - `src/app.js`
+    - `src/economy.js`
+    - `sw.js`
+  - Goal:
+    - Create browser-global `src/economy.js`.
+    - Move pure `getTileYield` logic if it can accept dependencies/state/data as parameters.
+    - Keep thin wrapper in `src/app.js`.
+    - Do not change yield values.
+    - Do not change city income.
+    - Add script before `src/app.js`.
+    - Add file to service worker cache.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] Refactor: extract income calculation into economy module
+  - Type: refactor-only
+  - Expected files:
+    - `src/app.js`
+    - `src/economy.js`
+    - `sw.js`
+  - Goal:
+    - Move `calculateIncome` only if previous economy module exists.
+    - Keep thin wrapper in `src/app.js`.
+    - Do not change income numbers.
+    - Do not change settlement yield.
+    - Do not change building yield.
+    - Update service worker cache because `src/economy.js` changes.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] Refactor: extract era calculation into a pure progression module
+  - Type: refactor-only
+  - Expected files:
+    - `index.html`
+    - `src/app.js`
+    - `src/progression.js`
+    - `sw.js`
+  - Goal:
+    - Create browser-global `src/progression.js`.
+    - Move `currentEra` logic as a pure helper.
+    - Keep thin wrapper in `src/app.js`.
+    - Do not change era labels or thresholds.
+    - Add script before `src/app.js`.
+    - Add file to service worker cache.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] UX: show selected unit inside own-unit stack inspection
+  - Type: behavior/UX
+  - Expected files:
+    - `src/app.js`
+    - tests if needed
+    - `sw.js`
+  - Goal:
+    - When multiple own units are on one tile, inspection should prefer the currently selected unit if it is on that tile.
+    - Do not add stack arrows yet.
+    - Do not rename units yet.
+    - Keep change small.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] UX: add stack navigation arrows for own units on same tile
+  - Type: behavior/UX
+  - Expected files:
+    - `src/app.js`
+    - `styles/app.css` if needed
+    - tests if needed
+    - `sw.js`
+  - Goal:
+    - Add previous/next controls for own units on the same tile.
+    - Switching selected unit must not spend movement.
+    - Keep action buttons behavior unchanged.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] UX: permanent generated unit names
+  - Type: behavior/UX
+  - Expected files:
+    - `src/app.js`
+    - tests if needed
+    - `sw.js`
+  - Goal:
+    - Give new units stable generated names at creation time.
+    - Existing saves should still load safely.
+    - Show name in selected unit card.
+    - Do not add manual rename UI yet.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
+
+- [ ] UX: move context action buttons to the right side when space allows
+  - Type: UI
+  - Expected files:
+    - `src/app.js`
+    - `styles/app.css`
+    - tests if needed
+    - `sw.js`
+  - Goal:
+    - Keep tabs on the left.
+    - Move main action buttons like move/build/attack toward the right side when layout allows.
+    - Preserve horizontal scrolling for narrow mobile screens.
+    - Do not change action availability.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check
