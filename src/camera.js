@@ -88,12 +88,24 @@
     camera.y = viewport.height / 2 - center.y * camera.scale;
   }
 
+  function setCameraScale(camera, mapViewport, nextScale, originX, originY) {
+    const viewport = viewportMetrics(mapViewport);
+    const anchorX = originX == null ? viewport.width / 2 : originX;
+    const anchorY = originY == null ? viewport.height / 2 : originY;
+    const mapX = (anchorX - camera.x) / camera.scale;
+    const mapY = (anchorY - camera.y) / camera.scale;
+    camera.scale = clamp(nextScale, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE);
+    camera.x = anchorX - mapX * camera.scale;
+    camera.y = anchorY - mapY * camera.scale;
+  }
+
   window.EpohiCamera = {
     viewportMetrics,
     pointerPoint,
     mapSize,
     clampCamera,
     tileCenter,
-    centerCameraOnTile
+    centerCameraOnTile,
+    setCameraScale
   };
 })();
