@@ -15,7 +15,19 @@
     return result;
   }
 
+  function calculateIncome(state, cities, cityIncome) {
+    const total = { food: 0, production: 0, gold: 0, science: 0 };
+    cities.forEach(function (city) {
+      addYield(total, cityIncome(city));
+    });
+    state.settlements.forEach(function () {
+      addYield(total, { food: 1, production: 1, gold: 1 });
+    });
+    return total;
+  }
+
   window.EpohiEconomy = {
-    getTileYield
+    getTileYield,
+    calculateIncome
   };
 })();
