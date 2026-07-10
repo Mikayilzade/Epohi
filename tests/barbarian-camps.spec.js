@@ -42,7 +42,7 @@ test.describe('v1.4.4 living barbarian camps', () => {
 
   test('camp produces at most two living barbarians and reopens after one dies', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
-    const r = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state, e=d.activeCampEntries(s)[0], camp=e.camp; s.turn=50; camp.nextSpawn=0; s.barbarians=[]; d.processBarbarians(); camp.nextSpawn=0; d.processBarbarians(); const two=s.barbarians.filter(b=>b.originCampId===camp.campId).length; camp.nextSpawn=0; d.processBarbarians(); const still=s.barbarians.filter(b=>b.originCampId===camp.campId).length; s.barbarians.pop(); camp.nextSpawn=0; d.processBarbarians(); return { two, still, after:s.barbarians.filter(b=>b.originCampId===camp.campId).length, ids:s.barbarians.every(b=>b.originCampId===camp.campId) }; });
+    const r = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state, e=d.activeCampEntries(s)[0], camp=e.camp; s.turn=50; camp.nextSpawn=0; s.barbarians=[]; d.processBarbarians(); camp.nextSpawn=0; d.processBarbarians(); const two=s.barbarians.filter(b=>b.originCampId===camp.campId).length; camp.nextSpawn=0; d.processBarbarians(); const still=s.barbarians.filter(b=>b.originCampId===camp.campId).length; const fromCamp=s.barbarians.filter(b=>b.originCampId===camp.campId); s.barbarians=s.barbarians.filter(b=>b.id!==fromCamp[0].id); camp.nextSpawn=0; d.processBarbarians(); return { two, still, after:s.barbarians.filter(b=>b.originCampId===camp.campId).length, ids:s.barbarians.every(b=>b.originCampId===camp.campId) }; });
     expect(r).toEqual({ two:2, still:2, after:2, ids:true });
   });
 
