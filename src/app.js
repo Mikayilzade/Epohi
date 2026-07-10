@@ -31,6 +31,7 @@
 
   if (!window.EpohiSelectors) throw new Error("EpohiSelectors module is required");
   if (!window.EpohiTerritory) throw new Error("EpohiTerritory module is required");
+  if (!window.EpohiEconomy) throw new Error("EpohiEconomy module is required");
 
   const {
     DEFAULT_MAP_SIZE,
@@ -142,6 +143,10 @@
     territoryRadius: territoryRadiusForState,
     inTerritory: isInTerritory
   } = window.EpohiTerritory;
+
+  const {
+    getTileYield: getTileYieldFromData
+  } = window.EpohiEconomy;
 
   const {
     saveTypeLabel,
@@ -672,11 +677,7 @@
   }
 
   function getTileYield(tile) {
-    const result = emptyYield();
-    addYield(result, TERRAIN[tile.terrain].base);
-    if (tile.improvement && !tile.pillaged) addYield(result, IMPROVEMENTS[tile.improvement].yield);
-    if (tile.feature && tile.feature !== "ruins" && tile.improvement) addYield(result, FEATURES[tile.feature].bonus);
-    return result;
+    return getTileYieldFromData(tile, TERRAIN, IMPROVEMENTS, FEATURES);
   }
 
   function healthBar(hp, maxHp) {

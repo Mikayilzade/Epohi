@@ -63,7 +63,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] Refactor: extract tile yield helper into a dedicated economy module
+- [x] Refactor: extract tile yield helper into a dedicated economy module
   - Type: refactor-only
   - Expected files:
     - `index.html`
