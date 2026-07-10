@@ -99,6 +99,13 @@
     camera.y = anchorY - mapY * camera.scale;
   }
 
+  function applyCamera(camera, mapViewport, mapEl, zoomValue) {
+    clampCamera(camera, mapViewport, mapEl);
+    mapEl.style.transform = "translate3d(" + camera.x + "px, " + camera.y + "px, 0) scale(" + camera.scale + ")";
+    zoomValue.value = String(Math.round(camera.scale * 100));
+    zoomValue.textContent = Math.round(camera.scale * 100) + "%";
+  }
+
   window.EpohiCamera = {
     viewportMetrics,
     pointerPoint,
@@ -106,6 +113,7 @@
     clampCamera,
     tileCenter,
     centerCameraOnTile,
-    setCameraScale
+    setCameraScale,
+    applyCamera
   };
 })();
