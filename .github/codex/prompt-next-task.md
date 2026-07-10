@@ -69,9 +69,13 @@ Do not change service worker cache unless runtime files are added or changed.
 
 Do not create more than one PR.
 
-Do not mark the queue task as completed unless the task itself asks for that.
+When completing the selected queue task, update `.github/codex/task-queue.md` in the same PR by changing only that selected task from `[ ]` to `[x]`.
 
-Do not start the next task.
+Do not mark any later task as completed.
+
+Do not start any later task.
+
+If the PR is closed without merge, the completed checkbox will not reach `main`, so the queue remains safe.
 
 ## Standard checks
 

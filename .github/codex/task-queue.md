@@ -6,7 +6,8 @@ Codex must take only the first unchecked task and stop after creating one Draft 
 
 ## Current queue
 
-- [ ] Refactor: extract `hasTech` and `hasBuilding` into `src/selectors.js`
+- [x] Refactor: extract `hasTech` and `hasBuilding` into `src/selectors.js`
+  - Completed in PR #57.
   - Type: refactor-only
   - Expected files:
     - `src/app.js`
