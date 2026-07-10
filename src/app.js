@@ -29,6 +29,8 @@
     throw new Error("EpohiCamera must be loaded before app.js");
   }
 
+  if (!window.EpohiSelectors) throw new Error("EpohiSelectors module is required");
+
   const {
     DEFAULT_MAP_SIZE,
     MAP_SIZES,
@@ -124,6 +126,12 @@
     focusCameraTarget: getFocusCameraTarget,
     centerCameraOnFocus: centerCameraOnFocusBounds
   } = window.EpohiCamera;
+
+  const {
+    getUnit: getUnitFromState,
+    unitsAt: getUnitsAt,
+    settlementAt: getSettlementAt
+  } = window.EpohiSelectors;
 
   const {
     saveTypeLabel,
@@ -606,15 +614,15 @@
   }
 
   function getUnit(id) {
-    return state.units.find(function (unit) { return unit.id === id; }) || null;
+    return getUnitFromState(state, id);
   }
 
   function unitsAt(x, y) {
-    return state.units.filter(function (unit) { return unit.x === x && unit.y === y; });
+    return getUnitsAt(state, x, y);
   }
 
   function settlementAt(x, y) {
-    return state.settlements.find(function (settlement) { return settlement.x === x && settlement.y === y; }) || null;
+    return getSettlementAt(state, x, y);
   }
 
   function canAfford(cost) {
