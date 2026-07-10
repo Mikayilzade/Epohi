@@ -84,7 +84,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] Refactor: extract income calculation into economy module
+- [x] Refactor: extract income calculation into economy module
   - Type: refactor-only
   - Expected files:
     - `src/app.js`
