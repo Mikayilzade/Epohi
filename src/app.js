@@ -117,7 +117,8 @@
     pointerPoint: getPointerPoint,
     mapSize: getMapSize,
     clampCamera: clampCameraBounds,
-    tileCenter: getTileCenter
+    tileCenter: getTileCenter,
+    centerCameraOnTile: centerCameraOnTileBounds
   } = window.EpohiCamera;
 
   const {
@@ -542,10 +543,7 @@
   }
 
   function centerCameraOnTile(x, y, shouldSave) {
-    const viewport = viewportMetrics();
-    const center = tileCenter(x, y);
-    camera.x = viewport.width / 2 - center.x * camera.scale;
-    camera.y = viewport.height / 2 - center.y * camera.scale;
+    centerCameraOnTileBounds(camera, mapViewport, mapEl, mapSizeCells, x, y);
     applyCamera(shouldSave);
   }
 

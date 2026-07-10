@@ -81,11 +81,19 @@
     };
   }
 
+  function centerCameraOnTile(camera, mapViewport, mapEl, mapSizeCellsFn, x, y) {
+    const viewport = viewportMetrics(mapViewport);
+    const center = tileCenter(mapEl, mapSizeCellsFn, x, y);
+    camera.x = viewport.width / 2 - center.x * camera.scale;
+    camera.y = viewport.height / 2 - center.y * camera.scale;
+  }
+
   window.EpohiCamera = {
     viewportMetrics,
     pointerPoint,
     mapSize,
     clampCamera,
-    tileCenter
+    tileCenter,
+    centerCameraOnTile
   };
 })();
