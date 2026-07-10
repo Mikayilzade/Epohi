@@ -88,6 +88,10 @@
     camera.y = viewport.height / 2 - center.y * camera.scale;
   }
 
+  function centerCameraOnFocus(camera, mapViewport, mapEl, mapSizeCellsFn, target) {
+    centerCameraOnTile(camera, mapViewport, mapEl, mapSizeCellsFn, target.x, target.y);
+  }
+
   function setCameraScale(camera, mapViewport, nextScale, originX, originY) {
     const viewport = viewportMetrics(mapViewport);
     const anchorX = originX == null ? viewport.width / 2 : originX;
@@ -120,6 +124,7 @@
     centerCameraOnTile,
     setCameraScale,
     applyCamera,
-    focusCameraTarget
+    focusCameraTarget,
+    centerCameraOnFocus
   };
 })();

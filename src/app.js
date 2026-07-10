@@ -121,7 +121,8 @@
     centerCameraOnTile: centerCameraOnTileBounds,
     setCameraScale: setCameraScaleBounds,
     applyCamera: applyCameraView,
-    focusCameraTarget: getFocusCameraTarget
+    focusCameraTarget: getFocusCameraTarget,
+    centerCameraOnFocus: centerCameraOnFocusBounds
   } = window.EpohiCamera;
 
   const {
@@ -553,7 +554,8 @@
 
   function centerCameraOnFocus(shouldSave) {
     const target = focusCameraTarget();
-    centerCameraOnTile(target.x, target.y, shouldSave);
+    centerCameraOnFocusBounds(camera, mapViewport, mapEl, mapSizeCells, target);
+    applyCamera(shouldSave);
   }
 
   function setCameraScale(nextScale, originX, originY) {
