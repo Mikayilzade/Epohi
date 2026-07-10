@@ -25,7 +25,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] Refactor: extract affordability helper `canAfford` into `src/selectors.js`
+- [x] Refactor: extract affordability helper `canAfford` into `src/selectors.js`
   - Type: refactor-only
   - Expected files:
     - `src/app.js`
