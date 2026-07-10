@@ -119,7 +119,8 @@
     clampCamera: clampCameraBounds,
     tileCenter: getTileCenter,
     centerCameraOnTile: centerCameraOnTileBounds,
-    setCameraScale: setCameraScaleBounds
+    setCameraScale: setCameraScaleBounds,
+    applyCamera: applyCameraView
   } = window.EpohiCamera;
 
   const {
@@ -532,10 +533,7 @@
   }
 
   function applyCamera(shouldSave) {
-    clampCamera();
-    mapEl.style.transform = "translate3d(" + camera.x + "px, " + camera.y + "px, 0) scale(" + camera.scale + ")";
-    zoomValue.value = String(Math.round(camera.scale * 100));
-    zoomValue.textContent = Math.round(camera.scale * 100) + "%";
+    applyCameraView(camera, mapViewport, mapEl, zoomValue);
     if (shouldSave) scheduleCameraSave();
   }
 
