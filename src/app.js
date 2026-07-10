@@ -118,7 +118,8 @@
     mapSize: getMapSize,
     clampCamera: clampCameraBounds,
     tileCenter: getTileCenter,
-    centerCameraOnTile: centerCameraOnTileBounds
+    centerCameraOnTile: centerCameraOnTileBounds,
+    setCameraScale: setCameraScaleBounds
   } = window.EpohiCamera;
 
   const {
@@ -559,14 +560,7 @@
   }
 
   function setCameraScale(nextScale, originX, originY) {
-    const viewport = viewportMetrics();
-    const anchorX = originX == null ? viewport.width / 2 : originX;
-    const anchorY = originY == null ? viewport.height / 2 : originY;
-    const mapX = (anchorX - camera.x) / camera.scale;
-    const mapY = (anchorY - camera.y) / camera.scale;
-    camera.scale = clamp(nextScale, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE);
-    camera.x = anchorX - mapX * camera.scale;
-    camera.y = anchorY - mapY * camera.scale;
+    setCameraScaleBounds(camera, mapViewport, nextScale, originX, originY);
     applyCamera(true);
   }
 
