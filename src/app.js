@@ -130,7 +130,9 @@
   const {
     getUnit: getUnitFromState,
     unitsAt: getUnitsAt,
-    settlementAt: getSettlementAt
+    settlementAt: getSettlementAt,
+    hasTech: hasTechInState,
+    hasBuilding: hasBuildingInState
   } = window.EpohiSelectors;
 
   const {
@@ -606,11 +608,11 @@
   }
 
   function hasTech(id) {
-    return state.researched.indexOf(id) !== -1;
+    return hasTechInState(state, id);
   }
 
   function hasBuilding(id) {
-    return state.city.buildings.indexOf(id) !== -1;
+    return hasBuildingInState(state, id);
   }
 
   function getUnit(id) {
@@ -2130,7 +2132,7 @@
   function activeCity(){ return playerCities().find(c=>c.id===selectedCityId) || playerCities()[0] || state.city; }
   function cityRadius(city){ if (city.population >= 6) return 3; if (city.population >= 3) return 2; return 1; }
   function inTerritory(x, y) { if (playerCities().some(c=>chebyshev(x,y,c.x,c.y)<=cityRadius(c))) return true; return state.settlements.some(s=>chebyshev(x,y,s.x,s.y)<=1); }
-  function hasBuilding(id) { return (activeCity().buildings||[]).indexOf(id) !== -1; }
+  function hasBuilding(id) { return hasBuildingInState({ city: activeCity() }, id); }
   function cityIncome(city){ const income={food:2+Math.floor(city.population/2),production:2+(city.youngUntil&&state.turn<=city.youngUntil?-1:0),gold:1,science:2}; addYield(income,TERRAIN[state.map[city.y][city.x].terrain].base); (city.buildings||[]).forEach(id=>addYield(income,BUILDINGS[id].yield)); state.map.forEach((row,y)=>row.forEach((tile,x)=>{ if(tile.owner===(city.id||city.name)&&tile.improvement&&!tile.pillaged){ addYield(income,TERRAIN[tile.terrain].base); addYield(income,IMPROVEMENTS[tile.improvement].yield); if(tile.feature) addYield(income,FEATURES[tile.feature].bonus); }})); income.production=Math.max(1,income.production+(state.permanentBonuses.production||0)); income.gold+=(state.permanentBonuses.gold||0); income.science+=(state.permanentBonuses.science||0); return income; }
   function calculateIncome(){ const total={food:0,production:0,gold:0,science:0}; playerCities().forEach(c=>addYield(total,cityIncome(c))); state.settlements.forEach(()=>addYield(total,{food:1,production:1,gold:1})); return total; }
   function cityAtAny(x,y){ const pc=playerCities().find(c=>c.x===x&&c.y===y&&c.hp>0); if(pc) return {owner:'player', city:pc}; const rc=rivalCityAt(x,y); if(rc) return rc; return null; }

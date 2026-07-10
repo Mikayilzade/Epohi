@@ -15,9 +15,19 @@
     }) || null;
   }
 
+  function hasTech(state, id) {
+    return state.researched.indexOf(id) !== -1;
+  }
+
+  function hasBuilding(state, id) {
+    return (state.city.buildings || []).indexOf(id) !== -1;
+  }
+
   window.EpohiSelectors = {
     getUnit,
     unitsAt,
-    settlementAt
+    settlementAt,
+    hasTech,
+    hasBuilding
   };
 })();
