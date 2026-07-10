@@ -120,7 +120,8 @@
     tileCenter: getTileCenter,
     centerCameraOnTile: centerCameraOnTileBounds,
     setCameraScale: setCameraScaleBounds,
-    applyCamera: applyCameraView
+    applyCamera: applyCameraView,
+    focusCameraTarget: getFocusCameraTarget
   } = window.EpohiCamera;
 
   const {
@@ -547,9 +548,7 @@
   }
 
   function focusCameraTarget() {
-    const unit = getUnit(selectedUnitId);
-    if (unit) return { x: unit.x, y: unit.y };
-    return { x: state.city.x, y: state.city.y };
+    return getFocusCameraTarget(getUnit(selectedUnitId), state.city);
   }
 
   function centerCameraOnFocus(shouldSave) {

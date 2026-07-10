@@ -106,6 +106,11 @@
     zoomValue.textContent = Math.round(camera.scale * 100) + "%";
   }
 
+  function focusCameraTarget(unit, city) {
+    if (unit) return { x: unit.x, y: unit.y };
+    return { x: city.x, y: city.y };
+  }
+
   window.EpohiCamera = {
     viewportMetrics,
     pointerPoint,
@@ -114,6 +119,7 @@
     tileCenter,
     centerCameraOnTile,
     setCameraScale,
-    applyCamera
+    applyCamera,
+    focusCameraTarget
   };
 })();
