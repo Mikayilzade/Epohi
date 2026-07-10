@@ -132,7 +132,8 @@
     unitsAt: getUnitsAt,
     settlementAt: getSettlementAt,
     hasTech: hasTechInState,
-    hasBuilding: hasBuildingInState
+    hasBuilding: hasBuildingInState,
+    canAfford: canAffordInState
   } = window.EpohiSelectors;
 
   const {
@@ -628,9 +629,7 @@
   }
 
   function canAfford(cost) {
-    return Object.keys(cost || {}).every(function (key) {
-      return (state.resources[key] || 0) >= cost[key];
-    });
+    return canAffordInState(state, cost);
   }
 
   function pay(cost) {

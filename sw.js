@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-2-refactor-selectors-cache";
+  "epohi-v1-4-5-3-refactor-affordability-selector-cache";
 const APP_FILES = [
   "./",
   "./index.html",

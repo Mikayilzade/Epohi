@@ -23,11 +23,18 @@
     return (state.city.buildings || []).indexOf(id) !== -1;
   }
 
+  function canAfford(state, cost) {
+    return Object.keys(cost || {}).every(function (key) {
+      return (state.resources[key] || 0) >= cost[key];
+    });
+  }
+
   window.EpohiSelectors = {
     getUnit,
     unitsAt,
     settlementAt,
     hasTech,
-    hasBuilding
+    hasBuilding,
+    canAfford
   };
 })();
