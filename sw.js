@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-3-refactor-affordability-selector-cache";
+  "epohi-v1-4-5-4-refactor-territory-cache";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -12,6 +12,7 @@ const APP_FILES = [
   "./src/camera-storage.js",
   "./src/camera.js",
   "./src/selectors.js",
+  "./src/territory.js",
   "./src/app.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
