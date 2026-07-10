@@ -28,6 +28,8 @@ A human must still decide:
 7. Report PR number, branch, commit SHA, changed files, and test result.
 8. Stop.
 
+When a task PR is created, the selected queue item should be marked as completed in the same PR. Because the checkbox reaches `main` only after merge, abandoned or closed PRs do not advance the queue.
+
 ## Important rule
 
 One task = one small PR.
