@@ -123,7 +123,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] UX: show selected unit inside own-unit stack inspection
+- [x] UX: show selected unit inside own-unit stack inspection
   - Type: behavior/UX
   - Expected files:
     - `src/app.js`
