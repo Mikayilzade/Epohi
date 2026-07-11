@@ -468,6 +468,12 @@
       background: #826b43;
     }
 
+    .context-btn.stack-nav {
+      min-width: 49px;
+      background: #3f6543;
+      font-size: 13px;
+    }
+
     .toolbar {
       display: grid;
       grid-template-columns: 1fr 1fr 1.35fr 48px;

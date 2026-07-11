@@ -53,7 +53,7 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     expect(displays).toEqual({ tabs: 'none', actions: 'none' });
   });
 
-  test('two own units never create duplicate select buttons and cycle one unit at a time', async ({ page }) => {
+  test('two own units never create duplicate select buttons and navigate the stack without spending movement', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
 
     const setup = await page.evaluate(() => {
@@ -93,16 +93,31 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     expect(selectedOnTile.selectedId).not.toBe(setup.activeId);
     expect(selectedOnTile.onTile).toBeTruthy();
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="cycle-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
 
-    const before = await page.evaluate(() => window.__epohiDebug().getSelectedUnitId());
-    await page.locator('#contextActions [data-context-action="cycle-unit"]').click();
-    const after = await page.evaluate(() => window.__epohiDebug().getSelectedUnitId());
-    expect(after).not.toBe(before);
+    const before = await page.evaluate(() => {
+      const d = window.__epohiDebug();
+      const selectedId = d.getSelectedUnitId();
+      const unit = d.state.units.find(u => u.id === selectedId);
+      return { selectedId, moves: unit.moves };
+    });
+    await page.locator('#contextActions [data-context-action="stack-next-unit"]').click();
+    const after = await page.evaluate(() => {
+      const d = window.__epohiDebug();
+      const selectedId = d.getSelectedUnitId();
+      const unit = d.state.units.find(u => u.id === selectedId);
+      return { selectedId, moves: unit.moves };
+    });
+    expect(after.selectedId).not.toBe(before.selectedId);
+    expect(after.moves).toBe(1);
+    await page.locator('#contextActions [data-context-action="stack-prev-unit"]').click();
+    await expect.poll(async () => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(before.selectedId);
     await page.evaluate(() => window.__epohiDebug().renderContext());
     await page.evaluate(() => window.__epohiDebug().renderContext());
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="cycle-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
 
     const activeHereSetup = await page.evaluate(({ x, y }) => {
       const d = window.__epohiDebug();
@@ -113,7 +128,8 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     }, setup);
     await page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`).click();
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="cycle-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
+    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
     expect(activeHereSetup.selectedId).toBeTruthy();
   });
 

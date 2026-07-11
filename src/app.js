@@ -903,13 +903,21 @@
     }) || null;
   }
 
-  function cycleUnitAt(x, y) {
+  function cycleUnitAt(x, y, direction) {
     const list = unitsAt(x, y);
     if (!list.length) return;
     const index = list.findIndex(function (unit) { return unit.id === selectedUnitId; });
-    selectedUnitId = list[(index + 1 + list.length) % list.length].id;
+    const step = direction === "prev" ? -1 : 1;
+    selectedUnitId = list[(index + step + list.length) % list.length].id;
     selected = { x: x, y: y };
+    inspectLayer = "unit";
     render();
+  }
+
+  function appendStackNavigationControls(x, y, units) {
+    if (!units || units.length <= 1) return;
+    appendContextActionOnce("stack-prev-unit", "‹<br>Юнит", "stack-nav", function () { cycleUnitAt(x, y, "prev"); }, false);
+    appendContextActionOnce("stack-next-unit", "Юнит<br>›", "stack-nav", function () { cycleUnitAt(x, y, "next"); }, false);
   }
 
   function relationLabel(civ) { return !civ || !civ.met ? "неизвестны" : (civ.relation === "war" ? "война" : "нейтральные отношения"); }
@@ -971,7 +979,7 @@
     const ownUnits = unitsAt(x,y);
     const ownUnit = ownUnits.find(function (unit) { return unit.id === selectedUnitId; }) || ownUnits[0];
     const ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
-    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextTitle.textContent = def.icon+" "+def.name; contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(!ownUnit) appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); return true; }
+    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextTitle.textContent = def.icon+" "+def.name; contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); return true; }
     if (barb) { contextTitle.textContent="⚔ Варварский налётчик"; contextText.textContent="здоровье: "+Math.ceil(barb.hp)+"/"+barb.maxHp+" · атака: "+BARBARIAN.raiderAttack+" · защита: "+BARBARIAN.raiderDefense; return true; }
     return false;
   }
@@ -1052,7 +1060,7 @@
       }
 
       if (hereUnits.length > 1) {
-        appendContextActionOnce("cycle-unit", "Другой<br>юнит", "", function () { cycleUnitAt(x, y); }, false);
+        appendStackNavigationControls(x, y, hereUnits);
       }
       return;
     }
@@ -1087,7 +1095,7 @@
     if (hereUnits.length) {
       const activeHere = activeUnit && activeUnit.x === x && activeUnit.y === y;
       if (hereUnits.length > 1 && activeHere) {
-        appendContextActionOnce("cycle-unit", "Другой<br>юнит", "", function () { cycleUnitAt(x, y); }, false);
+        appendStackNavigationControls(x, y, hereUnits);
       } else if (!activeHere) {
         appendContextActionOnce("select-unit", "Выбрать<br>юнит", "alt", function () {
           selectedUnitId = hereUnits[0].id;
