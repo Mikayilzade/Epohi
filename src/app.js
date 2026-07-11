@@ -968,7 +968,9 @@
       contextText.textContent = "здоровье: " + Math.ceil(camp.hp) + "/" + camp.maxHp + " · награда: золото, наука и опыт для атакующего юнита · отряды лагеря: " + countBarbariansForCamp(state, camp.campId) + "/2 · опасность: может порождать налётчиков.";
       return true;
     }
-    const ownUnit = unitsAt(x,y)[0], ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
+    const ownUnits = unitsAt(x,y);
+    const ownUnit = ownUnits.find(function (unit) { return unit.id === selectedUnitId; }) || ownUnits[0];
+    const ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
     if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextTitle.textContent = def.icon+" "+def.name; contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(!ownUnit) appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); return true; }
     if (barb) { contextTitle.textContent="⚔ Варварский налётчик"; contextText.textContent="здоровье: "+Math.ceil(barb.hp)+"/"+barb.maxHp+" · атака: "+BARBARIAN.raiderAttack+" · защита: "+BARBARIAN.raiderDefense; return true; }
     return false;

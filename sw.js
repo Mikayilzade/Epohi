@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-7-refactor-progression-cache";
+  "epohi-v1-4-5-8-own-unit-stack-cache";
 const APP_FILES = [
   "./",
   "./index.html",
