@@ -32,6 +32,7 @@
   if (!window.EpohiSelectors) throw new Error("EpohiSelectors module is required");
   if (!window.EpohiTerritory) throw new Error("EpohiTerritory module is required");
   if (!window.EpohiEconomy) throw new Error("EpohiEconomy module is required");
+  if (!window.EpohiProgression) throw new Error("EpohiProgression module is required");
 
   const {
     DEFAULT_MAP_SIZE,
@@ -148,6 +149,10 @@
     getTileYield: getTileYieldFromData,
     calculateIncome: calculateIncomeFromEconomy
   } = window.EpohiEconomy;
+
+  const {
+    currentEra: currentEraForState
+  } = window.EpohiProgression;
 
   const {
     saveTypeLabel,
@@ -670,11 +675,7 @@
   }
 
   function currentEra() {
-    if (state.victory) return "Империя";
-    if (hasTech("statehood")) return "Королевство";
-    if (state.researched.length >= 3 || state.city.population >= 4) return "Город";
-    if (state.researched.length >= 1 || state.city.population >= 2) return "Поселение";
-    return "Племя";
+    return currentEraForState(state, hasTech);
   }
 
   function getTileYield(tile) {
