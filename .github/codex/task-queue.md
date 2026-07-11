@@ -103,7 +103,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] Refactor: extract era calculation into a pure progression module
+- [x] Refactor: extract era calculation into a pure progression module
   - Type: refactor-only
   - Expected files:
     - `index.html`

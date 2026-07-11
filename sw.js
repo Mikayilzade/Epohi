@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-6-refactor-income-cache";
+  "epohi-v1-4-5-7-refactor-progression-cache";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -14,6 +14,7 @@ const APP_FILES = [
   "./src/selectors.js",
   "./src/territory.js",
   "./src/economy.js",
+  "./src/progression.js",
   "./src/app.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
