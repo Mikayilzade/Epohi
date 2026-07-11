@@ -140,7 +140,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] UX: add stack navigation arrows for own units on same tile
+- [x] UX: add stack navigation arrows for own units on same tile
   - Type: behavior/UX
   - Expected files:
     - `src/app.js`
