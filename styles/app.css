@@ -223,6 +223,10 @@
       will-change: transform;
     }
 
+    .map.camera-smooth {
+      transition: transform 150ms ease-out;
+    }
+
     .tile {
       position: relative;
       min-width: 0;
@@ -331,11 +335,11 @@
     }
 
     .map-controls {
-      width: min(100%, 254px);
+      width: min(100%, 304px);
       height: 44px;
       flex: 0 0 44px;
       display: grid;
-      grid-template-columns: 44px minmax(82px, 1fr) 44px 44px;
+      grid-template-columns: 44px minmax(82px, 1fr) 44px 44px 44px;
       gap: 6px;
       align-items: center;
       touch-action: manipulation;
@@ -358,7 +362,7 @@
       touch-action: manipulation;
     }
 
-    .map-control-btn.center {
+    .map-control-btn.center, .map-control-btn.fit {
       font-size: 22px;
     }
 

@@ -14,14 +14,8 @@
   }
 
   const {
-    CAMERA_KEY,
-    CAMERA_MIN_SCALE,
-    CAMERA_MAX_SCALE
+    CAMERA_KEY
   } = window.EpohiConfig;
-
-  const {
-    clamp
-  } = window.EpohiUtils;
 
   const {
     safeGet,
@@ -38,7 +32,7 @@
       return {
         x: candidate.x,
         y: candidate.y,
-        scale: clamp(candidate.scale, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE)
+        scale: candidate.scale
       };
     } catch (error) {
       return null;

@@ -19,8 +19,8 @@
   const LEGACY_ACTIVE_SLOT_KEY = "mika-epohi-v131-active-slot";
   const MANUAL_SAVE_IDS = ["manual-1", "manual-2", "manual-3"];
   const AUTOSAVE_IDS = ["autosave-1", "autosave-2", "autosave-3"];
-  const CAMERA_MIN_SCALE = 0.8;
-  const CAMERA_MAX_SCALE = 2;
+  const CAMERA_MIN_SCALE = 0.18;
+  const CAMERA_MAX_SCALE = 8;
   const CAMERA_DEFAULT_SCALE = 1.3;
   const CAMERA_ZOOM_STEP = 1.18;
   const CAMERA_TAP_SLOP = 7;
