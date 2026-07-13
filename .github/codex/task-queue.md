@@ -191,3 +191,26 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke test list
     - smoke tests
     - git diff check
+
+
+- [x] Camera 2.0: full-map zoom and deep tile zoom
+  - Type: behavior/UX
+  - Expected files:
+    - `src/config.js`
+    - `src/camera.js`
+    - `src/camera-storage.js`
+    - `src/app.js`
+    - `index.html`
+    - `styles/app.css`
+    - camera-related tests
+    - `sw.js`
+  - Goal:
+    - Use dynamic minimum zoom so each map size can fit inside the viewport.
+    - Allow deep tile zoom with safe dynamic maximum bounds.
+    - Add a separate show-entire-map control while preserving center-on-focus behavior.
+    - Keep pinch, pan, persistence, resize and tile clicking safe across zoom levels.
+  - Checks:
+    - full JS syntax checks
+    - smoke test list
+    - smoke tests
+    - git diff check

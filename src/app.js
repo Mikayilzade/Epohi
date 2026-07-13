@@ -52,8 +52,6 @@
     LEGACY_ACTIVE_SLOT_KEY,
     MANUAL_SAVE_IDS,
     AUTOSAVE_IDS,
-    CAMERA_MIN_SCALE,
-    CAMERA_MAX_SCALE,
     CAMERA_DEFAULT_SCALE,
     CAMERA_ZOOM_STEP,
     CAMERA_TAP_SLOP
@@ -127,7 +125,9 @@
     setCameraScale: setCameraScaleBounds,
     applyCamera: applyCameraView,
     focusCameraTarget: getFocusCameraTarget,
-    centerCameraOnFocus: centerCameraOnFocusBounds
+    centerCameraOnFocus: centerCameraOnFocusBounds,
+    showEntireMap: showEntireMapBounds,
+    scaleBounds: getCameraScaleBounds
   } = window.EpohiCamera;
 
   const {
@@ -175,6 +175,7 @@
   const zoomInBtn = document.getElementById("zoomInBtn");
   const zoomOutBtn = document.getElementById("zoomOutBtn");
   const centerMapBtn = document.getElementById("centerMapBtn");
+  const showMapBtn = document.getElementById("showMapBtn");
   const zoomValue = document.getElementById("zoomValue");
   const turnValue = document.getElementById("turnValue");
   const eraLabel = document.getElementById("eraLabel");
@@ -577,11 +578,11 @@
   }
 
   function clampCamera() {
-    clampCameraBounds(camera, mapViewport, mapEl);
+    clampCameraBounds(camera, mapViewport, mapEl, mapSizeCells);
   }
 
   function applyCamera(shouldSave) {
-    applyCameraView(camera, mapViewport, mapEl, zoomValue);
+    applyCameraView(camera, mapViewport, mapEl, zoomValue, mapSizeCells, { zoomInBtn: zoomInBtn, zoomOutBtn: zoomOutBtn });
     if (shouldSave) scheduleCameraSave();
   }
 
@@ -600,13 +601,29 @@
 
   function centerCameraOnFocus(shouldSave) {
     const target = focusCameraTarget();
+    mapEl.classList.add("camera-smooth");
     centerCameraOnFocusBounds(camera, mapViewport, mapEl, mapSizeCells, target);
     applyCamera(shouldSave);
+    scheduleCameraTransitionEnd();
   }
 
-  function setCameraScale(nextScale, originX, originY) {
-    setCameraScaleBounds(camera, mapViewport, nextScale, originX, originY);
+  function showEntireMap(shouldSave) {
+    mapEl.classList.add("camera-smooth");
+    showEntireMapBounds(camera, mapViewport, mapEl, mapSizeCells);
+    applyCamera(shouldSave);
+    scheduleCameraTransitionEnd();
+  }
+
+  function scheduleCameraTransitionEnd() {
+    clearTimeout(scheduleCameraTransitionEnd.timer);
+    scheduleCameraTransitionEnd.timer = setTimeout(function () { mapEl.classList.remove("camera-smooth"); }, 170);
+  }
+
+  function setCameraScale(nextScale, originX, originY, smooth) {
+    if (smooth) mapEl.classList.add("camera-smooth");
+    setCameraScaleBounds(camera, mapViewport, mapEl, mapSizeCells, nextScale, originX, originY);
     applyCamera(true);
+    if (smooth) scheduleCameraTransitionEnd();
   }
 
   function initializeCamera(saveFocusedCamera) {
@@ -1982,6 +1999,7 @@
 
   function beginGesture() {
     const points = Array.from(activePointers.values());
+    mapEl.classList.remove("camera-smooth");
     mapViewport.classList.remove("dragging");
 
     if (points.length === 1) {
@@ -2042,7 +2060,8 @@
       const second = points[1];
       const midpoint = pointerMidpoint(first, second);
       const distance = Math.max(1, pointerDistance(first, second));
-      camera.scale = clamp(gesture.startScale * distance / gesture.startDistance, CAMERA_MIN_SCALE, CAMERA_MAX_SCALE);
+      const bounds = getCameraScaleBounds(mapViewport, mapEl, mapSizeCells);
+      camera.scale = clamp(gesture.startScale * distance / gesture.startDistance, bounds.min, bounds.max);
       camera.x = midpoint.x - gesture.anchorX * camera.scale;
       camera.y = midpoint.y - gesture.anchorY * camera.scale;
       gesture.moved = true;
@@ -2141,15 +2160,19 @@
   });
 
   zoomInBtn.addEventListener("click", function () {
-    setCameraScale(camera.scale * CAMERA_ZOOM_STEP);
+    setCameraScale(camera.scale * CAMERA_ZOOM_STEP, null, null, true);
   });
 
   zoomOutBtn.addEventListener("click", function () {
-    setCameraScale(camera.scale / CAMERA_ZOOM_STEP);
+    setCameraScale(camera.scale / CAMERA_ZOOM_STEP, null, null, true);
   });
 
   centerMapBtn.addEventListener("click", function () {
     centerCameraOnFocus(true);
+  });
+
+  showMapBtn.addEventListener("click", function () {
+    showEntireMap(true);
   });
 
 
@@ -2260,7 +2283,7 @@
     saveCamera();
   });
 
-  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getInspectLayer: function(){ return inspectLayer; }, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
+  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getInspectLayer: function(){ return inspectLayer; }, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
   openDb().then(function(db){ db.close(); storageAvailable = true; return migrateOldSaveIfNeeded(); }).catch(function(error){ storageAvailable = false; storageWarning = "IndexedDB недоступна: " + error.message + ". Пять слотов отключены, старое localStorage-сохранение не изменяется."; }).finally(function(){
     openMainMenu();
     if (!safeGet(UPDATE_KEY)) { safeSet(UPDATE_KEY, "1"); setTimeout(function(){ showToast("v1.4.5.1-hotfix: мобильная карточка осмотра прокручивается, а летопись больше не спамит движениями ИИ", 3600); }, 350); }

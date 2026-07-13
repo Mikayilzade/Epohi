@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-11-context-actions";
+  "epohi-v1-4-5-12-camera-2";
 const APP_FILES = [
   "./",
   "./index.html",
