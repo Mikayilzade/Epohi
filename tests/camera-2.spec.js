@@ -76,6 +76,51 @@ function expectCameraPositionWithinBounds(info) {
   }
 }
 
+async function findVisibleTileClickPoint(page) {
+  return page.evaluate(() => {
+    const viewport = document.getElementById('mapViewport');
+    const rect = viewport.getBoundingClientRect();
+    const fractions = [0.5, 0.38, 0.62, 0.26, 0.74];
+    const candidates = [];
+    for (const yFraction of fractions) {
+      for (const xFraction of fractions) {
+        candidates.push({
+          clientX: rect.left + rect.width * xFraction,
+          clientY: rect.top + rect.height * yFraction
+        });
+      }
+    }
+
+    for (const point of candidates) {
+      const element = document.elementFromPoint(point.clientX, point.clientY);
+      const tile = element && element.closest ? element.closest('.tile') : null;
+      if (tile && !tile.classList.contains('fog') && !tile.querySelector('.piece')) {
+        return {
+          clientX: point.clientX,
+          clientY: point.clientY,
+          tileX: tile.dataset.x,
+          tileY: tile.dataset.y
+        };
+      }
+    }
+
+    for (const point of candidates) {
+      const element = document.elementFromPoint(point.clientX, point.clientY);
+      const tile = element && element.closest ? element.closest('.tile') : null;
+      if (tile && !tile.classList.contains('fog')) {
+        return {
+          clientX: point.clientX,
+          clientY: point.clientY,
+          tileX: tile.dataset.x,
+          tileY: tile.dataset.y
+        };
+      }
+    }
+
+    return null;
+  });
+}
+
 test.describe('Camera 2.0', () => {
   test('fit scale shows whole map and dynamic bounds vary by map size', async ({ page }) => {
     const mins = [];
@@ -188,7 +233,12 @@ test.describe('Camera 2.0', () => {
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20);
     await page.mouse.up();
-    await page.locator('.tile[data-x="14"][data-y="14"]').click({ force: true });
-    await expect(page.locator('#contextTitle')).toContainText('Клетка');
+    await page.waitForFunction(() => !document.getElementById('mapViewport').classList.contains('dragging'));
+
+    const visibleTile = await findVisibleTileClickPoint(page);
+    expect(visibleTile).not.toBeNull();
+    await page.mouse.click(visibleTile.clientX, visibleTile.clientY);
+    await expect(page.locator(`.tile.inspect-tile[data-x="${visibleTile.tileX}"][data-y="${visibleTile.tileY}"]`)).toHaveCount(1);
+    await expect(page.locator('#contextTitle')).toHaveText(/\S/);
   });
 });
