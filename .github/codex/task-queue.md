@@ -157,7 +157,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] UX: permanent generated unit names
+- [x] UX: permanent generated unit names
   - Type: behavior/UX
   - Expected files:
     - `src/app.js`

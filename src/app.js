@@ -375,8 +375,25 @@
     }
     return null;
   }
+  const PLAYER_UNIT_NAME_PARTS = ["Заря", "Ветер", "Искра", "Страж", "Сокол", "Кедр", "Рубеж", "Факел"];
+  function generatedUnitName(type, id) {
+    const def = UNIT_DEFS[type] || {};
+    const number = Number(String(id || "").replace(/\D/g, "")) || 1;
+    const callsign = PLAYER_UNIT_NAME_PARTS[(number - 1) % PLAYER_UNIT_NAME_PARTS.length];
+    return (def.name || "Юнит") + " «" + callsign + "-" + number + "»";
+  }
+  function ensureUnitName(unit) {
+    if (unit && !unit.name) unit.name = generatedUnitName(unit.type, unit.id);
+    return unit;
+  }
+  function makePlayerUnit(type, id, x, y, options) {
+    const def = UNIT_DEFS[type];
+    const opts = options || {};
+    const maxHp = opts.maxHp || def.maxHealth || 60;
+    return ensureUnitName({ id: id, type: type, x: x, y: y, moves: opts.moves || 0, acted: !!opts.acted, hp: opts.hp || maxHp, maxHp: maxHp });
+  }
   function placeStartingUnits(gs, city, list, civId) {
-    ["scout","warrior"].forEach(function(type){ const spot=findStartUnitSpot(gs, city, list); if(!spot) return; const def=UNIT_DEFS[type]; list.push({id:(civId ? "ru"+(gs.nextRivalUnitId++) : "u"+(gs.nextUnitId++)), civilizationId:civId, type:type, x:spot.x, y:spot.y, moves:def.maxMoves, acted:false, hp:def.maxHealth, maxHp:def.maxHealth}); });
+    ["scout","warrior"].forEach(function(type){ const spot=findStartUnitSpot(gs, city, list); if(!spot) return; const def=UNIT_DEFS[type]; const id=(civId ? "ru"+(gs.nextRivalUnitId++) : "u"+(gs.nextUnitId++)); const unit={id:id, civilizationId:civId, type:type, x:spot.x, y:spot.y, moves:def.maxMoves, acted:false, hp:def.maxHealth, maxHp:def.maxHealth}; if(!civId) ensureUnitName(unit); list.push(unit); });
   }
 
   function createNewGame(size, rivalCount, barbarianActivity) {
@@ -406,12 +423,12 @@
     candidate.map.forEach(function (row) { row.forEach(function (tile) { if (tile.pillaged === undefined) tile.pillaged = false; if (tile.poi === undefined) tile.poi = null; if (tile.camp === undefined) tile.camp = null; }); });
     if (!Array.isArray(candidate.units)) {
       const oldScout = candidate.scout || { x: candidate.city.x, y: candidate.city.y - 1, moved: false };
-      candidate.units = [{ id: "u1", type: "scout", x: oldScout.x, y: oldScout.y, moves: oldScout.moved ? 0 : 2, acted: false }];
+      candidate.units = [makePlayerUnit("scout", "u1", oldScout.x, oldScout.y, { moves: oldScout.moved ? 0 : 2, acted: false })];
     }
     candidate.units.forEach(function (unit, index) {
       if (!unit.id) unit.id = "u" + (index + 1); if (!UNIT_DEFS[unit.type]) unit.type = "scout";
       const def = UNIT_DEFS[unit.type]; if (typeof unit.moves !== "number") unit.moves = def.maxMoves; if (typeof unit.acted !== "boolean") unit.acted = false;
-      if (typeof unit.maxHp !== "number") unit.maxHp = def.maxHealth || 60; if (typeof unit.hp !== "number") unit.hp = unit.maxHp;
+      if (typeof unit.maxHp !== "number") unit.maxHp = def.maxHealth || 60; if (typeof unit.hp !== "number") unit.hp = unit.maxHp; ensureUnitName(unit);
     });
     if (!Array.isArray(candidate.barbarians)) candidate.barbarians = [];
     if (!candidate.nextBarbarianId) candidate.nextBarbarianId = 1;
@@ -979,7 +996,7 @@
     const ownUnits = unitsAt(x,y);
     const ownUnit = ownUnits.find(function (unit) { return unit.id === selectedUnitId; }) || ownUnits[0];
     const ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
-    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextTitle.textContent = def.icon+" "+def.name; contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); return true; }
+    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextTitle.textContent = def.icon+" "+(ownUnit && u.name ? u.name : def.name); contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+(ownUnit && u.name ? " · имя: "+u.name : "")+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); return true; }
     if (barb) { contextTitle.textContent="⚔ Варварский налётчик"; contextText.textContent="здоровье: "+Math.ceil(barb.hp)+"/"+barb.maxHp+" · атака: "+BARBARIAN.raiderAttack+" · защита: "+BARBARIAN.raiderDefense; return true; }
     return false;
   }
@@ -1364,10 +1381,7 @@
     const id = "u" + state.nextUnitId++;
     const def = UNIT_DEFS[type];
     const militaryBonus = (type === "warrior" ? (state.permanentBonuses.militaryHealth || 0) * 10 : 0);
-    state.units.push({
-      id: id, type: type, x: state.city.x, y: state.city.y,
-      moves: 0, acted: false, maxHp: (def.maxHealth || 60) + militaryBonus, hp: (def.maxHealth || 60) + militaryBonus
-    });
+    state.units.push(makePlayerUnit(type, id, state.city.x, state.city.y, { maxHp: (def.maxHealth || 60) + militaryBonus, hp: (def.maxHealth || 60) + militaryBonus }));
     return id;
   }
 
@@ -2170,7 +2184,7 @@
   function queueProject(type,id){ const city=activeCity(); if(city.queue) return showToast('Очередь этого города занята.'); const def=projectDef(type,id); if(!def||def.tech&&!hasTech(def.tech)||type==='building'&&(city.buildings||[]).includes(id)) return; if((id==='palace'&&city.population<6)||(type==='unit'&&city.population<def.population)) return showToast('Недостаточно населения.'); const upfront=nonProductionCost(def.cost); if(!canAfford(upfront)) return showToast('Не хватает общих ресурсов.'); pay(upfront); city.queue={type,id,progress:0,cost:def.cost.production||0,upfront}; logEvent(state,'city-production-started',city.name+': начат проект '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); render(); openCity(); }
   function cancelQueue(){ const city=activeCity(), q=city.queue; if(!q)return; Object.keys(q.upfront||{}).forEach(k=>state.resources[k]+=q.upfront[k]); city.queue=null; render(); openCity(); }
   function rushQueue(){ const city=activeCity(), q=city.queue; if(!q||city.production<=0)return; const a=Math.min(city.production,q.cost-q.progress); city.production-=a; q.progress+=a; const done=finishCityQueue(city); showToast(done?done.text:'Вложено 🔨 '+a); render(); openCity(); }
-  function addUnit(type, city){ city=city||activeCity(); const id='u'+state.nextUnitId++; const def=UNIT_DEFS[type]; state.units.push({id,type,x:city.x,y:city.y,moves:0,acted:false,maxHp:def.maxHealth||60,hp:def.maxHealth||60}); return id; }
+  function addUnit(type, city){ city=city||activeCity(); const id='u'+state.nextUnitId++; state.units.push(makePlayerUnit(type, id, city.x, city.y)); return id; }
   function finishCityQueue(city){ const q=city.queue; if(!q||q.progress<q.cost)return null; const def=projectDef(q.type,q.id); city.queue=null; if(q.type==='building'){ city.buildings.push(q.id); if(q.id==='palace') state.victory=true; logEvent(state,'city-production-completed',city.name+' завершил здание '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); return {text:def.icon+' '+def.name+' завершён.',victory:q.id==='palace'}; } const uid=addUnit(q.id,city); logEvent(state,'city-production-completed',city.name+' подготовил '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); return {text:def.icon+' '+def.name+' готов в '+city.name+'.',unitId:uid}; }
   function processProduction(){ let completed=null; playerCities().forEach(city=>{ const inc=cityIncome(city); city.food+=inc.food; state.resources.gold+=inc.gold; state.resources.science+=inc.science; if(city.queue){ city.queue.progress+=inc.production; completed=finishCityQueue(city)||completed; } else city.production+=inc.production; while(city.population<10&&city.food>=growthNeed(city.population)){ city.food-=growthNeed(city.population); city.population++; revealAround(state,city.x,city.y,cityRadius(city)); logEvent(state,'city-growth',city.name+' вырос до населения '+city.population+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); } }); return completed; }
   function applyGrowth(){ return false; }
