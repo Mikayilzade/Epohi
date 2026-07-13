@@ -80,40 +80,26 @@ async function findVisibleTileClickPoint(page) {
   return page.evaluate(() => {
     const viewport = document.getElementById('mapViewport');
     const rect = viewport.getBoundingClientRect();
-    const fractions = [0.5, 0.38, 0.62, 0.26, 0.74];
-    const candidates = [];
+    const fractions = [0.5, 0.44, 0.56, 0.38, 0.62, 0.32, 0.68, 0.26, 0.74, 0.2, 0.8];
+
     for (const yFraction of fractions) {
       for (const xFraction of fractions) {
-        candidates.push({
-          clientX: rect.left + rect.width * xFraction,
-          clientY: rect.top + rect.height * yFraction
-        });
-      }
-    }
-
-    for (const point of candidates) {
-      const element = document.elementFromPoint(point.clientX, point.clientY);
-      const tile = element && element.closest ? element.closest('.tile') : null;
-      if (tile && !tile.classList.contains('fog') && !tile.querySelector('.piece')) {
-        return {
-          clientX: point.clientX,
-          clientY: point.clientY,
-          tileX: tile.dataset.x,
-          tileY: tile.dataset.y
-        };
-      }
-    }
-
-    for (const point of candidates) {
-      const element = document.elementFromPoint(point.clientX, point.clientY);
-      const tile = element && element.closest ? element.closest('.tile') : null;
-      if (tile && !tile.classList.contains('fog')) {
-        return {
-          clientX: point.clientX,
-          clientY: point.clientY,
-          tileX: tile.dataset.x,
-          tileY: tile.dataset.y
-        };
+        const clientX = rect.left + rect.width * xFraction;
+        const clientY = rect.top + rect.height * yFraction;
+        const elements = document.elementsFromPoint(clientX, clientY);
+        for (const element of elements) {
+          const tile = element.matches && element.matches('.tile')
+            ? element
+            : (element.closest ? element.closest('.tile') : null);
+          if (tile) {
+            return {
+              clientX,
+              clientY,
+              tileX: tile.dataset.x,
+              tileY: tile.dataset.y
+            };
+          }
+        }
       }
     }
 
