@@ -59,6 +59,23 @@ async function tileScreenCenter(page, x, y) {
   }, { x, y });
 }
 
+function expectCameraPositionWithinBounds(info) {
+  const scaledWidth = info.map.width * info.camera.scale;
+  const scaledHeight = info.map.height * info.camera.scale;
+  if (scaledWidth <= info.viewport.width) {
+    expect(info.camera.x).toBeCloseTo((info.viewport.width - scaledWidth) / 2, 1);
+  } else {
+    expect(info.camera.x).toBeGreaterThanOrEqual(info.viewport.width - scaledWidth - 1);
+    expect(info.camera.x).toBeLessThanOrEqual(1);
+  }
+  if (scaledHeight <= info.viewport.height) {
+    expect(info.camera.y).toBeCloseTo((info.viewport.height - scaledHeight) / 2, 1);
+  } else {
+    expect(info.camera.y).toBeGreaterThanOrEqual(info.viewport.height - scaledHeight - 1);
+    expect(info.camera.y).toBeLessThanOrEqual(1);
+  }
+}
+
 test.describe('Camera 2.0', () => {
   test('fit scale shows whole map and dynamic bounds vary by map size', async ({ page }) => {
     const mins = [];
@@ -129,7 +146,15 @@ test.describe('Camera 2.0', () => {
   test('stored scale clamps after layout, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
     await clearStorage(page);
     await createGame(page, 0, 'normal');
-    await page.evaluate(() => localStorage.setItem(window.EpohiConfig.CAMERA_KEY, JSON.stringify({ x: -99999, y: -99999, scale: 99 })));
+    await expect(page.locator('#gameApp')).toBeVisible();
+    await page.waitForFunction(() => window.__epohiDebug && window.__epohiDebug().state && document.querySelector('#map .tile'));
+    await page.evaluate(() => {
+      const camera = window.__epohiDebug().getCamera();
+      camera.x = -99999;
+      camera.y = -99999;
+      camera.scale = 99;
+    });
+
     await page.reload();
     await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
     expect(await page.evaluate(() => window.__epohiDebug().getCamera().scale)).toBe(99);
@@ -138,6 +163,7 @@ test.describe('Camera 2.0', () => {
 
     let info = await cameraState(page);
     expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
+    expectCameraPositionWithinBounds(info);
 
     await page.evaluate(() => {
       const viewport = document.getElementById('mapViewport');
