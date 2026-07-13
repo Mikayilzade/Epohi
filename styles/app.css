@@ -444,6 +444,29 @@
       scrollbar-width: none;
     }
 
+    @media (min-width: 720px) {
+      .context {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+        align-items: end;
+      }
+
+      .context-copy {
+        grid-column: 1 / -1;
+      }
+
+      .inspect-tabs {
+        grid-column: 1;
+        justify-self: start;
+      }
+
+      .context-actions {
+        grid-column: 2;
+        justify-self: end;
+        justify-content: flex-end;
+      }
+    }
+
     .inspect-tabs::-webkit-scrollbar,
     .context-actions::-webkit-scrollbar { display: none; }
 

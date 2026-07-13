@@ -174,7 +174,7 @@ Codex must take only the first unchecked task and stop after creating one Draft 
     - smoke tests
     - git diff check
 
-- [ ] UX: move context action buttons to the right side when space allows
+- [x] UX: move context action buttons to the right side when space allows
   - Type: UI
   - Expected files:
     - `src/app.js`
