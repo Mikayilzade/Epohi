@@ -10,9 +10,10 @@
   }
 
   const {
-    CAMERA_MIN_SCALE,
     CAMERA_MAX_SCALE
   } = window.EpohiConfig;
+
+  const CAMERA_SCALE_SAFETY_MIN = 0.001;
 
   const {
     clamp
@@ -63,7 +64,8 @@
   function fitScale(mapViewport, mapEl) {
     const viewport = viewportMetrics(mapViewport);
     const size = mapSize(mapEl);
-    return Math.max(CAMERA_MIN_SCALE, Math.min(CAMERA_MAX_SCALE, Math.min(viewport.width / size.width, viewport.height / size.height)));
+    const requiredScale = Math.min(viewport.width / size.width, viewport.height / size.height);
+    return Math.max(CAMERA_SCALE_SAFETY_MIN, Math.min(CAMERA_MAX_SCALE, requiredScale));
   }
 
   function maxScale(mapViewport, mapEl, mapSizeCellsFn) {

@@ -107,6 +107,23 @@ async function findVisibleTileClickPoint(page) {
   });
 }
 
+async function expectLargeMapFitsViewport(page, viewportSize) {
+  await page.setViewportSize(viewportSize);
+  await clearStorage(page);
+  await createGame(page, 0, 'large');
+  await page.locator('#showMapBtn').click();
+  const info = await cameraState(page);
+  const requiredFitScale = Math.min(info.viewport.width / info.map.width, info.viewport.height / info.map.height);
+
+  expect(info.camera.scale).toBeCloseTo(info.bounds.min, 2);
+  expect(info.bounds.min).toBeCloseTo(requiredFitScale, 3);
+  expect(info.map.width * info.camera.scale).toBeLessThanOrEqual(info.viewport.width + 1);
+  expect(info.map.height * info.camera.scale).toBeLessThanOrEqual(info.viewport.height + 1);
+  expect(info.camera.x).toBeCloseTo((info.viewport.width - info.map.width * info.camera.scale) / 2, 1);
+  expect(info.camera.y).toBeCloseTo((info.viewport.height - info.map.height * info.camera.scale) / 2, 1);
+  if (requiredFitScale < 0.18) expect(info.bounds.min).toBeLessThan(0.18);
+}
+
 test.describe('Camera 2.0', () => {
   test('fit scale shows whole map and dynamic bounds vary by map size', async ({ page }) => {
     const mins = [];
@@ -121,6 +138,13 @@ test.describe('Camera 2.0', () => {
       expect(info.map.height * info.camera.scale).toBeLessThanOrEqual(info.viewport.height + 1);
     }
     expect(new Set(mins.map((value) => value.toFixed(3))).size).toBeGreaterThan(1);
+  });
+
+
+
+  test('large map can fit short portrait and landscape viewports below legacy minimum', async ({ page }) => {
+    await expectLargeMapFitsViewport(page, { width: 390, height: 667 });
+    await expectLargeMapFitsViewport(page, { width: 844, height: 390 });
   });
 
   test('deep max zoom exceeds old 200% limit and plus/minus respect bounds', async ({ page }) => {
