@@ -20,6 +20,45 @@ async function cameraState(page) {
   });
 }
 
+async function clickZoomUntilDisabled(page, selector, readDisabled, maxClicks = 50) {
+  for (let i = 0; i < maxClicks; i++) {
+    const info = await cameraState(page);
+    if (info[readDisabled]) return info;
+    await page.locator(selector).click();
+  }
+  return cameraState(page);
+}
+
+async function zoomAboveFit(page) {
+  return page.evaluate(() => {
+    const debug = window.__epohiDebug();
+    const bounds = debug.getCameraScaleBounds();
+    const scale = Math.min(bounds.max, Math.max(bounds.min * 3, 2.4));
+    debug.setCameraScale(scale, null, null, false);
+    return scale;
+  });
+}
+
+async function tileScreenCenter(page, x, y) {
+  return page.evaluate(({ x, y }) => {
+    const debug = window.__epohiDebug();
+    const camera = debug.getCamera();
+    const viewport = document.getElementById('mapViewport');
+    const map = document.getElementById('map');
+    const tile = map.querySelector('.tile');
+    const style = getComputedStyle(map);
+    const gap = parseFloat(style.columnGap) || 0;
+    const tileWidth = tile.offsetWidth;
+    const tileHeight = tile.offsetHeight;
+    return {
+      x: camera.x + (x * (tileWidth + gap) + tileWidth / 2) * camera.scale,
+      y: camera.y + (y * (tileHeight + gap) + tileHeight / 2) * camera.scale,
+      viewportCenterX: (viewport.clientWidth - 10) / 2,
+      viewportCenterY: (viewport.clientHeight - 10) / 2
+    };
+  }, { x, y });
+}
+
 test.describe('Camera 2.0', () => {
   test('fit scale shows whole map and dynamic bounds vary by map size', async ({ page }) => {
     const mins = [];
@@ -41,15 +80,16 @@ test.describe('Camera 2.0', () => {
     await createGame(page, 0, 'normal');
     let info = await cameraState(page);
     expect(info.bounds.max).toBeGreaterThan(2);
-    for (let i = 0; i < 30; i++) await page.locator('#zoomInBtn').click();
-    info = await cameraState(page);
+
+    info = await clickZoomUntilDisabled(page, '#zoomInBtn', 'zoomInDisabled');
     expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
     expect(info.zoomInDisabled).toBe(true);
     expect(info.zoomText).toBe(`${Math.round(info.camera.scale * 100)}%`);
-    for (let i = 0; i < 40; i++) await page.locator('#zoomOutBtn').click();
-    info = await cameraState(page);
+
+    info = await clickZoomUntilDisabled(page, '#zoomOutBtn', 'zoomOutDisabled');
     expect(info.camera.scale).toBeCloseTo(info.bounds.min, 2);
     expect(info.zoomOutDisabled).toBe(true);
+    expect(info.zoomText).toBe(`${Math.round(info.camera.scale * 100)}%`);
   });
 
   test('show entire map centers map and center control targets selected unit or capital', async ({ page }) => {
@@ -60,37 +100,45 @@ test.describe('Camera 2.0', () => {
     expect(info.camera.x).toBeCloseTo((info.viewport.width - info.map.width * info.camera.scale) / 2, 1);
     expect(info.camera.y).toBeCloseTo((info.viewport.height - info.map.height * info.camera.scale) / 2, 1);
 
-    const changed = await page.evaluate(() => {
+    await zoomAboveFit(page);
+    await page.evaluate(() => {
       const debug = window.__epohiDebug();
       const state = debug.state;
       state.units[0].x = 2;
       state.units[0].y = 3;
       debug.render();
       debug.centerCameraOnFocus(true);
-      return debug.getCamera();
     });
-    expect(changed.x).not.toBeCloseTo(info.camera.x, 0);
+    let centered = await tileScreenCenter(page, 2, 3);
+    expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
+    expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
 
-    const capitalCentered = await page.evaluate(() => {
+    await zoomAboveFit(page);
+    const capital = await page.evaluate(() => {
       const debug = window.__epohiDebug();
       debug.state.units = [];
       debug.render();
       debug.centerCameraOnFocus(true);
-      return debug.getCamera();
+      return { x: debug.state.city.x, y: debug.state.city.y };
     });
-    expect(capitalCentered.x).not.toBe(changed.x);
+    centered = await tileScreenCenter(page, capital.x, capital.y);
+    expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
+    expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
   });
 
   test('stored scale clamps after layout, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
     await clearStorage(page);
-    await page.goto('/');
-    await page.evaluate(() => localStorage.setItem(window.EpohiConfig.CAMERA_KEY, JSON.stringify({ x: -99999, y: -99999, scale: 99 })));
     await createGame(page, 0, 'normal');
+    await page.evaluate(() => localStorage.setItem(window.EpohiConfig.CAMERA_KEY, JSON.stringify({ x: -99999, y: -99999, scale: 99 })));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
+    expect(await page.evaluate(() => window.__epohiDebug().getCamera().scale)).toBe(99);
+    await page.locator('[data-continue]').first().click();
+    await expect(page.locator('#gameApp')).toBeVisible();
+
     let info = await cameraState(page);
     expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
 
-    const box = await page.locator('#mapViewport').boundingBox();
-    await page.touchscreen.tap(box.x + box.width / 2 - 20, box.y + box.height / 2);
     await page.evaluate(() => {
       const viewport = document.getElementById('mapViewport');
       viewport.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 91, pointerType: 'touch', clientX: 120, clientY: 160, bubbles: true }));
@@ -109,6 +157,7 @@ test.describe('Camera 2.0', () => {
     expect(info.camera.scale).toBeLessThanOrEqual(info.bounds.max + 0.01);
 
     await page.evaluate(() => window.__epohiDebug().setCameraScale(3, null, null, false));
+    const box = await page.locator('#mapViewport').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20);
