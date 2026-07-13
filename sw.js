@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-9-stack-navigation";
+  "epohi-v1-4-5-10-unit-names";
 const APP_FILES = [
   "./",
   "./index.html",
