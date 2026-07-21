@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-0-humans-outcomes-1";
+  "epohi-v1-5-0-humans-journey-1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -20,6 +20,9 @@ const APP_FILES = [
   "./src/app.js",
   "./src/humans-autonomy.js",
   "./src/humans-outcomes.js",
+  "./src/humans-journey-data.js",
+  "./src/humans-journey-core.js",
+  "./src/humans-journey-ui.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
