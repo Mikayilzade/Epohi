@@ -12,7 +12,5 @@
 }
 
 .context-text [data-autonomy-note] {
-  display: block;
-  padding-top: 4px;
-  color: var(--text, #f4f1df);
+  display: none;
 }
