@@ -1,11 +1,12 @@
 const CACHE_NAME =
-  "epohi-v1-4-5-12-camera-2";
+  "epohi-v1-5-0-humans-content-1";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles/app.css",
   "./src/config.js",
   "./src/data.js",
+  "./src/humans-content.js",
   "./src/utils.js",
   "./src/storage.js",
   "./src/save-utils.js",
