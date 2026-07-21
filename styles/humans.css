@@ -1,0 +1,18 @@
+.map-controls {
+  position: relative;
+}
+
+#autonomyReportBtn {
+  position: absolute;
+  right: 0;
+  top: -48px;
+  z-index: 6;
+  min-width: 42px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+.context-text [data-autonomy-note] {
+  display: block;
+  padding-top: 4px;
+  color: var(--text, #f4f1df);
+}
