@@ -181,8 +181,9 @@ test.describe('Camera 2.0', () => {
       state.units[0].x = 2;
       state.units[0].y = 3;
       debug.render();
-      debug.centerCameraOnFocus(true);
     });
+    await page.waitForTimeout(50);
+    await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
     await page.waitForTimeout(220);
     let centered = await tileScreenCenter(page, 2, 3);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
@@ -193,9 +194,10 @@ test.describe('Camera 2.0', () => {
       const debug = window.__epohiDebug();
       debug.state.units = [];
       debug.render();
-      debug.centerCameraOnFocus(true);
       return { x: debug.state.city.x, y: debug.state.city.y };
     });
+    await page.waitForTimeout(50);
+    await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
     await page.waitForTimeout(220);
     centered = await tileScreenCenter(page, capital.x, capital.y);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
