@@ -20,12 +20,16 @@ test.describe('Автономные приказы людей', () => {
   test('модуль загружается и создаёт журнал отчётов', async ({ page }) => {
     await openFreshGame(page);
 
-    const moduleInfo = await page.evaluate(() => ({
-      version: window.EpohiHumansAutonomy.version,
-      hasAssign: typeof window.EpohiHumansAutonomy.assignOrder === 'function',
-      hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function',
-      reports: window.__epohiDebug().state.autonomyReports
-    }));
+    const moduleInfo = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      window.EpohiHumansAutonomy.ensureAutonomyState(state);
+      return {
+        version: window.EpohiHumansAutonomy.version,
+        hasAssign: typeof window.EpohiHumansAutonomy.assignOrder === 'function',
+        hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function',
+        reports: state.autonomyReports
+      };
+    });
 
     expect(moduleInfo.version).toBe(1);
     expect(moduleInfo.hasAssign).toBe(true);

@@ -41,20 +41,22 @@ async function zoomAboveFit(page) {
 
 async function tileScreenCenter(page, x, y) {
   return page.evaluate(({ x, y }) => {
-    const debug = window.__epohiDebug();
-    const camera = debug.getCamera();
     const viewport = document.getElementById('mapViewport');
-    const map = document.getElementById('map');
-    const tile = map.querySelector('.tile');
-    const style = getComputedStyle(map);
-    const gap = parseFloat(style.columnGap) || 0;
-    const tileWidth = tile.offsetWidth;
-    const tileHeight = tile.offsetHeight;
+    const tile = document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+    const viewportRect = viewport.getBoundingClientRect();
+    const tileRect = tile.getBoundingClientRect();
+    const style = getComputedStyle(viewport);
+    const padLeft = parseFloat(style.paddingLeft) || 0;
+    const padRight = parseFloat(style.paddingRight) || 0;
+    const padTop = parseFloat(style.paddingTop) || 0;
+    const padBottom = parseFloat(style.paddingBottom) || 0;
+    const contentWidth = viewport.clientWidth - padLeft - padRight;
+    const contentHeight = viewport.clientHeight - padTop - padBottom;
     return {
-      x: camera.x + (x * (tileWidth + gap) + tileWidth / 2) * camera.scale,
-      y: camera.y + (y * (tileHeight + gap) + tileHeight / 2) * camera.scale,
-      viewportCenterX: (viewport.clientWidth - 10) / 2,
-      viewportCenterY: (viewport.clientHeight - 10) / 2
+      x: tileRect.left + tileRect.width / 2,
+      y: tileRect.top + tileRect.height / 2,
+      viewportCenterX: viewportRect.left + padLeft + contentWidth / 2,
+      viewportCenterY: viewportRect.top + padTop + contentHeight / 2
     };
   }, { x, y });
 }
@@ -229,7 +231,7 @@ test.describe('Camera 2.0', () => {
       viewport.dispatchEvent(new PointerEvent('pointerup', { pointerId: 92, pointerType: 'touch', clientX: 820, clientY: 160, bubbles: true }));
     });
     info = await cameraState(page);
-    expect(info.camera.scale).toBeLessThanOrEqual(info.bounds.max + 0.01);
+    expect(info.camera.scale).toBelessThanOrEqual(info.bounds.max + 0.01);
 
     await page.setViewportSize({ width: 390, height: 700 });
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
