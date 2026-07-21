@@ -112,15 +112,44 @@ test.describe('Эпохи: Люди — базовый контракт прот
         techCount: Object.keys(TECHS).length,
         buildingCount: Object.keys(BUILDINGS).length,
         unitCount: Object.keys(UNIT_DEFS).length,
-        improvementCount: Object.keys(IMPROVEMENTS).length
+        improvementCount: Object.keys(IMPROVEMENTS).length,
+        extension: window.EpohiHumansContent
       };
     });
 
     expect(integrity.errors).toEqual([]);
-    expect(integrity.techCount).toBeGreaterThanOrEqual(6);
-    expect(integrity.buildingCount).toBeGreaterThanOrEqual(7);
-    expect(integrity.unitCount).toBeGreaterThanOrEqual(4);
-    expect(integrity.improvementCount).toBeGreaterThanOrEqual(5);
+    expect(integrity.techCount).toBe(11);
+    expect(integrity.buildingCount).toBe(11);
+    expect(integrity.unitCount).toBe(6);
+    expect(integrity.improvementCount).toBe(5);
+    expect(integrity.extension.version).toBe(1);
+  });
+
+  test('новые технологии, здания и юниты доступны через обычный интерфейс', async ({ page }) => {
+    await openFreshGame(page, { size: 'small', barbarians: 'off', rivals: 0, name: 'Тест контента' });
+
+    await page.locator('#scienceBtn').click();
+    await expect(page.locator('#scienceContent')).toContainText('Обработка дерева');
+    await expect(page.locator('#scienceContent')).toContainText('Животноводство');
+    await expect(page.locator('#scienceContent')).toContainText('Военная организация');
+    await expect(page.locator('#scienceContent')).toContainText('Законы');
+    await page.locator('#scienceModal [data-close="scienceModal"]').click();
+
+    await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      state.researched = Object.keys(window.EpohiData.TECHS);
+      state.cities[0].population = 8;
+      state.resources.gold = 500;
+      state.cities[0].production = 500;
+    });
+
+    await page.locator('#cityBtn').click();
+    await expect(page.locator('#cityContent')).toContainText('Склад');
+    await expect(page.locator('#cityContent')).toContainText('Частокол');
+    await expect(page.locator('#cityContent')).toContainText('Казармы');
+    await expect(page.locator('#cityContent')).toContainText('Совет');
+    await expect(page.locator('#cityContent')).toContainText('Копейщик');
+    await expect(page.locator('#cityContent')).toContainText('Всадник');
   });
 
   test('текущая государственная победа достижима через завершение дворца', async ({ page }) => {
