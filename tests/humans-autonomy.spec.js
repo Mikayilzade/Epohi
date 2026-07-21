@@ -16,22 +16,22 @@ async function openFreshGame(page, name = 'Тест автономности') {
   ));
 }
 
-function revealCount(state) {
-  return state.map.reduce((sum, row) => sum + row.filter(tile => tile.revealed).length, 0);
-}
-
 test.describe('Автономные приказы людей', () => {
-  test('модуль загружается и добавляет доступ к отчётам', async ({ page }) => {
+  test('модуль загружается и создаёт журнал отчётов', async ({ page }) => {
     await openFreshGame(page);
 
     const moduleInfo = await page.evaluate(() => ({
       version: window.EpohiHumansAutonomy.version,
       hasAssign: typeof window.EpohiHumansAutonomy.assignOrder === 'function',
-      hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function'
+      hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function',
+      reports: window.__epohiDebug().state.autonomyReports
     }));
 
-    expect(moduleInfo).toEqual({ version: 1, hasAssign: true, hasProcess: true });
-    await expect(page.locator('#autonomyReportBtn')).toBeVisible();
+    expect(moduleInfo.version).toBe(1);
+    expect(moduleInfo.hasAssign).toBe(true);
+    expect(moduleInfo.hasProcess).toBe(true);
+    expect(moduleInfo.reports).toEqual([]);
+    await expect(page.locator('#autonomyReportBtn')).toHaveCount(1);
   });
 
   test('разведчик самостоятельно идёт к границе известного мира и открывает клетки', async ({ page }) => {
