@@ -1,10 +1,11 @@
 const CACHE_NAME =
-  "epohi-v1-5-0-humans-journey-1";
+  "epohi-v1-5-0-humans-journey-2";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles/app.css",
   "./styles/humans.css",
+  "./styles/humans-responsive.css",
   "./src/config.js",
   "./src/data.js",
   "./src/humans-content.js",
