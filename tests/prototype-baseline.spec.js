@@ -47,7 +47,7 @@ test.describe('Эпохи: Люди — базовый контракт прот
     expect(snapshot.turn).toBe(1);
     expect(snapshot.cityCount).toBe(1);
     expect(snapshot.capitalCount).toBe(1);
-    expect(snapshot.unitTypes).toEqual(['scout', 'worker']);
+    expect(snapshot.unitTypes).toEqual(['scout', 'warrior']);
     expect(snapshot.uniqueUnitIds).toBe(2);
     expect(snapshot.rivals).toBe(1);
     expect(snapshot.barbarianActivity).toBe('normal');
