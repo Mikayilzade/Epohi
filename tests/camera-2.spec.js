@@ -183,6 +183,7 @@ test.describe('Camera 2.0', () => {
       debug.render();
       debug.centerCameraOnFocus(true);
     });
+    await page.waitForTimeout(220);
     let centered = await tileScreenCenter(page, 2, 3);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
@@ -195,6 +196,7 @@ test.describe('Camera 2.0', () => {
       debug.centerCameraOnFocus(true);
       return { x: debug.state.city.x, y: debug.state.city.y };
     });
+    await page.waitForTimeout(220);
     centered = await tileScreenCenter(page, capital.x, capital.y);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
@@ -231,7 +233,7 @@ test.describe('Camera 2.0', () => {
       viewport.dispatchEvent(new PointerEvent('pointerup', { pointerId: 92, pointerType: 'touch', clientX: 820, clientY: 160, bubbles: true }));
     });
     info = await cameraState(page);
-    expect(info.camera.scale).toBelessThanOrEqual(info.bounds.max + 0.01);
+    expect(info.camera.scale).toBeLessThanOrEqual(info.bounds.max + 0.01);
 
     await page.setViewportSize({ width: 390, height: 700 });
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
