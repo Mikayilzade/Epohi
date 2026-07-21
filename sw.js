@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-0-humans-autonomy-2";
+  "epohi-v1-5-0-humans-autonomy-3";
 const APP_FILES = [
   "./",
   "./index.html",
