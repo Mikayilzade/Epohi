@@ -152,18 +152,31 @@ test.describe('Эпохи: Люди — базовый контракт прот
     await expect(page.locator('#cityContent')).toContainText('Всадник');
   });
 
-  test('текущая государственная победа достижима через завершение дворца', async ({ page }) => {
+  test('государственная победа достижима после создания устойчивого государства', async ({ page }) => {
     await openFreshGame(page, { size: 'small', barbarians: 'off', rivals: 0, name: 'Тест победы' });
 
     await page.evaluate(() => {
-      const debug = window.__epohiDebug();
-      const state = debug.state;
-      const city = state.cities[0];
+      const state = window.__epohiDebug().state;
+      const capital = state.cities[0];
       const palace = window.EpohiData.BUILDINGS.palace;
 
-      city.population = 6;
+      capital.population = 6;
+      state.cities.push({
+        id: 'player-city-baseline',
+        name: 'Второй город',
+        x: capital.x + 3,
+        y: capital.y,
+        population: 2,
+        food: 0,
+        production: 0,
+        buildings: [],
+        queue: null,
+        hp: 150,
+        maxHp: 150,
+        capital: false
+      });
       state.researched = Array.from(new Set([...state.researched, 'statehood']));
-      city.queue = {
+      capital.queue = {
         type: 'building',
         id: 'palace',
         progress: Math.max(0, palace.cost.production - 1),
@@ -173,7 +186,10 @@ test.describe('Эпохи: Люди — базовый контракт прот
     });
 
     await page.locator('#endTurnBtn').click();
-    await page.waitForFunction(() => window.__epohiDebug().state.victory === true);
+    await page.waitForFunction(() => {
+      const state = window.__epohiDebug().state;
+      return state.outcome && state.outcome.status === 'victory' && state.outcome.type === 'statehood';
+    });
 
     await expect(page.locator('#victoryModal')).toHaveClass(/show/);
     const state = await page.evaluate(() => window.__epohiDebug().state);
