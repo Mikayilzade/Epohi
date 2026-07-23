@@ -62,5 +62,4 @@
   }
 
   autonomy.drainScoutMoves = drainScout;
-  autonomy.version = 2;
 })();

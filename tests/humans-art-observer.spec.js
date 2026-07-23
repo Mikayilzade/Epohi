@@ -61,11 +61,13 @@ test.describe('Визуальная демка и режим наблюдени�
         moves: scout.moves,
         acted: scout.acted,
         steps: scout.order && scout.order.steps,
-        version: window.EpohiHumansAutonomy.version
+        version: window.EpohiHumansAutonomy.version,
+        hasDrain: typeof window.EpohiHumansAutonomy.drainScoutMoves === 'function'
       };
     });
 
-    expect(result.version).toBe(2);
+    expect(result.version).toBe(1);
+    expect(result.hasDrain).toBe(true);
     expect(result.moves).toBe(0);
     expect(result.acted).toBe(true);
     expect(result.steps).toBeGreaterThanOrEqual(2);
