@@ -10,6 +10,7 @@
   let targetModeUnitId = null;
   let uiFrame = 0;
   let poiModal = null;
+  let routeSignature = "";
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -97,10 +98,26 @@
   }
 
   function drawRoute(gs, unit) {
-    clearRouteOverlay();
-    if (!unit || !unit.travelOrder) return null;
+    if (!unit || !unit.travelOrder) {
+      if (routeSignature) {
+        clearRouteOverlay();
+        routeSignature = "";
+      }
+      return null;
+    }
     const route = CORE.pathForOrder(gs, unit, unit.travelOrder);
     unit.travelOrder.path = route.path || [];
+    const signature = [
+      unit.id, unit.x, unit.y, unit.travelOrder.type, unit.travelOrder.status,
+      route.target ? route.target.x + "," + route.target.y : "none",
+      route.path ? route.path.map(function (point) { return point.x + "," + point.y; }).join(";") : "blocked",
+      document.querySelectorAll("#map .tile").length
+    ].join("|");
+    if (signature === routeSignature && document.querySelector("#map .route-step, #map .route-endpoint, #map .route-attack-endpoint")) {
+      return route;
+    }
+    routeSignature = signature;
+    clearRouteOverlay();
     if (route.path) {
       route.path.forEach(function (point, index) {
         const tile = document.querySelector('#map .tile[data-x="' + point.x + '"][data-y="' + point.y + '"]');
@@ -230,7 +247,6 @@
     const turn = document.getElementById("turnValue");
     const endTurn = document.getElementById("endTurnBtn");
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
-    if (map) new MutationObserver(scheduleUi).observe(map, { childList: true });
     if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, subtree: true, characterData: true });
     document.addEventListener("click", handleTargetClick, true);
     document.addEventListener("keydown", function (event) {
