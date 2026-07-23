@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-0-visual-demo-1";
+  "epohi-v1-5-2-pathing-performance-1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const APP_FILES = [
   "./styles/humans.css",
   "./styles/humans-responsive.css",
   "./styles/humans-art.css",
+  "./styles/humans-runtime.css",
   "./src/config.js",
   "./src/data.js",
   "./src/humans-content.js",
@@ -20,6 +21,7 @@ const APP_FILES = [
   "./src/economy.js",
   "./src/progression.js",
   "./src/app.js",
+  "./src/humans-performance.js",
   "./src/humans-autonomy.js",
   "./src/humans-outcomes.js",
   "./src/humans-journey-data.js",
@@ -28,6 +30,7 @@ const APP_FILES = [
   "./src/humans-autonomy-fix.js",
   "./src/humans-observer.js",
   "./src/humans-visuals.js",
+  "./src/humans-pathing.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
