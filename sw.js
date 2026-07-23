@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-2-pathing-performance-1";
+  "epohi-v1-5-2-pathing-performance-2";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -30,7 +30,8 @@ const APP_FILES = [
   "./src/humans-autonomy-fix.js",
   "./src/humans-observer.js",
   "./src/humans-visuals.js",
-  "./src/humans-pathing.js",
+  "./src/humans-pathing-core.js",
+  "./src/humans-pathing-ui.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",

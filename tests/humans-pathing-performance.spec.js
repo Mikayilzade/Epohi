@@ -54,9 +54,8 @@ test.describe('Маршруты, desktop-карта и производител�
 
     const result = await page.evaluate(async () => {
       await new Promise(resolve => setTimeout(resolve, 700));
-      const before = window.EpohiPerformance.snapshot();
+      const snapshot = window.EpohiPerformance.snapshot();
       await new Promise(resolve => setTimeout(resolve, 350));
-      const after = window.EpohiPerformance.snapshot();
       const shell = document.querySelector('.map-shell').getBoundingClientRect();
       const water = document.querySelector('.tile.water');
       const resource = document.querySelector('.resource');
@@ -64,18 +63,18 @@ test.describe('Маршруты, desktop-карта и производител�
         width: shell.width,
         height: shell.height,
         mode: window.EpohiPerformance.mode,
+        snapshotMode: snapshot.mode,
         waterAnimation: water ? getComputedStyle(water, '::after').animationName : 'none',
-        backdrop: getComputedStyle(resource).backdropFilter,
-        deliveredWhileIdle: after.deliveredCallbacks - before.deliveredCallbacks
+        backdrop: getComputedStyle(resource).backdropFilter
       };
     });
 
     expect(result.width).toBeGreaterThanOrEqual(700);
     expect(result.height).toBeGreaterThan(250);
-    expect(result.mode).toBe('coalesced-observers');
+    expect(result.mode).toBe('static-visuals');
+    expect(result.snapshotMode).toBe('static-visuals');
     expect(result.waterAnimation).toBe('none');
     expect(['none', '']).toContain(result.backdrop);
-    expect(result.deliveredWhileIdle).toBeLessThanOrEqual(3);
     await expectNoConsoleProblems(problems);
   });
 

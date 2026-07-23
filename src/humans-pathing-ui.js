@@ -17,9 +17,24 @@
   }
 
   function selectedUnit(gs) {
+    const focusedId = document.body.dataset.routeFocusUnitId;
+    const focused = focusedId && (gs.units || []).find(function (unit) { return String(unit.id) === focusedId; });
+    if (focused && (focused.travelOrder || targetModeUnitId != null)) return focused;
     const value = debug();
     const id = value && typeof value.getSelectedUnitId === "function" ? value.getSelectedUnitId() : null;
     return (gs.units || []).find(function (unit) { return unit.id === id; }) || null;
+  }
+
+  function inspectedUnit(gs, title) {
+    const tile = document.querySelector("#map .tile.inspect-tile");
+    if (!tile) return null;
+    const x = Number(tile.dataset.x);
+    const y = Number(tile.dataset.y);
+    return (gs.units || []).find(function (unit) {
+      if (unit.x !== x || unit.y !== y || unit.hp <= 0) return false;
+      const def = UNIT_DEFS[unit.type] || { name: unit.type || "Юнит" };
+      return title.textContent.includes(unit.name || "") || title.textContent.includes(def.name);
+    }) || null;
   }
 
   function notify(text) {
@@ -80,12 +95,15 @@
 
   function startTargetMode(unitId) {
     targetModeUnitId = unitId;
+    document.body.dataset.routeUnitId = String(unitId);
+    document.body.dataset.routeFocusUnitId = String(unitId);
     document.body.classList.add("route-targeting");
     notify("Выбери конечную точку");
   }
 
   function stopTargetMode() {
     targetModeUnitId = null;
+    delete document.body.dataset.routeUnitId;
     document.body.classList.remove("route-targeting");
   }
 
@@ -170,8 +188,9 @@
     const text = document.getElementById("contextText");
     const title = document.getElementById("contextTitle");
     if (!gs || !actions || !text || !title) return;
-    const unit = selectedUnit(gs);
-    const route = drawRoute(gs, unit);
+    const routeUnit = selectedUnit(gs);
+    const route = drawRoute(gs, routeUnit);
+    const unit = inspectedUnit(gs, title) || routeUnit;
     const summary = text.querySelector("[data-route-summary]");
     if (!unit) {
       if (summary) summary.remove();
@@ -194,6 +213,7 @@
         }
         actions.appendChild(makeButton("✖️<br>Отменить путь", "cancel", function () {
           CORE.cancelTravelOrder(unit.id);
+          delete document.body.dataset.routeFocusUnitId;
           const value = debug();
           if (value && typeof value.renderContext === "function") value.renderContext();
           scheduleUi();
@@ -204,8 +224,8 @@
     }
     injectWorkerPicker(unit, actions);
 
-    if (unit.travelOrder && route) {
-      const description = routeDescription(unit, route);
+    if (routeUnit && routeUnit.travelOrder && route) {
+      const description = routeDescription(routeUnit, route);
       let element = summary;
       if (!element) {
         element = document.createElement("div");
@@ -225,7 +245,8 @@
   }
 
   function handleTargetClick(event) {
-    if (!targetModeUnitId) return;
+    const routeUnitId = document.body.dataset.routeUnitId || targetModeUnitId;
+    if (routeUnitId == null) return;
     const tile = event.target.closest && event.target.closest("#map .tile");
     if (!tile) return;
     event.preventDefault();
@@ -233,7 +254,7 @@
     event.stopImmediatePropagation();
     const gs = CORE.ensureState(CORE.currentState());
     const destination = gs && CORE.targetFromTile(gs, Number(tile.dataset.x), Number(tile.dataset.y));
-    const unitId = targetModeUnitId;
+    const unitId = routeUnitId;
     stopTargetMode();
     if (!destination || !CORE.assignTravelOrder(unitId, destination)) {
       scheduleUi();
@@ -253,19 +274,7 @@
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, subtree: true, characterData: true });
     document.addEventListener("click", handleTargetClick, true);
-    document.addEventListener("click", function (event) {
-      if (targetModeUnitId) return;
-      const tile = event.target.closest && event.target.closest("#map .tile");
-      if (!tile) {
-        scheduleUi();
-        return;
-      }
-      window.setTimeout(function () {
-        const select = document.querySelector('[data-context-action="select-unit"]');
-        if (select) select.click();
-        scheduleUi();
-      }, 0);
-    });
+    document.addEventListener("click", scheduleUi);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId) {
         stopTargetMode();
@@ -276,8 +285,22 @@
       endTurn.addEventListener("click", function () {
         const gs = CORE.ensureState(CORE.currentState());
         if (!gs || endTurn.disabled) return;
+        const beforeTurn = gs.turn || 1;
         CORE.processOrders(gs);
         scheduleUi();
+        let attempts = 0;
+        function continueAfterTurn() {
+          attempts += 1;
+          const next = CORE.ensureState(CORE.currentState());
+          if (!next) return;
+          if ((next.turn || 1) > beforeTurn) {
+            CORE.processOrders(next);
+            scheduleUi();
+            return;
+          }
+          if (attempts < 20) window.setTimeout(continueAfterTurn, 80);
+        }
+        window.setTimeout(continueAfterTurn, 80);
       }, true);
     }
     scheduleUi();
