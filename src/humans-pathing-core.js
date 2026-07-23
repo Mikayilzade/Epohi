@@ -189,7 +189,7 @@
     return { target: target, path: findPath(gs, unit, target) };
   }
 
-  function revealAround(gs, x, y, radius) {
+  function revealAround(gs, x, y,radius) {
     const size = gs.mapSize || gs.map.length;
     for (let yy = Math.max(0, y - radius); yy <= Math.min(size - 1, y + radius); yy += 1) {
       for (let xx = Math.max(0, x - radius); xx <= Math.min(size - 1, x + radius); xx += 1) {
@@ -258,224 +258,10 @@
           gs.resources.gold = (gs.resources.gold || 0) + 25;
         }
         unit.travelOrder = null;
-        notify("Ð›Ð°Ð³ÐµÑ€ÑŒ ÑƒÐ½Ð¸Ñ‡Ñ‚Ð¾Ð¶ÐµÐ½");
-        return true;
-      }
-      unit.hp -= damage(BARBARIAN.raiderAttack || 20, defenseValue(unit));
-      if (unit.hp <= 0) {
-        gs.units = (gs.units || []).filter(function (item) { return item.id !== unit.id; });
-        notify(unitName(unit) + " Ð¿Ð¾Ð³Ð¸Ð±");
-      }
-      log(gs, "route-combat", unitName(unit) + " Ð°Ñ‚Ð°ÐºÐ¾Ð²Ð°Ð» Ð»Ð°Ð³ÐµÑ€ÑŒ: âˆ’" + dealt + " Ð¿Ñ€Ð¾Ñ‡Ð½Ð¾ÑÑ‚Ð¸.", { x: located.x, y: located.y }, unit.id);
-      return true;
-    }
-
-    located.target.hp -= dealt;
-    if (located.target.hp <= 0) {
-      if (located.kind === "barbarian") {
-        gs.barbarians = (gs.barbarians || []).filter(function (item) { return item.id !== located.target.id; });
-      } else if (located.civ) {
-        located.civ.units = (located.civ.units || []).filter(function (item) { return item.id !== located.target.id; });
-      }
-      unit.travelOrder = null;
-      log(gs, "route-combat-win", unitName(unit) + " ÑƒÐ½Ð¸Ñ‡Ñ‚Ð¾Ð¶Ð¸Ð» Ð¿Ñ€Ð¾Ñ‚Ð¸Ð²Ð½Ð¸ÐºÐ°.", { x: located.x, y: located.y }, unit.id);
-      notify("ÐŸÑ€Ð¾Ñ‚Ð¸Ð²Ð½Ð¸Ðº ÑƒÐ½Ð¸Ñ‡Ñ‚Ð¾Ð¶ÐµÐ½");
-      return true;
-    }
-
-    const counter = located.kind === "barbarian" ? (BARBARIAN.raiderAttack || 20) : attackValue(located.target);
-    unit.hp -= damage(counter, defenseValue(unit));
-    if (unit.hp <= 0) {
-      gs.units = (gs.units || []).filter(function (item) { return item.id !== unit.id; });
-      notify(unitName(unit) + " Ð¿Ð¾Ð³Ð¸Ð±");
-    }
-    log(gs, "route-combat", unitName(unit) + " Ð²ÑÑ‚ÑƒÐ¿Ð¸Ð» Ð² Ð±Ð¾Ð¹: Ð½Ð°Ð½ÐµÑÐµÐ½Ð¾ " + dealt + " ÑƒÑ€Ð¾Ð½Ð°.", { x: located.x, y: located.y }, unit.id);
-    return true;
-  }
-
-  function completeOrder(gs, unit, text) {
-    unit.travelOrder = null;
-    if (text) log(gs, "route-completed", text, { x: unit.x, y: unit.y }, unit.id);
-  }
-
-  function processUnit(gs, unit, options) {
-    if (!unit.travelOrder || unit.travelOrder.status === "awaiting-choice" || unit.hp <= 0 || unit.moves <= 0 || unit.acted) return false;
-    let changed = false;
-    let guard = 0;
-    while (unit.travelOrder && unit.moves > 0 && !unit.acted && guard < 12) {
-      guard += 1;
-      const order = unit.travelOrder;
-      const route = pathForOrder(gs, unit, order);
-      const target = route.target;
-      if (!target) {
-        completeOrder(gs, unit, unitName(unit) + " Ð¿Ñ€ÐµÐºÑ€Ð°Ñ‚Ð¸Ð» Ð¿ÑƒÑ‚ÑŒ: Ñ†ÐµÐ»ÑŒ Ð±Ð¾Ð»ÑŒÑˆÐµ Ð½Ðµ ÑÑƒÑ‰ÐµÑÑ‚Ð²ÑƒÐµÑ‚.");
-        notify("Ð¦ÐµÐ»ÑŒ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚Ð° Ð¸ÑÑ‡ÐµÐ·Ð»Ð°");
-        return true;
-      }
-      order.x = target.x;
-      order.y = target.y;
-      order.path = route.path || [];
-      order.status = "active";
-      order.reason = null;
-
-      if (order.type === "attack" && isAdjacent(unit.x, unit.y, target.x, target.y)) {
-        return resolveAttack(gs, unit, target) || changed;
-      }
-      if (order.type === "poi" && unit.x === target.x && unit.y === target.y) {
-        order.status = "awaiting-choice";
-        unit.moves = 0;
-        unit.acted = true;
-        centerCombat(target.x, target.y);
-        if (poiArrivalHandler) poiArrivalHandler(gs, unit, target);
-        return true;
-      }
-      if (order.type === "move" && unit.x === target.x && unit.y === target.y) {
-        completeOrder(gs, unit, unitName(unit) + " Ð¿Ñ€Ð¸Ð±Ñ‹Ð» Ð² Ð½Ð°Ð·Ð½Ð°Ñ‡ÐµÐ½Ð½ÑƒÑŽ Ñ‚Ð¾Ñ‡ÐºÑƒ.");
-        return true;
-      }
-      if (!route.path || !route.path.length) {
-        order.status = "waiting";
-        order.reason = "Ð¿ÑƒÑ‚ÑŒ Ð²Ñ€ÐµÐ¼ÐµÐ½Ð½Ð¾ Ð¿ÐµÑ€ÐµÐºÑ€Ñ‹Ñ‚";
-        return changed;
-      }
-      if (!moveOne(gs, unit, route.path[0])) {
-        order.status = "waiting";
-        order.reason = "Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚ Ð¸Ð·Ð¼ÐµÐ½Ð¸Ð»ÑÑ; Ð±ÑƒÐ´ÐµÑ‚ Ð¿ÐµÑ€ÐµÑÑ‡Ð¸Ñ‚Ð°Ð½";
-        return changed;
-      }
-      changed = true;
-    }
-    if (changed && options && options.render !== false) {
-      const value = debug();
-      if (value && typeof value.render === "function") value.render();
-    }
-    return changed;
-  }
-
-  function processOrders(gs, options) {
-    ensureState(gs);
-    let changed = false;
-    (gs.units || []).slice().forEach(function (unit) {
-      if (unit.travelOrder) changed = processUnit(gs, unit, { render: false }) || changed;
-    });
-    if (changed && (!options || options.render !== false)) {
-      const value = debug();
-      if (value && typeof value.render === "function") value.render();
-    }
-    return changed;
-  }
-
-  function targetFromTile(gs, x, y) {
-    const tile = gs.map[y] && gs.map[y][x];
-    if (!tile) return null;
-    const rival = rivalUnitAt(gs, x, y);
-    const barbarian = barbarianAt(gs, x, y);
-    const camp = campAt(gs, x, y);
-    if (camp) return { type: "attack", targetKind: "camp", targetId: camp.campId || null, x: x, y: y };
-    if (barbarian) return { type: "attack", targetKind: "barbarian", targetId: barbarian.id, x: x, y: y };
-    if (rival) return { type: "attack", targetKind: "rival", targetId: rival.unit.id, civilizationId: rival.civ.civilizationId, x: x, y: y, civ: rival.civ };
-    if (tile.poi && !tile.poi.used) return { type: "poi", targetKind: "poi", targetId: tile.poi.type, x: x, y: y };
-    return { type: "move", targetKind: "tile", targetId: null, x: x, y: y };
-  }
-
-  function assignTravelOrder(unitId, destination) {
-    const gs = ensureState(currentState());
-    const unit = gs && (gs.units || []).find(function (item) { return item.id === unitId; });
-    if (!unit || !destination) return false;
-    if (destination.type === "attack" && destination.targetKind === "rival" && destination.civ && destination.civ.relation !== "war") {
-      if (!window.confirm("ÐžÐ±ÑŠÑÐ²Ð¸Ñ‚ÑŒ Ð²Ð¾Ð¹Ð½Ñƒ Ð³Ð¾ÑÑƒÐ´Ð°Ñ€ÑÑ‚Ð²Ñƒ Â«" + destination.civ.name + "Â» Ð¸ Ð½Ð°Ñ‡Ð°Ñ‚ÑŒ Ð°Ñ‚Ð°ÐºÑƒ?")) return false;
-      destination.civ.relation = "war";
-    }
-    const order = {
-      version: VERSION,
-      type: destination.type,
-      targetKind: destination.targetKind,
-      targetId: destination.targetId || null,
-      civilizationId: destination.civilizationId || null,
-      x: destination.x,
-      y: destination.y,
-      status: "active",
-      reason: null,
-      path: [],
-      issuedTurn: gs.turn || 1
-    };
-    unit.order = null;
-    unit.travelOrder = order;
-    const route = pathForOrder(gs, unit, order);
-    if (!route.target) {
-      unit.travelOrder = null;
-      notify("Ð¦ÐµÐ»ÑŒ ÑƒÐ¶Ðµ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð°");
-      return false;
-    }
-    if (route.path === null) {
-      order.status = "waiting";
-      order.reason = "ÑÐµÐ¹Ñ‡Ð°Ñ Ð½ÐµÑ‚ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¾Ð³Ð¾ Ð¿ÑƒÑ‚Ð¸";
-      notify("ÐŸÑƒÑ‚ÑŒ Ð¿Ð¾ÐºÐ° Ð¿ÐµÑ€ÐµÐºÑ€Ñ‹Ñ‚ â€” Ð¿Ñ€Ð¸ÐºÐ°Ð· ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½");
-    } else {
-      order.path = route.path;
-      processUnit(gs, unit, { render: false });
-      const value = debug();
-      if (value && typeof value.render === "function") value.render();
-      if (unit.travelOrder) {
-        const remaining = pathForOrder(gs, unit, unit.travelOrder).path;
-        unit.travelOrder.path = remaining || [];
-      }
-      notify(order.type === "attack" ? "ÐœÐ°Ñ€ÑˆÑ€ÑƒÑ‚ Ð°Ñ‚Ð°ÐºÐ¸ Ð½Ð°Ð·Ð½Ð°Ñ‡ÐµÐ½" : (order.type === "poi" ? "ÐžÑ‚Ñ€ÑÐ´ Ð½Ð°Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½ Ðº Ð½Ð°Ñ…Ð¾Ð´ÐºÐµ" : "ÐœÐ°Ñ€ÑˆÑ€ÑƒÑ‚ Ð½Ð°Ð·Ð½Ð°Ñ‡ÐµÐ½"));
-    }
-    log(gs, "route-assigned", unitName(unit) + " Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ð» Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚ Ðº ÐºÐ»ÐµÑ‚ÐºÐµ " + destination.x + ", " + destination.y + ".", { x: destination.x, y: destination.y }, unit.id);
-    return true;
-  }
-
-  function cancelTravelOrder(unitId) {
-    const gs = ensureState(currentState());
-    const unit = gs && (gs.units || []).find(function (item) { return item.id === unitId; });
-    if (!unit || !unit.travelOrder) return false;
-    unit.travelOrder = null;
-    notify("ÐœÐ°Ñ€ÑˆÑ€ÑƒÑ‚ Ð¾Ñ‚Ð¼ÐµÐ½Ñ‘Ð½");
-    return true;
-  }
-
-  function resolvePoiChoice(unitId, x, y, choice) {
-    const gs = ensureState(currentState());
-    const unit = gs && (gs.units || []).find(function (item) { return item.id === unitId; });
-    const tile = gs && gs.map[y] && gs.map[y][x];
-    if (!gs || !unit || !tile || !tile.poi || tile.poi.used) return false;
-    const typeId = tile.poi.type || "unknown";
-    const type = (INTEREST_TYPES[typeId] && INTEREST_TYPES[typeId].name) || typeId;
-    if (choice === "study") {
-      gs.resources.science = (gs.resources.science || 0) + 10;
-      log(gs, "poi-studied", unitName(unit) + " Ð¸ÑÑÐ»ÐµÐ´Ð¾Ð²Ð°Ð» Ð¾Ð±ÑŠÐµÐºÑ‚ Â«" + type + "Â» Ð¸ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ð» 10 Ð½Ð°ÑƒÐºÐ¸.", { x: x, y: y }, unit.id);
-    } else {
-      gs.resources.gold = (gs.resources.gold || 0) + 12;
-      const city = (gs.cities || []).slice().sort(function (a, b) {
-        return chebyshev(unit.x, unit.y, a.x, a.y) - chebyshev(unit.x, unit.y, b.x, b.y);
-      })[0];
-      if (city) city.production = (city.production || 0) + 6;
-      log(gs, "poi-salvaged", unitName(unit) + " Ñ€Ð°Ð·Ð¾Ð±Ñ€Ð°Ð» Ð¾Ð±ÑŠÐµÐºÑ‚ Â«" + type + "Â»: +12 Ð·Ð¾Ð»Ð¾Ñ‚Ð° Ð¸ +6 Ð¿Ñ€Ð¾Ð¸Ð·Ð²Ð¾Ð´ÑÑ‚Ð²Ð° Ð±Ð»Ð¸Ð¶Ð°Ð¹ÑˆÐµÐ¼Ñƒ Ð³Ð¾Ñ€Ð¾Ð´Ñƒ.", { x: x, y: y }, unit.id);
-    }
-    tile.poi.used = true;
-    unit.travelOrder = null;
-    const value = debug();
-    if (value && typeof value.render === "function") value.render();
-    notify("ÐÐ°Ñ…Ð¾Ð´ÐºÐ° Ð¸ÑÐ¿Ð¾Ð»ÑŒÐ·Ð¾Ð²Ð°Ð½Ð°");
-    return true;
-  }
-
-  window.EpohiHumansPathing = {
-    version: VERSION,
-    ensureState: ensureState,
-    currentState: currentState,
-    findPath: findPath,
-    pathForOrder: pathForOrder,
-    locateTarget: locateTarget,
-    targetFromTile: targetFromTile,
-    assignTravelOrder: assignTravelOrder,
-    cancelTravelOrder: cancelTravelOrder,
-    processUnit: processUnit,
-    processOrders: processOrders,
-    estimateTurns: estimateTurns,
-    resolvePoiChoice: resolvePoiChoice,
-    unitName: unitName,
-    setPoiArrivalHandler: function (handler) { poiArrivalHandler = handler; }
-  };
-})();
+        notify("Ð›Ð°Ð³ÐµÑ€ÑŒ ÖB÷BãFFBûBÛB×Bôˆ¤ì(€€€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€€€ô(€€€€€Õ¹¥Ð¹¡À€´ô‘…µ…”¡	I	I%8¹É…¥‘•ÉÑÑ…¬ñð€ÈÀ°‘•™•¹Í•Y…±Õ”¡Õ¹¥Ð¤¤ì(€€€€€¥˜€¡Õ¹¥Ð¹¡À€ðô€À¤ì(€€€€€€€Ì¹Õ¹¥ÑÌ€ô€¡Ì¹Õ¹¥ÑÌñðmt¤¹™¥±Ñ•È¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸¥Ñ•´¹¥€„ôôÕ¹¥Ð¹¥ìô¤ì(€€€€€€€¹½Ñ¥™ä¡Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÿBûBÏBãBÌˆ¤ì(€€€€€ô(€€€€€±½œ¡Ì°€‰É½ÕÑ”µ½µ‰…Ðˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÃFBÃBëBûBËBÃBìƒBïBÃBÏB×FF0èƒŠ"Hˆ€¬‘•…±Ð€¬€ˆƒBÿFBûFB÷BûFFBà¸ˆ°ìàè±½…Ñ•¹à°äè±½…Ñ•¹äô°Õ¹¥Ð¹¥¤ì(€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€ô((€€€±½…Ñ•¹Ñ…É•Ð¹¡À€´ô‘•…±Ðì(€€€¥˜€¡±½…Ñ•¹Ñ…É•Ð¹¡À€ðô€À¤ì(€€€€€¥˜€¡±½…Ñ•¹­¥¹€ôôô€‰‰…É‰…É¥…¸ˆ¤ì(€€€€€€€Ì¹‰…É‰…É¥…¹Ì€ô€¡Ì¹‰…É‰…É¥…¹Ìñðmt¤¹™¥±Ñ•È¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸¥Ñ•´¹¥€„ôô±½…Ñ•¹Ñ…É•Ð¹¥ìô¤ì(€€€€€ô•±Í”¥˜€¡±½…Ñ•¹¥Ø¤ì(€€€€€€€±½…Ñ•¹¥Ø¹Õ¹¥ÑÌ€ô€¡±½…Ñ•¹¥Ø¹Õ¹¥ÑÌñðmt¤¹™¥±Ñ•È¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸¥Ñ•´¹¥€„ôô±½…Ñ•¹Ñ…É•Ð¹¥ìô¤ì(€€€€€ô(€€€€€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô¹Õ±°ì(€€€€€±½œ¡Ì°€‰É½ÕÑ”µ½µ‰…ÐµÝ¥¸ˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒFB÷BãFFBûBÛBãBìƒBÿFBûFBãBËB÷BãBëBÀ¸ˆ°ìàè±½…Ñ•¹à°äè±½…Ñ•¹äô°Õ¹¥Ð¹¥¤ì(€€€€€¹½Ñ¥™ä ‹BFBûFBãBËB÷BãBèƒFB÷BãFFBûBÛB×Bôˆ¤ì(€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€ô((€€€½¹ÍÐ½Õ¹Ñ•È€ô±½…Ñ•¹­¥¹€ôôô€‰‰…É‰…É¥…¸ˆ€ü€¡	I	I%8¹É…¥‘•ÉÑÑ…¬ñð€ÈÀ¤€è…ÑÑ…­Y…±Õ”¡±½…Ñ•¹Ñ…É•Ð¤ì(€€€Õ¹¥Ð¹¡À€´ô‘…µ…”¡½Õ¹Ñ•È°‘•™•¹Í•Y…±Õ”¡Õ¹¥Ð¤¤ì(€€€¥˜€¡Õ¹¥Ð¹¡À€ðô€À¤ì(€€€€€Ì¹Õ¹¥ÑÌ€ô€¡Ì¹Õ¹¥ÑÌñðmt¤¹™¥±Ñ•È¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸¥Ñ•´¹¥€„ôôÕ¹¥Ð¹¥ìô¤ì(€€€€€¹½Ñ¥™ä¡Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÿBûBÏBãBÄˆ¤ì(€€€ô(€€€±½œ¡Ì°€‰É½ÕÑ”µ½µ‰…Ðˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBËFFFBÿBãBìƒBÈƒBÇBûBäèƒB÷BÃB÷B×FB×B÷Bø€ˆ€¬‘•…±Ð€¬€ˆƒFFBûB÷BÀ¸ˆ°ìàè±½…Ñ•¹à°äè±½…Ñ•¹äô°Õ¹¥Ð¹¥¤ì(€€€É•ÑÕÉ¸ÑÉÕ”ì(€ô((€™Õ¹Ñ¥½¸½µÁ±•Ñ•=É‘•È¡Ì°Õ¹¥Ð°Ñ•áÐ¤ì(€€€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô¹Õ±°ì(€€€¥˜€¡Ñ•áÐ¤±½œ¡Ì°€‰É½ÕÑ”µ½µÁ±•Ñ•ˆ°Ñ•áÐ°ìàèÕ¹¥Ð¹à°äèÕ¹¥Ð¹äô°Õ¹¥Ð¹¥¤ì(€ô((€™Õ¹Ñ¥½¸ÁÉ½•ÍÍU¹¥Ð¡Ì°Õ¹¥Ð°½ÁÑ¥½¹Ì¤ì(€€€¥˜€ …Õ¹¥Ð¹ÑÉ…Ù•±=É‘•ÈñðÕ¹¥Ð¹ÑÉ…Ù•±=É‘•È¹ÍÑ…ÑÕÌ€ôôô€‰…Ý…¥Ñ¥¹œµ¡½¥”ˆñðÕ¹¥Ð¹¡À€ðô€ÀñðÕ¹¥Ð¹µ½Ù•Ì€ðô€ÀñðÕ¹¥Ð¹…Ñ•¤É•ÑÕÉ¸™…±Í”ì(€€€±•Ð¡…¹•€ô™…±Í”ì(€€€±•ÐÕ…É€ô€Àì(€€€Ý¡¥±”€¡Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€˜˜Õ¹¥Ð¹µ½Ù•Ì€ø€À€˜˜€…Õ¹¥Ð¹…Ñ•€˜˜Õ…É€ð€ÄÈ¤ì(€€€€€Õ…É€¬ô€Äì(€€€€€½¹ÍÐ½É‘•È€ôÕ¹¥Ð¹ÑÉ…Ù•±=É‘•Èì(€€€€€½¹ÍÐÉ½ÕÑ”€ôÁ…Ñ¡½É=É‘•È¡Ì°Õ¹¥Ð°½É‘•È¤ì(€€€€€½¹ÍÐÑ…É•Ð€ôÉ½ÕÑ”¹Ñ…É•Ðì(€€€€€¥˜€ …Ñ…É•Ð¤ì(€€€€€€€½µÁ±•Ñ•=É‘•È¡Ì°Õ¹¥Ð°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÿFB×BëFBÃFBãBìƒBÿFFF0èƒFB×BïF0ƒBÇBûBïF3F#BÔƒB÷BÔƒFFF'B×FFBËFB×F¸ˆ¤ì(€€€€€€€¹½Ñ¥™ä ‹B›B×BïF0ƒBóBÃFF#FFFBÀƒBãFFB×BßBïBÀˆ¤ì(€€€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€ô(€€€½É‘•È¹à€ôÑ…É•Ð¹àì(€€€½É‘•È¹ä€ôÑ…É•Ð¹äì(€€€½É‘•È¹Á…Ñ €ôÉ½ÕÑ”¹Á…Ñ ñðmtì(€€€½É‘•È¹ÍÑ…ÑÕÌ€ô€‰…Ñ¥Ù”ˆì(€€€½É‘•È¹É•…Í½¸€ô¹Õ±°ì((€€€¥˜€¡½É‘•È¹ÑåÁ”€ôôô€‰…ÑÑ…¬ˆ€˜˜¥Í‘©…•¹Ð¡Õ¹¥Ð¹à°Õ¹¥Ð¹ä°Ñ…É•Ð¹à°Ñ…É•Ð¹ä¤¤ì(€€€€€É•ÑÕÉ¸É•Í½±Ù•ÑÑ…¬¡Ì°Õ¹¥Ð°Ñ…É•Ð¤ñð¡…¹•ì(€€€ô(€€€¥˜€¡½É‘•È¹ÑåÁ”€ôôô€‰Á½¤ˆ€˜˜Õ¹¥Ð¹à€ôôôÑ…É•Ð¹à€˜˜Õ¹¥Ð¹ä€ôôôÑ…É•Ð¹ä¤ì(€€€€€½É‘•È¹ÍÑ…ÑÕÌ€ô€‰…Ý…¥Ñ¥¹œµ¡½¥”ˆì(€€€€€Õ¹¥Ð¹µ½Ù•Ì€ô€Àì(€€€€€Õ¹¥Ð¹…Ñ•€ôÑÉÕ”ì(€€€€€•¹Ñ•É½µ‰…Ð¡Ñ…É•Ð¹à°Ñ…É•Ð¹ä¤ì(€€€€€¥˜€¡Á½¥ÉÉ¥Ù…±!…¹‘±•È¤Á½¥ÉÉ¥Ù…±!…¹‘±•È¡Ì°Õ¹¥Ð°Ñ…É•Ð¤ì(€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€ô(€€€¥˜€¡½É‘•È¹ÑåÁ”€ôôô€‰µ½Ù”ˆ€˜˜Õ¹¥Ð¹à€ôôôÑ…É•Ð¹à€˜˜Õ¹¥Ð¹ä€ôôôÑ…É•Ð¹ä¤ì(€€€€€½µÁ±•Ñ•=É‘•È¡Ì°Õ¹¥Ð°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÿFBãBÇF/BìƒBÈƒB÷BÃBßB÷BÃFB×B÷B÷FF8ƒFBûFBëF¸ˆ¤ì(€€€€€É•ÑÕÉ¸ÑÉÕ”ì(€€€ô(€€€¥˜€ …É½ÕÑ”¹Á…Ñ ñð€…É½ÕÑ”¹Á…Ñ ¹±•¹Ñ ¤ì(€€€€€½É‘•È¹ÍÑ…ÑÕÌ€ô€‰Ý…¥Ñ¥¹œˆì(€€€€€½É‘•È¹É•…Í½¸€ô€‹BÿFFF0ƒBËFB×BóB×B÷B÷BøƒBÿB×FB×BëFF/Fˆì(€€€€€É•ÑÕÉ¸¡…¹•ì(€€€ô(€€€¥˜€ …µ½Ù•=¹”¡Ì°Õ¹¥Ð°É½ÕÑ”¹Á…Ñ¡lÁt¤¤ì(€€€€€½É‘•È¹ÍÑ…ÑÕÌ€ô€‰Ý…¥Ñ¥¹œˆì(€€€€€½É‘•È¹É•…Í½¸€ô€‹BóBÃFF#FFFƒBãBßBóB×B÷BãBïFF<ìƒBÇFBÓB×FƒBÿB×FB×FFBãFBÃBôˆì(€€€€€É•ÑÕÉ¸¡…¹•ì(€€€ô(€€€¡…¹•€ôÑÉÕ”ì(€ô(€€€¥˜€¡¡…¹•€˜˜½ÁÑ¥½¹Ì€˜˜½ÁÑ¥½¹Ì¹É•¹‘•È€„ôô™…±Í”¤ì(€€€½¹ÍÐÙ…±Õ”€ô‘•‰Õœ ¤ì(€€€¥˜€¡Ù…±Õ”€˜˜ÑåÁ•½˜Ù…±Õ”¹É•¹‘•È€ôôô€‰™Õ¹Ñ¥½¸ˆ¤Ù…±Õ”¹É•¹‘•È ¤ì(€ô(€É•ÑÕÉ¸¡…¹•ì)ô((€™Õ¹Ñ¥½¸ÁÉ½•ÍÍ=É‘•ÉÌ¡Ì°½ÁÑ¥½¹Ì¤ì(€€€•¹ÍÕÉ•MÑ…Ñ”¡Ì¤ì(€€€±•Ð¡…¹•€ô™…±Í”ì(€€€€¡Ì¹Õ¹¥ÑÌñðmt¤¹Í±¥” ¤¹™½É… ¡™Õ¹Ñ¥½¸€¡Õ¹¥Ð¤ì(€€€¥˜€¡Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È¤¡…¹•€ôÁÉ½•ÍÍU¹¥Ð¡Ì°Õ¹¥Ð°ìÉ•¹‘•Èè™…±Í”ô¤ñð¡…¹•ì(€ô¤ì(€¥˜€¡¡…¹•€˜˜€ …½ÁÑ¥½¹Ìñð½ÁÑ¥½¹Ì¹É•¹‘•È€„ôô™…±Í”¤¤ì(€½¹ÍÐÙ…±Õ”€ô‘•‰Õœ ¤ì(¥˜€¡Ù…±Õ”€˜˜ÑåÁ•½˜Ù…±Õ”¹É•¹‘•È€ôôô€‰™Õ¹Ñ¥½¸ˆ¤Ù…±Õ”¹É•¹‘•È ¤ì)ô(É•ÑÕÉ¸¡…¹•ì)ô((€™Õ¹Ñ¥½¸Ñ…É•ÑÉ½µQ¥±”¡Ì°à°ä¤ì(€€€½¹ÍÐÑ¥±”€ôÌ¹µ…Ámåt€˜˜Ì¹µ…Ámåumátì(€€€¥˜€ …Ñ¥±”¤É•ÑÕÉ¸¹Õ±°ì(€€€½¹ÍÐÉ¥Ù…°€ôÉ¥Ù…±U¹¥ÑÐ¡Ì°à°ä¤ì(€€€½¹ÍÐ‰…É‰…É¥…¸€ô‰…É‰…É¥…¹Ð¡Ì°à°ä¤ì(€€€½¹ÍÐ…µÀ€ô…µÁÐ¡Ì°à°ä¤ì(€€€¥˜€¡…µÀ¤É•ÑÕÉ¸ìÑåÁ”è€‰…ÑÑ…¬ˆ°Ñ…É•Ñ-¥¹è€‰…µÀˆ°Ñ…É•Ñ%è…µÀ¹…µÁ%ñð¹Õ±°°àèà°äèäôì(€€€¥˜€¡‰…É‰…É¥…¸¤É•ÑÕÉ¸ìÑåÁ”è€‰…ÑÑ…¬ˆ°Ñ…É•Ñ-¥¹è€‰‰…É‰…É¥…¸ˆ°Ñ…É•Ñ%è‰…É‰…É¥…¸¹¥°àèà°äèäôì(€€€¥˜€¡É¥Ù…°¤É•ÑÕÉ¸ìÑåÁ”è€‰…ÑÑ…¬ˆ°Ñ…É•Ñ-¥¹è€‰É¥Ù…°ˆ°Ñ…É•Ñ%èÉ¥Ù…°¹Õ¹¥Ð¹¥°¥Ù¥±¥é…Ñ¥½¹%èÉ¥Ù…°¹¥Ø¹¥Ù¥±¥é…Ñ¥½¹%°àèà°äèä°¥ØèÉ¥Ù…°¹¥Øôì(€€€¥˜€¡Ñ¥±”¹Á½¤€˜˜€…Ñ¥±”¹Á½¤¹ÕÍ•¤É•ÑÕÉ¸ìÑåÁ”è€‰Á½¤ˆ°Ñ…É•Ñ-¥¹è€‰Á½¤ˆ°Ñ…É•Ñ%èÑ¥±”¹Á½¤¹ÑåÁ”°àèà°äèäôì(€€€É•ÑÕÉ¸ìÑåÁ”è€‰µ½Ù”ˆ°Ñ…É•Ñ-¥¹è€‰Ñ¥±”ˆ°Ñ…É•Ñ%è¹Õ±°°àèà°äèäôì(€ô((€™Õ¹Ñ¥½¸…ÍÍ¥¹QÉ…Ù•±=É‘•È¡Õ¹¥Ñ%°‘•ÍÑ¥¹…Ñ¥½¸¤ì(€€€½¹ÍÐÌ€ô•¹ÍÕÉ•MÑ…Ñ”¡ÕÉÉ•¹ÑMÑ…Ñ” ¤¤ì(€€€½¹ÍÐÕ¹¥Ð€ôÌ€˜˜€¡Ì¹Õ¹¥ÑÌñðmt¤¹™¥¹¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸MÑÉ¥¹œ¡¥Ñ•´¹¥¤€ôôôMÑÉ¥¹œ¡Õ¹¥Ñ%¤ìô¤ì(€€€¥˜€ …Õ¹¥Ðñð€…‘•ÍÑ¥¹…Ñ¥½¸¤É•ÑÕÉ¸™…±Í”ì(€€€¥˜€¡‘•ÍÑ¥¹…Ñ¥½¸¹ÑåÁ”€ôôô€‰…ÑÑ…¬ˆ€˜˜‘•ÍÑ¥¹…Ñ¥½¸¹Ñ…É•Ñ-¥¹€ôôô€‰É¥Ù…°ˆ€˜˜‘•ÍÑ¥¹…Ñ¥½¸¹¥Ø€˜˜‘•ÍÑ¥¹…Ñ¥½¸¹¥Ø¹É•±…Ñ¥½¸€„ôô€‰Ý…Èˆ¤ì(€€€€€¥˜€ …Ý¥¹‘½Ü¹½¹™¥É´ ‹B{BÇF+F?BËBãFF0ƒBËBûBçB÷FƒBÏBûFFBÓBÃFFFBËFƒ
+¬ˆ€¬‘•ÍÑ¥¹…Ñ¥½¸¹¥Ø¹¹…µ”€¬€‹
+ìƒBàƒB÷BÃFBÃFF0ƒBÃFBÃBëFüˆ¤¤É•ÑÕÉ¸™…±Í”ì(€€€€€‘•ÍÑ¥¹…Ñ¥½¸¹¥Ø¹É•±…Ñ¥½¸€ô€‰Ý…Èˆì(€€€ô(€€€½¹ÍÐ½É‘•È€ôì(€€€Ù•ÉÍ¥½¸èYIM%=8°(€€€ÑåÁ”è‘•ÍÑ¥¹…Ñ¥½¸¹ÑåÁ”°(€€€Ñ…É•Ñ-¥¹è‘•ÍÑ¥¹…Ñ¥½¸¹Ñ…É•Ñ-¥¹°(€€€Ñ…É•Ñ%è‘•ÍÑ¥¹…Ñ¥½¸¹Ñ…É•Ñ%ñð¹Õ±°°(€€€¥Ù¥±¥é…Ñ¥½¹%è‘•ÍÑ¥¹…Ñ¥½¸¹¥Ù¥±¥é…Ñ¥½¹%ñð¹Õ±°°(€€€àè‘•ÍÑ¥¹…Ñ¥½¸¹à°(€€äè‘•ÍÑ¥¹…Ñ¥½¸¹ä°(€€€ÍÑ…ÑÕÌè€‰…Ñ¥Ù”ˆ°(€€É•…Í½¸è¹Õ±°°(€€€Á…Ñ èmt°(€€¥ÍÍÕ•‘QÕÉ¸èÌ¹ÑÕÉ¸ñð€Ä(€€€ôì(€€€Õ¹¥Ð¹½É‘•È€ô¹Õ±°ì(€€€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô½É‘•Èì(€€€½¹ÍÐÉ½ÕÑ”€ôÁ…Ñ¡½É=É‘•È¡Ì°Õ¹¥Ð°½É‘•È¤ì(€€€¥˜€ …É½ÕÑ”¹Ñ…É•Ð¤ì(€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô¹Õ±°ì(¹½Ñ¥™ä ‹B›B×BïF0ƒFBÛBÔƒB÷B×BÓBûFFFBÿB÷BÀˆ¤ì)É•ÑÕÉ¸™…±Í”ì(€ô(€¥˜€¡É½ÕÑ”¹Á…Ñ €ôôô¹Õ±°¤ì(½É‘•È¹ÍÑ…ÑÕÌ€ô€‰Ý…¥Ñ¥¹œˆì)½É‘•È¹É•…Í½¸€ô€‹FB×BçFBÃFƒB÷B×FƒBÓBûFFFBÿB÷BûBÏBøƒBÿFFBàˆì)¹½Ñ¥™ä ‹BFFF0ƒBÿBûBëBÀƒBÿB×FB×BëFF/FƒŠPƒBÿFBãBëBÃBÜƒFBûFFBÃB÷FGBôˆ¤ì(€ô•±Í”ì(½É‘•È¹Á…Ñ €ôÉ½ÕÑ”¹Á…Ñ ì)ÁÉ½•ÍÍU¹¥Ð¡Ì°Õ¹¥Ð°ìÉ•¹‘•Èè™…±Í”ô¤ì)½¹ÍÐÙ…±Õ”€ô‘•‰Õœ ¤ì)¥˜€¡Ù…±Õ”€˜˜ÑåÁ•½˜Ù…±Õ”¹É•¹‘•È€ôôô€‰™Õ¹Ñ¥½¸ˆ¤Ù…±Õ”¹É•¹‘•È ¤ì)¥˜€¡Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È¤ì(€½¹ÍÐÉ•µ…¥¹¥¹œ€ôÁ…Ñ¡½É=É‘•È¡Ì°Õ¹¥Ð°Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È¤¹Á…Ñ ì(Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È¹Á…Ñ €ôÉ•µ…¥¹¥¹œñðmtì)ô)¹½Ñ¥™ä¡½É‘•È¹ÑåÁ”€ôôô€‰…ÑÑ…¬ˆ€ü€‹BsBÃFF#FFFƒBÃFBÃBëBàƒB÷BÃBßB÷BÃFB×Bôˆ€è€¡½É‘•È¹ÑåÁ”€ôôô€‰Á½¤ˆ€ü€‹B{FFF?BÐƒB÷BÃBÿFBÃBËBïB×BôƒBèƒB÷BÃFBûBÓBëBÔˆ€è€‹BsBÃFF#FFFƒB÷BÃBßB÷BÃFB×Bôˆ¤¤ì(€ô(€€€±½œ¡Ì°€‰É½ÕÑ”µ…ÍÍ¥¹•ˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBÿBûBïFFBãBìƒBóBÃFF#FFFƒBèƒBëBïB×FBëBÔ€ˆ€¬‘•ÍÑ¥¹…Ñ¥½¸¹à€¬€ˆ°€ˆ€¬‘•ÍÑ¥¹…Ñ¥½¸¹ä€¬€ˆ¸ˆ°ìàè‘•ÍÑ¥¹…Ñ¥½¸¹à°äè‘•ÍÑ¥¹…Ñ¥½¸¹äô°Õ¹¥Ð¹¥¤ì(É•ÑÕÉ¸ÑÉÕ”ì(€ô((€™Õ¹Ñ¥½¸…¹•±QÉ…Ù•±=É‘•È¡Õ¹¥Ñ%¤ì(€€€½¹ÍÐÌ€ô•¹ÍÕÉ•MÑ…Ñ”¡ÕÉÉ•¹ÑMÑ…Ñ” ¤¤ì(€€€½¹ÍÐÕ¹¥Ð€ôÌ€˜˜€¡Ì¹Õ¹¥ÑÌñðmt¤¹™¥¹¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸MÑÉ¥¹œ¡¥Ñ•´¹¥¤€ôôôMÑÉ¥¹œ¡Õ¹¥Ñ%¤ìô¤ì(€€€¥˜€ …Õ¹¥Ðñð€…Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È¤É•ÑÕÉ¸™…±Í”ì(€€€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô¹Õ±°ì(€€€¹½Ñ¥™ä ‹BsBÃFF#FFFƒBûFBóB×B÷FGBôˆ¤ì(€€€É•ÑÕÉ¸ÑÉÕ”ì(€ô((€™Õ¹Ñ¥½¸É•Í½±Ù•A½¥¡½¥”¡Õ¹¥Ñ%°à°ä°¡½¥”¤ì(€€€½¹ÍÐÌ€ô•¹ÍÕÉ•MÑ…Ñ”¡ÕÉÉ•¹ÑMÑ…Ñ” ¤¤ì(€€€½¹ÍÐÕ¹¥Ð€ôÌ€˜˜€¡Ì¹Õ¹¥ÑÌñðmt¤¹™¥¹¡™Õ¹Ñ¥½¸€¡¥Ñ•´¤ìÉ•ÑÕÉ¸MÑÉ¥¹œ¡¥Ñ•´¹¥¤€ôôôMÑÉ¥¹œ¡Õ¹¥Ñ%¤ìô¤ì(€€€½¹ÍÐÑ¥±”€ôÌ€˜˜Ì¹µ…Ámåt€˜˜Ì¹µ…Ámåumátì(€€€¥˜€ …Ìñð€…Õ¹¥Ðñð€…Ñ¥±”ñð€…Ñ¥±”¹Á½¤ñðÑ¥±”¹Á½¤¹ÕÍ•¤É•ÑÕÉ¸™…±Í”ì(€€€½¹ÍÐÑåÁ•%€ôÑ¥±”¹Á½¤¹ÑåÁ”ñð€‰Õ¹­¹½Ý¸ˆì(€€€½¹ÍÐÑåÁ”€ô€¡%9QIMQ}QeAMmÑåÁ•%‘t€˜˜%9QIMQ}QeAMmÑåÁ•%‘t¹¹…µ”¤ñðÑåÁ•%ì(€€€¥˜€¡¡½¥”€ôôô€‰ÍÑÕ‘äˆ¤ì)Ì¹É•Í½ÕÉ•Ì¹Í¥•¹”€ô€¡Ì¹É•Í½ÕÉ•Ì¹Í¥•¹”ñð€À¤€¬€ÄÀì)±½œ¡Ì°€‰Á½¤µÍÑÕ‘¥•ˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒBãFFBïB×BÓBûBËBÃBìƒBûBÇF+B×BëFƒ
+¬ˆ€¬ÑåÁ”€¬€‹
+ìƒBàƒBÿBûBïFFBãBì€ÄÀƒB÷BÃFBëBà¸ˆ°ìàèà°äèäô°Õ¹¥Ð¹¥¤ì(€€€ô•±Í”ì)Ì¹É•Í½ÕÉ•Ì¹½±€ô€¡Ì¹É•Í½ÕÉ•Ì¹½±ñð€À¤€¬€ÄÈì)½¹ÍÐ¥Ñä€ô€¡Ì¹¥Ñ¥•Ìñðmt¤¹Í±¥” ¤¹Í½ÉÐ¡™Õ¹Ñ¥½¸€¡„°ˆ¤ì(€É•ÑÕÉ¸¡•‰åÍ¡•Ø¡Õ¹¥Ð¹à°Õ¹¥Ð¹ä°„¹à°„¹ä¤€´¡•‰åÍ¡•Ø¡Õ¹¥Ð¹à°Õ¹¥Ð¹ä°ˆ¹à°ˆ¹ä¤ì)ô¥lÁtì)¥˜€¡¥Ñä¤¥Ñä¹ÁÉ½‘ÕÑ¥½¸€ô€¡¥Ñä¹ÁÉ½‘ÕÑ¥½¸ñð€À¤€¬€ì)±½œ¡Ì°€‰Á½¤µÍ…±Ù…•ˆ°Õ¹¥Ñ9…µ”¡Õ¹¥Ð¤€¬€ˆƒFBÃBßBûBÇFBÃBìƒBûBÇF+B×BëFƒ
+¬ˆ€¬ÑåÁ”€¬€‹
+ìè€¬ÄÈƒBßBûBïBûFBÀƒBà€¬ØƒBÿFBûBãBßBËBûBÓFFBËBÀƒBÇBïBãBÛBÃBçF#B×BóFƒBÏBûFBûBÓF¸ˆ°ìàèà°äèäô°Õ¹¥Ð¹¥¤ì(€€€ô(€€€Ñ¥±”¹Á½¤¹ÕÍ•€ôÑÉÕ”ì(€€€Õ¹¥Ð¹ÑÉ…Ù•±=É‘•È€ô¹Õ±°ì(€€€½¹ÍÐÙ…±Õ”€ô‘•‰Õœ ¤ì(€€€¥˜€¡Ù…±Õ”€˜˜ÑåÁ•½˜Ù…±Õ”¹É•¹‘•È€ôôô€‰™Õ¹Ñ¥½¸ˆ¤Ù…±Õ”¹É•¹‘•È ¤ì(€€€¹½Ñ¥™ä ‹BwBÃFBûBÓBëBÀƒBãFBÿBûBïF3BßBûBËBÃB÷BÀˆ¤ì(€€€É•ÑÕÉ¸ÑÉÕ”ì(€ô((€Ý¥¹‘½Ü¹Á½¡¥!Õµ…¹ÍA…Ñ¡¥¹œ€ôì(€€€Ù•ÉÍ¥½¸èYIM%=8°(€€€•¹ÍÕÉ•MÑ…Ñ”è•¹ÍÕÉ•MÑ…Ñ”°(€€€ÕÉÉ•¹ÑMÑ…Ñ”èÕÉÉ•¹ÑMÑ…Ñ”°(€€€™¥¹‘A…Ñ è™¥¹‘A…Ñ °(€€€Á…Ñ¡½É=É‘•ÈèÁ…Ñ¡½É=É‘•È°(€€€±½…Ñ•Q…É•Ðè±½…Ñ•Q…É•Ð°(€€€Ñ…É•ÑÉ½µQ¥±”èÑ…É•ÑÉ½µQ¥±”°(€€€…ÍÍ¥¹QÉ…Ù•±=É‘•Èè…ÍÍ¥¹QÉ…Ù•±=É‘•È°(€€€…¹•±QÉ…Ù•±=É‘•Èè…¹•±QÉ…Ù•±=É‘•È°(€€€ÁÉ½•ÍÍU¹¥ÐèÁÉ½•ÍÍU¹¥Ð°(€€€ÁÉ½•ÍÍ=É‘•ÉÌèÁÉ½•ÍÍ=É‘•ÉÌ°(€€€•ÍÑ¥µ…Ñ•QÕÉ¹Ìè•ÍÑ¥µ…Ñ•QÕÉ¹Ì°(€€€É•Í½±Ù•A½¥¡½¥”èÉ•Í½±Ù•A½¥¡½¥”°(€€€Õ¹¥Ñ9…µ”èÕ¹¥Ñ9…µ”°(€€€Í•ÑA½¥ÉÉ¥Ù…±!…¹‘±•Èè™Õ¹Ñ¥½¸€¡¡…¹‘±•È¤ìÁ½¥ÉÉ¥Ù…±!…¹‘±•È€ô¡…¹‘±•Èìô(€ôì)ô¤ ¤ì
