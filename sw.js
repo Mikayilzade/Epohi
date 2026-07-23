@@ -1,11 +1,12 @@
 const CACHE_NAME =
-  "epohi-v1-5-0-humans-journey-2";
+  "epohi-v1-5-0-visual-demo-1";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles/app.css",
   "./styles/humans.css",
   "./styles/humans-responsive.css",
+  "./styles/humans-art.css",
   "./src/config.js",
   "./src/data.js",
   "./src/humans-content.js",
@@ -24,6 +25,9 @@ const APP_FILES = [
   "./src/humans-journey-data.js",
   "./src/humans-journey-core.js",
   "./src/humans-journey-ui.js",
+  "./src/humans-autonomy-fix.js",
+  "./src/humans-observer.js",
+  "./src/humans-visuals.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
