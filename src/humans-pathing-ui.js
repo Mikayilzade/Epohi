@@ -273,7 +273,7 @@
     const endTurn = document.getElementById("endTurnBtn");
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, subtree: true, characterData: true });
-    document.addEventListener("click", handleTargetClick, true);
+    if (map) map.addEventListener("click", handleTargetClick, true);
     document.addEventListener("click", scheduleUi);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId) {
