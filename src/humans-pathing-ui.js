@@ -235,8 +235,12 @@
     const destination = gs && CORE.targetFromTile(gs, Number(tile.dataset.x), Number(tile.dataset.y));
     const unitId = targetModeUnitId;
     stopTargetMode();
-    if (!destination || !CORE.assignTravelOrder(unitId, destination)) scheduleUi();
-    else scheduleUi();
+    if (!destination || !CORE.assignTravelOrder(unitId, destination)) {
+      scheduleUi();
+    } else {
+      refreshUi();
+      scheduleUi();
+    }
   }
 
   function install() {
@@ -249,6 +253,19 @@
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, subtree: true, characterData: true });
     document.addEventListener("click", handleTargetClick, true);
+    document.addEventListener("click", function (event) {
+      if (targetModeUnitId) return;
+      const tile = event.target.closest && event.target.closest("#map .tile");
+      if (!tile) {
+        scheduleUi();
+        return;
+      }
+      window.setTimeout(function () {
+        const select = document.querySelector('[data-context-action="select-unit"]');
+        if (select) select.click();
+        scheduleUi();
+      }, 0);
+    });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId) {
         stopTargetMode();
