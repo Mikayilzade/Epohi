@@ -11,6 +11,7 @@
   let uiFrame = 0;
   let poiModal = null;
   let routeSignature = "";
+  let suppressTargetClickUntil = 0;
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -299,11 +300,11 @@
     uiFrame = window.requestAnimationFrame(refreshUi);
   }
 
-  function handleTargetClick(event) {
+  function selectTargetFromEvent(event) {
     const routeUnitId = document.body.dataset.routeUnitId || targetModeUnitId;
-    if (routeUnitId == null) return;
+    if (routeUnitId == null) return false;
     const tile = event.target.closest && event.target.closest("#map .tile");
-    if (!tile) return;
+    if (!tile) return false;
 
     event.preventDefault();
     event.stopPropagation();
@@ -315,9 +316,31 @@
     stopTargetMode();
     if (!destination || !CORE.assignTravelOrder(unitId, destination)) {
       scheduleUi();
-      return;
+      return true;
     }
     scheduleUi();
+    return true;
+  }
+
+  function handleTargetPointerDown(event) {
+    if (document.body.dataset.routeUnitId == null && targetModeUnitId == null) return;
+    if (selectTargetFromEvent(event)) {
+      // Camera 2.0 resolves taps through its pointer gesture layer. Capturing the
+      // target at pointerdown keeps that one-cell handler out of route selection.
+      suppressTargetClickUntil = Date.now() + 600;
+    }
+  }
+
+  function handleTargetClick(event) {
+    const tile = event.target.closest && event.target.closest("#map .tile");
+    if (tile && Date.now() < suppressTargetClickUntil) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      return;
+    }
+    // Keyboard/programmatic activation does not emit pointerdown.
+    selectTargetFromEvent(event);
   }
 
   function installEndTurnHook() {
@@ -358,6 +381,7 @@
     if (map) new MutationObserver(scheduleUi).observe(map, { childList: true });
     if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, characterData: true, subtree: true });
 
+    document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId != null) {
