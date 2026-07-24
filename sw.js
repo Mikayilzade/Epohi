@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-2-pathing-performance-4";
+  "epohi-v1-5-2-pathing-performance-5";
 const APP_FILES = [
   "./",
   "./index.html",

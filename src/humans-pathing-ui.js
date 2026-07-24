@@ -252,33 +252,35 @@
 
     const def = UNIT_DEFS[unit.type] || { name: unit.type || "Юнит" };
     const showsUnit = title.textContent.includes(unit.name || "") || title.textContent.includes(def.name);
-    if (!showsUnit) {
-      if (summary) summary.remove();
-      return;
-    }
+    const selectedHasRoute = Boolean(selected && selected.travelOrder);
+    const actionUnit = showsUnit ? unit : selected;
 
-    if (!actions.querySelector("[data-path-action]")) {
-      if (unit.travelOrder) {
-        if (unit.travelOrder.status === "awaiting-choice") {
+    // Camera 2.0 keeps the selectedUnitId while the player inspects another tile.
+    // A route therefore remains the selected unit's route even when the context
+    // card is temporarily showing the destination cell. Keep route controls and
+    // ETA visible in that case; new-route/worker controls still require unit view.
+    if ((showsUnit || selectedHasRoute) && actionUnit && !actions.querySelector("[data-path-action]")) {
+      if (actionUnit.travelOrder) {
+        if (actionUnit.travelOrder.status === "awaiting-choice") {
           actions.appendChild(makeButton("✨<br>Решить судьбу находки", "poi-choice", function () {
-            const located = CORE.locateTarget(gs, unit.travelOrder);
-            if (located) openPoiChoice(gs, unit, located);
+            const located = CORE.locateTarget(gs, actionUnit.travelOrder);
+            if (located) openPoiChoice(gs, actionUnit, located);
           }, "alt"));
         }
         actions.appendChild(makeButton("✖️<br>Отменить путь", "cancel", function () {
-          CORE.cancelTravelOrder(unit.id);
+          CORE.cancelTravelOrder(actionUnit.id);
           const value = debug();
           if (value && typeof value.renderContext === "function") value.renderContext();
           scheduleUi();
         }, "alt"));
-      } else {
+      } else if (showsUnit) {
         actions.appendChild(makeButton("🥾<br>Идти", "start", function () {
-          startTargetMode(unit.id);
+          startTargetMode(actionUnit.id);
         }, "alt"));
       }
     }
 
-    injectWorkerPicker(unit, actions);
+    if (showsUnit) injectWorkerPicker(unit, actions);
 
     if (selected && selected.travelOrder && route) {
       const description = routeDescription(selected, route);
