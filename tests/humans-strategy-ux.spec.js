@@ -41,23 +41,32 @@ test.describe('Стратегический UX', () => {
     await createGame(page, 0, 'small');
     await waitStrategy(page);
 
-    await page.evaluate(() => {
+    const setup = await page.evaluate(() => {
       const debug = window.__epohiDebug();
       const state = debug.state;
       const scout = state.units.find(unit => unit.type === 'scout');
-      const x = Math.min(state.mapSize - 2, scout.x + 1);
-      const y = scout.y;
-      state.map[y][x].terrain = 'plains';
-      state.map[y][x].revealed = true;
-      state.map[y][x].feature = 'ruins';
-      state.map[y][x].poi = null;
+      const candidates = window.EpohiUtils.neighborsOf(scout.x, scout.y, state.mapSize).filter(point => {
+        const tile = state.map[point.y][point.x];
+        const occupied = state.units.some(unit => unit.id !== scout.id && unit.x === point.x && unit.y === point.y) ||
+          state.cities.some(city => city.x === point.x && city.y === point.y);
+        return !occupied && tile;
+      });
+      const target = candidates[0];
+      if (!target) return null;
+      state.map[target.y][target.x].terrain = 'plains';
+      state.map[target.y][target.x].revealed = true;
+      state.map[target.y][target.x].feature = 'ruins';
+      state.map[target.y][target.x].poi = null;
+      state.map[target.y][target.x].camp = null;
       scout.moves = 2;
       scout.acted = false;
       debug.render();
-      const destination = window.EpohiHumansPathing.targetFromTile(state, x, y);
-      window.EpohiHumansPathing.assignTravelOrder(scout.id, destination);
+      const destination = window.EpohiHumansPathing.targetFromTile(state, target.x, target.y);
+      return { target, assigned: window.EpohiHumansPathing.assignTravelOrder(scout.id, destination) };
     });
 
+    expect(setup).not.toBeNull();
+    expect(setup.assigned).toBe(true);
     await expect(page.locator('#routePoiModal')).toHaveClass(/show/);
     await expect(page.locator('#routePoiContent')).toContainText('Маршрут завершён');
     await expect(page.locator('#routePoiContent')).toContainText('Древние руины');

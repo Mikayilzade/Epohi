@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-3-strategy-ux-2";
+  "epohi-v1-5-3-strategy-ux-3";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -34,6 +34,7 @@ const APP_FILES = [
   "./src/humans-pathing-core.js",
   "./src/humans-pathing-ui.js",
   "./src/humans-strategy-ux.js",
+  "./src/humans-camera-layout-guard.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
@@ -63,15 +64,12 @@ self.addEventListener("activate", function (event) {
 
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
-
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
       const network = fetch(event.request).then(function (response) {
         if (response && response.status === 200 && response.type !== "opaque") {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(event.request, copy);
-          });
+          caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
         }
         return response;
       }).catch(function () {
