@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-3-strategy-ux-1";
+  "epohi-v1-5-3-strategy-ux-2";
 const APP_FILES = [
   "./",
   "./index.html",

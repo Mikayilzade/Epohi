@@ -61,15 +61,12 @@ test.describe('Стратегический UX', () => {
     await expect(page.locator('#routePoiModal')).toHaveClass(/show/);
     await expect(page.locator('#routePoiContent')).toContainText('Маршрут завершён');
     await expect(page.locator('#routePoiContent')).toContainText('Древние руины');
-    await page.locator('[data-strategy-poi="study"]').click();
+    await page.locator('[data-route-poi-choice="study"]').click();
 
     const result = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       const scout = state.units.find(unit => unit.type === 'scout');
-      return {
-        order: scout.travelOrder,
-        science: state.resources.science
-      };
+      return { order: scout.travelOrder, science: state.resources.science };
     });
     expect(result.order).toBeNull();
     expect(result.science).toBeGreaterThanOrEqual(10);
@@ -89,12 +86,7 @@ test.describe('Стратегический UX', () => {
       window.EpohiHumansObserver.revealAll(state);
       window.__epohiDebug().render();
       window.EpohiStrategyUX.refresh();
-      return state.rivals.map(civ => ({
-        name: civ.name,
-        color: civ.color,
-        city: civ.cities[0].name,
-        culture: civ.cultureKey
-      }));
+      return state.rivals.map(civ => ({ name: civ.name, color: civ.color, city: civ.cities[0].name, culture: civ.cultureKey }));
     });
 
     expect(identity).toHaveLength(2);
@@ -118,12 +110,12 @@ test.describe('Стратегический UX', () => {
     await page.getByRole('button', { name: 'Создать мир' }).click();
     await expect(page.locator('#gameApp')).toBeVisible();
     await waitStrategy(page);
-    await page.waitForFunction(() => window.__epohiDebug().state.rivals.length === 3 && window.__epohiDebug().state.rivals[2].cultureKey);
-
-    const diplomacy = await page.evaluate(() => {
-      const rivals = window.__epohiDebug().state.rivals;
-      return rivals.map(civ => ({ name: civ.name, relation: civ.relation, score: civ.diplomacy.score }));
+    await page.waitForFunction(() => {
+      const state = window.__epohiDebug().state;
+      return state.rivals.length === 3 && state.rivals.every(civ => Boolean(civ.cultureKey));
     });
+
+    const diplomacy = await page.evaluate(() => window.__epohiDebug().state.rivals.map(civ => ({ name: civ.name, relation: civ.relation, score: civ.diplomacy.score })));
     expect(diplomacy[0].score).toBeLessThan(0);
     expect(diplomacy[1].score).toBeLessThan(0);
     expect(diplomacy[2].relation).toBe('ally');
@@ -143,6 +135,9 @@ test.describe('Стратегический UX', () => {
     await waitStrategy(page);
 
     const snapshot = await page.evaluate(() => {
+      const debug = window.__epohiDebug();
+      debug.state.currentResearch = null;
+      debug.render();
       window.EpohiStrategyUX.refresh();
       const bar = document.getElementById('strategyReadiness');
       return {
