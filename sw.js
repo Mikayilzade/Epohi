@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-2-pathing-performance-5";
+  "epohi-v1-5-3-strategy-ux-1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -8,6 +8,7 @@ const APP_FILES = [
   "./styles/humans-responsive.css",
   "./styles/humans-art.css",
   "./styles/humans-runtime.css",
+  "./styles/humans-strategy.css",
   "./src/config.js",
   "./src/data.js",
   "./src/humans-content.js",
@@ -32,6 +33,7 @@ const APP_FILES = [
   "./src/humans-visuals.js",
   "./src/humans-pathing-core.js",
   "./src/humans-pathing-ui.js",
+  "./src/humans-strategy-ux.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",

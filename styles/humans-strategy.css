@@ -1,0 +1,374 @@
+/* Strategy UX: faction identity, readiness strip, diplomacy and mouse-centric desktop polish. */
+
+.strategy-readiness {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(52px, 1fr));
+  gap: 6px;
+  align-items: stretch;
+  margin-inline: auto 10px;
+}
+
+.strategy-readiness button {
+  min-width: 52px;
+  height: 40px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid rgba(242, 218, 159, .14);
+  border-radius: 11px;
+  background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(0,0,0,.08));
+  color: #d7dfd3;
+  box-shadow: inset 0 1px rgba(255,255,255,.05);
+}
+
+.strategy-readiness button span {
+  font-size: 16px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+}
+
+.strategy-readiness button b {
+  min-width: 15px;
+  color: #b5c0b5;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.strategy-readiness button.needs-attention {
+  border-color: rgba(232, 188, 83, .36);
+  background: linear-gradient(180deg, rgba(158,122,57,.28), rgba(59,76,55,.24));
+  color: #fff0bd;
+}
+
+.strategy-readiness button.needs-attention b {
+  color: #ffdfa0;
+}
+
+.strategy-readiness button:disabled {
+  opacity: .4;
+}
+
+.tile.strategy-player-territory {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--strategy-territory) 66%, transparent),
+    inset 0 1px rgba(255,255,255,.12),
+    inset 0 -2px rgba(25,35,27,.18),
+    0 1px 2px rgba(0,0,0,.22);
+}
+
+.tile.strategy-rival-territory,
+.tile.ai-territory.strategy-rival-territory {
+  box-shadow:
+    inset 0 0 0 3px color-mix(in srgb, var(--strategy-territory) 78%, transparent),
+    inset 0 1px rgba(255,255,255,.12),
+    0 1px 2px rgba(0,0,0,.24);
+}
+
+.strategy-faction-marker {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  z-index: 41;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.86);
+  border-radius: 4px 4px 7px 7px;
+  background: linear-gradient(145deg, var(--strategy-faction), var(--strategy-faction-dark));
+  color: white;
+  font-size: 8px;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0,0,0,.65);
+  box-shadow: 0 2px 4px rgba(0,0,0,.42);
+  pointer-events: none;
+}
+
+.strategy-faction-marker[data-relation="ally"] {
+  outline: 2px solid rgba(151, 219, 143, .68);
+}
+
+.strategy-faction-marker[data-relation="war"],
+.strategy-faction-marker[data-relation="hostile"] {
+  outline: 2px solid rgba(225, 94, 75, .58);
+}
+
+.piece.ai-unit.has-art-sprite::before,
+.piece.ai-city.has-art-sprite::before {
+  filter:
+    drop-shadow(0 0 1px var(--strategy-faction, var(--faction-color, #bd5b4d)))
+    drop-shadow(0 0 3px var(--strategy-faction, var(--faction-color, #bd5b4d)))
+    drop-shadow(0 3px 3px rgba(0,0,0,.46));
+}
+
+.piece.unit.has-art-sprite::before,
+.piece.city.has-art-sprite::before {
+  filter:
+    drop-shadow(0 0 1px rgba(220, 178, 74, .85))
+    drop-shadow(0 3px 3px rgba(0,0,0,.44));
+}
+
+.strategy-faction-chip {
+  max-width: min(230px, 45vw);
+  margin-left: 7px;
+  padding: 4px 7px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--strategy-civ, #d8ad4e) 75%, #fff);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--strategy-civ, #d8ad4e) 18%, rgba(255,255,255,.42));
+  color: #384136;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+button.strategy-faction-chip {
+  cursor: pointer;
+}
+
+.strategy-faction-chip.war,
+.strategy-faction-chip.hostile {
+  color: #762e28;
+}
+
+.strategy-faction-chip.ally,
+.strategy-faction-chip.friendly {
+  color: #2f643c;
+}
+
+.strategy-diplomacy-sheet {
+  max-width: 680px;
+}
+
+.strategy-diplomacy-list {
+  display: grid;
+  gap: 10px;
+}
+
+.strategy-diplomacy-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--strategy-civ) 42%, rgba(65,75,64,.16));
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0%, color-mix(in srgb, var(--strategy-civ) 15%, transparent), transparent 38%),
+    rgba(255,255,255,.42);
+  box-shadow: inset 4px 0 var(--strategy-civ);
+}
+
+.strategy-diplomacy-card > header {
+  display: grid;
+  grid-template-columns: 39px minmax(0,1fr) auto;
+  gap: 9px;
+  align-items: center;
+  padding: 10px 11px 5px;
+}
+
+.strategy-state-seal {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255,255,255,.62);
+  border-radius: 10px 10px 15px 15px;
+  background: linear-gradient(145deg, var(--strategy-civ), var(--strategy-civ-dark));
+  color: white;
+  font-size: 15px;
+  font-weight: 1000;
+  box-shadow: 0 3px 7px rgba(0,0,0,.22);
+}
+
+.strategy-diplomacy-card h3,
+.strategy-diplomacy-card small,
+.strategy-diplomacy-card p {
+  margin: 0;
+}
+
+.strategy-diplomacy-card h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+}
+
+.strategy-diplomacy-card small {
+  display: block;
+  margin-top: 2px;
+  color: #687267;
+  font-size: 9px;
+}
+
+.strategy-diplomacy-card header > strong {
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: rgba(60,75,62,.08);
+  color: #586358;
+  font-size: 9px;
+}
+
+.strategy-diplomacy-card.war header > strong,
+.strategy-diplomacy-card.hostile header > strong {
+  background: rgba(171,65,52,.13);
+  color: #8b3c33;
+}
+
+.strategy-diplomacy-card.ally header > strong,
+.strategy-diplomacy-card.friendly header > strong {
+  background: rgba(79,137,78,.14);
+  color: #427240;
+}
+
+.strategy-relation-meter {
+  height: 5px;
+  margin: 3px 11px 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(50,65,51,.12);
+}
+
+.strategy-relation-meter i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ad493f, #d0a84d 48%, #5d9664);
+}
+
+.strategy-diplomacy-card p {
+  padding: 0 11px 9px;
+  color: #596459;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.strategy-diplomacy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 9px 9px;
+}
+
+.strategy-diplomacy-actions button {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  background: linear-gradient(#587a58, #416344);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.strategy-diplomacy-actions button.secondary {
+  background: linear-gradient(#8d754d, #6d593b);
+}
+
+.strategy-diplomacy-actions button.danger {
+  background: linear-gradient(#a95a4b, #7c3d35);
+}
+
+.strategy-diplomacy-actions button:disabled {
+  opacity: .38;
+}
+
+.strategy-diplomacy-menu {
+  margin-bottom: 8px;
+}
+
+.strategy-poi-arrival {
+  display: grid;
+  grid-template-columns: 56px minmax(0,1fr);
+  gap: 11px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(125,94,49,.16);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(214,157,61,.17), transparent 36%),
+    rgba(255,255,255,.4);
+}
+
+.strategy-poi-arrival > span {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(61,82,62,.1);
+  font-size: 29px;
+}
+
+.strategy-poi-arrival small {
+  color: #9b6940;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+.strategy-poi-arrival h3 {
+  margin: 2px 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+}
+
+.strategy-poi-arrival p {
+  margin: 0;
+  color: #61695e;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+@media (min-width: 900px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(150px, auto) minmax(260px, 520px) auto;
+    align-items: center;
+  }
+
+  .strategy-readiness {
+    width: min(100%, 500px);
+    margin: 0 auto;
+  }
+
+  .toolbar {
+    grid-template-columns: 1fr 1fr .92fr 48px;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .strategy-readiness {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 4px 0 0;
+    order: 3;
+  }
+
+  .strategy-readiness button {
+    height: 32px;
+    min-width: 0;
+    padding: 0 5px;
+  }
+
+  .strategy-readiness button span {
+    font-size: 14px;
+  }
+
+  .strategy-faction-chip {
+    max-width: 160px;
+  }
+}
+
+@media (max-height: 690px) and (max-width: 720px) {
+  .strategy-readiness {
+    display: none;
+  }
+}
