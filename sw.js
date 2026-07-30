@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-5-3-strategy-ux-3";
+  "epohi-v1-6-living-civilizations";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -35,6 +35,7 @@ const APP_FILES = [
   "./src/humans-pathing-ui.js",
   "./src/humans-strategy-ux.js",
   "./src/humans-camera-layout-guard.js",
+  "./src/humans-living-civilizations.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
