@@ -27,6 +27,7 @@ test.describe('Living Civilizations', () => {
     const types = await page.evaluate(() => {
       const api=window.EpohiLivingCivilizations, gs=window.__epohiDebug().state, civ=gs.rivals[0]; gs.diplomaticProposals=[];
       ['trade','gift','alliance','peace','threat','jointWar'].forEach((type,i)=>api.createProposal(gs,civ,type,'Предложение '+type,i===5?gs.rivals[1].civilizationId:null));
+      window.__epohiDebug().render();
       return gs.diplomaticProposals.map(p=>p.type);
     });
     expect(new Set(types)).toEqual(new Set(['trade','gift','alliance','peace','threat','jointWar']));
@@ -35,7 +36,7 @@ test.describe('Living Civilizations', () => {
 
   test('принятое предложение меняет отношения и попадает в летопись', async ({ page }) => {
     await clearStorage(page); await createGame(page, 1); await ready(page);
-    const before = await page.evaluate(() => { const api=window.EpohiLivingCivilizations,gs=window.__epohiDebug().state,c=gs.rivals[0]; c.met=true; const p=api.createProposal(gs,c,'trade','Выгодный путь'); return {id:p.id,gold:gs.resources.gold,trust:c.diplomacy.trust}; });
+    const before = await page.evaluate(() => { const api=window.EpohiLivingCivilizations,gs=window.__epohiDebug().state,c=gs.rivals[0]; c.met=true; const p=api.createProposal(gs,c,'trade','Выгодный путь'); window.__epohiDebug().render(); return {id:p.id,gold:gs.resources.gold,trust:c.diplomacy.trust}; });
     await page.locator(`[data-proposal="${before.id}"][data-answer="yes"]`).click();
     const after = await page.evaluate(() => { const gs=window.__epohiDebug().state,c=gs.rivals[0]; return {gold:gs.resources.gold,trust:c.diplomacy.trust,status:gs.diplomaticProposals[0].status,events:gs.eventLog.map(e=>e.eventType)}; });
     expect(after.gold).toBe(before.gold+8); expect(after.trust).toBe(before.trust+7); expect(after.status).toBe('accepted'); expect(after.events).toContain('major-diplomatic-event');
@@ -45,8 +46,10 @@ test.describe('Living Civilizations', () => {
     await clearStorage(page); await createGame(page, 3); await ready(page);
     const result = await page.evaluate(() => {
       const gs=window.__epohiDebug().state, ally=gs.rivals[2], enemy=gs.rivals[0], unit=ally.units.find(u=>u.type!=='worker'&&u.type!=='settler'), city=gs.city||gs.cities[0];
-      ally.relation='ally'; enemy.relation='war'; unit.x=city.x+2; unit.y=city.y; gs.barbarians=[{id:'help-target',x:city.x+1,y:city.y,hp:5,maxHp:40}];
-      window.EpohiLivingCivilizations.alliedHelp(gs,ally,{distance:(a,b)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y)),stepToward:()=>false,attackBarbarian:(c,u,b)=>{b.hp-=10;if(b.hp<=0)gs.barbarians=gs.barbarians.filter(x=>x!==b);return true;},warAction:()=>true});
+      ally.relation='ally'; enemy.relation='war'; unit.x=city.x+2; unit.y=city.y; unit.moves=window.EpohiData.UNIT_DEFS[unit.type].maxMoves; unit.acted=false;
+      ally.units=[unit].concat(ally.units.filter(candidate=>candidate!==unit));
+      gs.barbarians=[{id:'help-target',x:city.x+1,y:city.y,hp:5,maxHp:40}];
+      window.EpohiLivingCivilizations.alliedHelp(gs,ally,{distance:(a,b)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y)),stepToward:()=>false,attackBarbarian:(c,u,b)=>{b.hp-=10;if(b.hp<=0)gs.barbarians=gs.barbarians.filter(x=>x!==b);return true;},warAction:()=>false});
       return {barbarians:gs.barbarians.length,joint:ally.diplomacy[enemy.civilizationId],events:gs.eventLog.map(e=>e.eventType)};
     });
     expect(result.barbarians).toBe(0); expect(result.joint).toBe('war'); expect(result.events).toContain('allied-battle'); expect(result.events).toContain('joint-war-declared');
@@ -70,7 +73,9 @@ test.describe('Living Civilizations', () => {
     await page.evaluate(() => {
       const gs=window.__epohiDebug().state,defs=window.EpohiData.UNIT_DEFS;
       gs.rivals.forEach((civ,index) => { while(civ.units.length<9)civ.units.push({id:`budget-${index}-${civ.units.length}`,civilizationId:civ.civilizationId,type:'warrior',x:civ.cities[0].x,y:civ.cities[0].y,moves:1,acted:false,hp:defs.warrior.maxHealth,maxHp:defs.warrior.maxHealth}); });
-      const ally=gs.rivals[2],city=gs.city||gs.cities[0],soldier=ally.units.find(unit=>unit.type==='warrior');ally.relation='ally';soldier.x=city.x+2;soldier.y=city.y;gs.barbarians=[{id:'budget-help',x:city.x+1,y:city.y,hp:60,maxHp:60}];
+      const ally=gs.rivals[2],city=gs.city||gs.cities[0],soldier=ally.units.find(unit=>unit.type==='warrior');
+      ally.relation='ally';soldier.x=city.x+2;soldier.y=city.y;ally.units=[soldier].concat(ally.units.filter(unit=>unit!==soldier));
+      gs.barbarians=[{id:'budget-help',x:city.x+1,y:city.y,hp:60,maxHp:60}];
     });
     await page.getByRole('button', { name: /Завершить ход/i }).click();
     await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
@@ -122,8 +127,18 @@ test.describe('Living Civilizations', () => {
 
   test('маршрутная атака создаёт память и видимый знак события', async ({ page }) => {
     await clearStorage(page); await createGame(page, 1); await ready(page);
-    const result=await page.evaluate(() => {const gs=window.__epohiDebug().state,civ=gs.rivals[0],unit=gs.units.find(u=>u.type==='warrior')||gs.units[0],enemy=civ.units.find(u=>u.type==='warrior');civ.relation='war';unit.x=5;unit.y=5;unit.moves=2;unit.acted=false;enemy.x=6;enemy.y=5;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='plains';gs.map[5][5].revealed=true;gs.map[5][6].revealed=true;window.__epohiDebug().render();const target=window.EpohiHumansPathing.targetFromTile(gs,6,5);return {assigned:window.EpohiHumansPathing.assignTravelOrder(unit.id,target),civId:civ.civilizationId};});
-    expect(result.assigned).toBe(true);await page.waitForFunction(id=>window.__epohiDebug().state.rivals.find(c=>c.civilizationId===id).diplomacy.memories.some(m=>m.reason.includes('атаковала')),result.civId);
+    const result=await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,civ=gs.rivals[0],unit=gs.units[0],enemy=civ.units[0],def=window.EpohiData.UNIT_DEFS.warrior;
+      civ.relation='war';unit.type='warrior';unit.hp=def.maxHealth;unit.maxHp=def.maxHealth;unit.x=5;unit.y=5;unit.moves=def.maxMoves;unit.acted=false;
+      enemy.x=6;enemy.y=5;gs.barbarians=[];gs.map[5][5].camp=null;gs.map[5][6].camp=null;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='plains';gs.map[5][5].revealed=true;gs.map[5][6].revealed=true;
+      window.__epohiDebug().render();
+      const target=window.EpohiHumansPathing.targetFromTile(gs,6,5),assigned=window.EpohiHumansPathing.assignTravelOrder(unit.id,target);
+      if (unit.travelOrder) window.EpohiHumansPathing.processUnit(gs,unit);
+      window.__epohiDebug().render();
+      return {assigned,civId:civ.civilizationId,memories:civ.diplomacy.memories.map(memory=>memory.reason),events:gs.eventLog.map(event=>event.eventType)};
+    });
+    expect(result.assigned).toBe(true);expect(result.memories.some(reason=>reason.includes('атаковала'))).toBe(true);
+    expect(result.events.some(type=>type==='route-combat'||type==='route-combat-win')).toBe(true);
     await expect(page.locator('#map .world-event-pulse')).toBeVisible();
   });
 });
