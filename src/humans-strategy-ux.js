@@ -285,6 +285,7 @@
   function openDiplomacy(civId) {
     const gs = state(); if (!gs) return; ensureIdentity(gs); const known = (gs.rivals || []).filter(function (civ) { return isKnownCiv(gs, civ); }); const modal = ensureDiplomacyModal(); const content = modal.querySelector("#strategyDiplomacyContent");
     content.innerHTML = known.length ? '<div class="strategy-diplomacy-list">' + known.map(function (civ) { return relationCard(gs, civ); }).join("") + '</div>' : '<div class="inline-note">Другие государства ещё не обнаружены.</div>'; modal.classList.add("show");
+    if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.renderUI(gs);
     if (civId) { const card = content.querySelector('[data-diplomacy-civ="' + civId + '"]'); if (card) card.scrollIntoView({ block: "nearest" }); }
   }
 
