@@ -296,6 +296,16 @@
     else if (action === "break") { civ.relation = "neutral"; civ.diplomacy.score = Math.min(civ.diplomacy.score, 5); recordDiplomacy(civ, "Ардена расторгла союз."); }
     else if (action === "peace") { if ((gs.resources.gold || 0) < 20) return; gs.resources.gold -= 20; civ.relation = "neutral"; civ.warStartTurn = null; civ.diplomacy.score = -8; recordDiplomacy(civ, "заключён мир за выплату."); }
     else if (action === "war") { if (!window.confirm("Объявить войну государству «" + civ.name + "»?")) return; civ.relation = "war"; civ.met = true; civ.warStartTurn = gs.turn || 1; civ.diplomacy.score = -50; recordDiplomacy(civ, "Ардена объявила войну."); }
+    const living = window.EpohiLivingCivilizations;
+    if (living) {
+      living.migrate(gs);
+      if (action === "gift") living.changeRelationship(gs, civ, "trust", 14, "Ардена отправила ценный дар");
+      else if (action === "ally") living.changeRelationship(gs, civ, "trust", 8, "Ардена предложила прочный союз");
+      else if (action === "break") living.changeRelationship(gs, civ, "grievances", 18, "Ардена расторгла союз");
+      else if (action === "peace") living.changeRelationship(gs, civ, "grievances", -20, "Ардена выплатила цену мира");
+      else if (action === "war") living.recordAttack(gs, civ, "player");
+      living.addWorldEvent(gs, action === "war" ? "war-declared" : "major-diplomatic-event", "Дипломатия: " + button.textContent.trim() + " — " + civ.name + ".", civ);
+    }
     const value = debug(); if (value && typeof value.render === "function") value.render(); openDiplomacy(civ.civilizationId); schedule();
   }
 
