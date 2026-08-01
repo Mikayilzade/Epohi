@@ -12,7 +12,7 @@ test.describe('Living Civilizations', () => {
       const gs = window.__epohiDebug().state, civ = gs.rivals[0];
       delete civ.diplomacy.trust; delete civ.diplomacy.fear; delete civ.diplomacy.grievances; delete civ.diplomacy.memories;
       window.EpohiLivingCivilizations.migrate(gs);
-      window.EpohiLivingCivilizations.changeRelationship(civ, 'trust', 9, 'Ардена помогла отбить налёт');
+      window.EpohiLivingCivilizations.changeRelationship(gs, civ, 'trust', 9, 'Ардена помогла отбить налёт');
       return { version: gs.diplomacySchemaVersion, diplomacy: civ.diplomacy, personality: civ.personality, strategy: civ.developmentStrategy };
     });
     expect(result.version).toBe(2); expect(result.diplomacy.trust).toBeGreaterThan(0); expect(result.diplomacy.fear).toBeGreaterThanOrEqual(0);
@@ -46,9 +46,22 @@ test.describe('Living Civilizations', () => {
     const result = await page.evaluate(() => {
       const gs=window.__epohiDebug().state, ally=gs.rivals[2], enemy=gs.rivals[0], unit=ally.units.find(u=>u.type!=='worker'&&u.type!=='settler'), city=gs.city||gs.cities[0];
       ally.relation='ally'; enemy.relation='war'; unit.x=city.x+2; unit.y=city.y; gs.barbarians=[{id:'help-target',x:city.x+1,y:city.y,hp:5,maxHp:40}];
-      window.EpohiLivingCivilizations.alliedHelp(gs,ally);
+      window.EpohiLivingCivilizations.alliedHelp(gs,ally,{distance:(a,b)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y)),stepToward:()=>false,attackBarbarian:(c,u,b)=>{b.hp-=10;if(b.hp<=0)gs.barbarians=gs.barbarians.filter(x=>x!==b);return true;},warAction:()=>true});
       return {barbarians:gs.barbarians.length,joint:ally.diplomacy[enemy.civilizationId],events:gs.eventLog.map(e=>e.eventType)};
     });
     expect(result.barbarians).toBe(0); expect(result.joint).toBe('war'); expect(result.events).toContain('allied-battle'); expect(result.events).toContain('joint-war-declared');
+  });
+
+  test('дипломатический ИИ выполняется внутри обычного завершения хода', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 1); await ready(page);
+    await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,civ=gs.rivals[0];
+      gs.turn=4; civ.met=true; civ.diplomacy.grievances=60; gs.diplomaticProposals=[];
+      window.__epohiDebug().endTurn();
+    });
+    await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const result=await page.evaluate(() => ({turn:window.__epohiDebug().state.turn,proposals:window.__epohiDebug().state.diplomaticProposals}));
+    expect(result.turn).toBe(5); expect(result.proposals.some(item => item.type === 'threat')).toBe(true);
+    await expect(page.locator('#livingProposals')).toHaveClass(/show/);
   });
 });

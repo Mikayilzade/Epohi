@@ -1,56 +1,172 @@
 (function () {
   "use strict";
+
   const PERSONALITIES = {
-    zarr:{name:"Завоеватель",strategy:"военная экспансия",aggression:.82,generosity:.18,commerce:.25},
-    velm:{name:"Купец",strategy:"торговля и богатство",aggression:.22,generosity:.48,commerce:.92},
-    elaria:{name:"Хранитель",strategy:"рост, оборона и союзы",aggression:.12,generosity:.86,commerce:.55},
-    varkesh:{name:"Интриган",strategy:"наука и дипломатическое давление",aggression:.55,generosity:.28,commerce:.62}
+    zarr: { name: "Завоеватель", strategy: "военная экспансия", aggression: 82, generosity: 18, commerce: 25, techs: ["mining", "engineering"] },
+    velm: { name: "Купец", strategy: "торговля и богатство", aggression: 22, generosity: 48, commerce: 92, techs: ["writing", "trade"] },
+    elaria: { name: "Хранитель", strategy: "рост, оборона и союзы", aggression: 12, generosity: 86, commerce: 55, techs: ["agriculture", "engineering"] },
+    varkesh: { name: "Интриган", strategy: "наука и дипломатическое давление", aggression: 55, generosity: 28, commerce: 62, techs: ["writing", "statehood"] }
   };
-  const LABELS={trade:"Торговый договор",gift:"Дар",alliance:"Союз",peace:"Мир",threat:"Угроза",jointWar:"Совместная война"};
-  let lastTurn=0;
-  function debug(){return typeof window.__epohiDebug==="function"?window.__epohiDebug():null;}
-  function state(){const d=debug();return d&&d.state;}
-  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-  function profile(c){return PERSONALITIES[c.cultureKey]||PERSONALITIES.elaria;}
-  function escapeText(v){return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-  function worldEvent(gs,type,text,civ,position){
-    const item={id:"living-"+Date.now()+"-"+Math.random().toString(36).slice(2,7),turn:gs.turn,eventType:type,text:text,position:position||null,actorType:"civilization",actorId:civ&&civ.civilizationId,phase:"diplomacy"};
-    gs.eventLog=Array.isArray(gs.eventLog)?gs.eventLog:[];gs.eventLog.unshift(item);gs.eventLog=gs.eventLog.slice(0,240);
-    gs.livingWorldEvents=Array.isArray(gs.livingWorldEvents)?gs.livingWorldEvents:[];gs.livingWorldEvents.unshift(item);gs.livingWorldEvents=gs.livingWorldEvents.slice(0,60);
+  const LABELS = { trade: "Торговый договор", gift: "Дар", alliance: "Союз", peace: "Мир", threat: "Угроза", jointWar: "Совместная война" };
+  let callbacks = {};
+
+  function profile(civ) { return PERSONALITIES[civ.cultureKey] || PERSONALITIES.elaria; }
+  function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+  function escapeText(value) { return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function connect(next) { callbacks = next || {}; }
+
+  function addWorldEvent(gs, type, text, civ, position) {
+    const item = { id: "living-" + gs.turn + "-" + (gs.nextLivingEventId++), turn: gs.turn, eventType: type, text: text, position: position || null, actorType: "civilization", actorId: civ && civ.civilizationId, phase: "diplomacy" };
+    gs.eventLog.unshift(item);
+    gs.eventLog = gs.eventLog.slice(0, 240);
+    gs.livingWorldEvents.unshift(item);
+    gs.livingWorldEvents = gs.livingWorldEvents.slice(0, 60);
   }
-  function migrate(gs){
-    if(!gs)return false;let changed=gs.diplomacySchemaVersion!==2;gs.diplomacySchemaVersion=2;
-    if(!Array.isArray(gs.diplomaticProposals)){gs.diplomaticProposals=[];changed=true;}if(!Array.isArray(gs.livingWorldEvents)){gs.livingWorldEvents=[];changed=true;}
-    (gs.rivals||[]).forEach(function(c){const p=profile(c),d=c.diplomacy||(c.diplomacy={}),score=Number(d.score)||0;
-      if(!Number.isFinite(d.trust)){d.trust=clamp(35+score,0,100);changed=true;}if(!Number.isFinite(d.fear)){d.fear=c.relation==="war"?45:15;changed=true;}
-      if(!Number.isFinite(d.grievances)){d.grievances=score<0?Math.abs(score):0;changed=true;}if(!Array.isArray(d.memories)){d.memories=[];changed=true;}if(!Array.isArray(d.history))d.history=[];
-      if(!c.personality){c.personality=p.name;c.developmentStrategy=p.strategy;changed=true;}c.technologies=Array.isArray(c.technologies)?c.technologies:[];
-    });return changed;
+
+  function migrate(gs) {
+    if (!gs) return null;
+    gs.diplomacySchemaVersion = 2;
+    gs.nextLivingEventId = Number(gs.nextLivingEventId) || 1;
+    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
+    if (!Array.isArray(gs.livingWorldEvents)) gs.livingWorldEvents = [];
+    if (!Array.isArray(gs.diplomaticProposals)) gs.diplomaticProposals = [];
+    (gs.rivals || []).forEach(function (civ) {
+      const identity = profile(civ), diplomacy = civ.diplomacy || (civ.diplomacy = {}), oldScore = Number(diplomacy.score) || 0;
+      if (!Number.isFinite(diplomacy.trust)) diplomacy.trust = clamp(35 + oldScore, 0, 100);
+      if (!Number.isFinite(diplomacy.fear)) diplomacy.fear = civ.relation === "war" ? 45 : 15;
+      if (!Number.isFinite(diplomacy.grievances)) diplomacy.grievances = oldScore < 0 ? Math.abs(oldScore) : 0;
+      if (!Array.isArray(diplomacy.memories)) diplomacy.memories = [];
+      if (!Array.isArray(diplomacy.history)) diplomacy.history = [];
+      civ.personality = civ.personality || identity.name;
+      civ.developmentStrategy = civ.developmentStrategy || identity.strategy;
+      if (!Array.isArray(civ.technologies)) civ.technologies = [];
+    });
+    return gs;
   }
-  function remember(c,kind,amount,reason){const gs=state()||{turn:1},d=c.diplomacy;d.memories.unshift({turn:gs.turn,kind:kind,amount:amount,reason:reason});d.memories=d.memories.slice(0,30);d.history.unshift("Ход "+gs.turn+": "+reason+" ("+(amount>=0?"+":"")+amount+")");d.history=d.history.slice(0,30);}
-  function change(c,field,amount,reason){const d=c.diplomacy;d[field]=clamp((Number(d[field])||0)+amount,0,100);d.score=clamp(Math.round(d.trust*.7-d.fear*.25-d.grievances*.65),-50,50);remember(c,field,amount,reason);}
-  function propose(gs,c,type,text,targetId){if(gs.diplomaticProposals.some(p=>p.status==="pending"&&p.civId===c.civilizationId&&p.type===type))return null;const p={id:"proposal-"+gs.turn+"-"+c.civilizationId+"-"+type,turn:gs.turn,civId:c.civilizationId,type:type,targetId:targetId||null,text:text,status:"pending"};gs.diplomaticProposals.unshift(p);worldEvent(gs,"diplomatic-proposal",c.name+": «"+text+"»",c);return p;}
-  function chooseProposal(gs,c){if(!c.met||c.defeated||gs.turn%4!==(Number(String(c.civilizationId).replace(/\D/g,""))||0)%4)return;const d=c.diplomacy,p=profile(c);
-    if(c.relation==="war")return propose(gs,c,"peace","Предлагаем мир: взаимная вражда уже слишком дорога.");
-    if(d.grievances>=45)return propose(gs,c,"threat","Возместите старые обиды даром, иначе последует война.");
-    if(c.relation!=="ally"&&d.trust>=62)return propose(gs,c,"alliance","Наше доверие окрепло. Заключим союз?");
-    const enemy=(gs.rivals||[]).find(o=>o!==c&&o.relation==="war");if(c.relation==="ally"&&enemy)return propose(gs,c,"jointWar","Выступим вместе против "+enemy.name+".",enemy.civilizationId);
-    if(p.generosity>.7&&gs.turn%8===0)return propose(gs,c,"gift","Примите 12 золота в память о нашей дружбе.");if(p.commerce>.5)return propose(gs,c,"trade","Откроем торговый путь: обе стороны получат золото.");
+
+  function remember(gs, civ, kind, amount, reason) {
+    const diplomacy = civ.diplomacy;
+    diplomacy.memories.unshift({ turn: gs.turn, kind: kind, amount: amount, reason: reason });
+    diplomacy.memories = diplomacy.memories.slice(0, 30);
+    diplomacy.history.unshift("Ход " + gs.turn + ": " + reason + " (" + (amount >= 0 ? "+" : "") + amount + ")");
+    diplomacy.history = diplomacy.history.slice(0, 30);
   }
-  function alliedHelp(gs,c){if(c.relation!=="ally")return;const city=gs.city||(gs.cities||[])[0];if(!city)return;const danger=(gs.barbarians||[]).slice().sort((a,b)=>Math.max(Math.abs(a.x-city.x),Math.abs(a.y-city.y))-Math.max(Math.abs(b.x-city.x),Math.abs(b.y-city.y)))[0];const soldiers=(c.units||[]).filter(u=>u.hp>0&&u.type!=="worker"&&u.type!=="settler");
-    if(danger&&soldiers.length){const u=soldiers[0],distance=Math.max(Math.abs(u.x-danger.x),Math.abs(u.y-danger.y));if(distance<=1){const def=window.EpohiData.UNIT_DEFS[u.type]||{};danger.hp-=Math.max(5,(def.attack||8)-3);worldEvent(gs,"allied-battle",c.name+" пришёл на помощь и атаковал варваров.",c,{x:danger.x,y:danger.y});remember(c,"help",5,"Союзники вместе сражались с варварами");if(danger.hp<=0)gs.barbarians=gs.barbarians.filter(b=>b!==danger);}else if(distance<=9&&debug()&&debug().stepToward){debug().stepToward(u,danger,c);worldEvent(gs,"allied-aid",c.name+" направляет отряд против угрозы Ардене.",c,{x:u.x,y:u.y});}}
-    const enemy=(gs.rivals||[]).find(o=>o!==c&&o.relation==="war");if(enemy&&c.diplomacy[enemy.civilizationId]!=="war"){c.diplomacy[enemy.civilizationId]="war";worldEvent(gs,"joint-war-declared",c.name+" выполняет союзный долг и вступает в войну против "+enemy.name+".",c);}
+
+  function changeRelationship(gs, civ, field, amount, reason) {
+    migrate(gs);
+    const diplomacy = civ.diplomacy;
+    diplomacy[field] = clamp(diplomacy[field] + amount, 0, 100);
+    diplomacy.score = clamp(Math.round(diplomacy.trust * .7 - diplomacy.fear * .25 - diplomacy.grievances * .65), -50, 50);
+    remember(gs, civ, field, amount, reason);
   }
-  function develop(gs,c){const p=profile(c);c.strategicGoal=p.strategy;if(gs.turn%6===0&&c.resources&&(c.resources.science||0)>=12){const paths=p.aggression>.6?["army","fortifications"]:(p.commerce>.7?["trade","writing"]:["agriculture","engineering"]),tech=paths.find(id=>c.technologies.indexOf(id)<0);if(tech){c.technologies.push(tech);c.resources.science-=12;worldEvent(gs,"rival-technology-completed",c.name+" развил технологию «"+tech+"».",c);}}}
-  function processTurn(gs){migrate(gs);(gs.rivals||[]).forEach(function(c){develop(gs,c);alliedHelp(gs,c);chooseProposal(gs,c);if(c.diplomacy.grievances>0&&gs.turn%5===0)change(c,"grievances",-1,"время понемногу смягчило старые обиды");});}
-  function resolve(id,accepted){const gs=state(),p=gs&&gs.diplomaticProposals.find(x=>x.id===id);if(!p||p.status!=="pending")return false;const c=gs.rivals.find(x=>x.civilizationId===p.civId);if(!c)return false;p.status=accepted?"accepted":"declined";p.resolvedTurn=gs.turn;
-    if(!accepted)change(c,"trust",-5,"Ардена отклонила предложение «"+LABELS[p.type]+"»");else if(p.type==="trade"){gs.resources.gold+=8;c.resources.gold+=8;change(c,"trust",7,"торговый договор оказался взаимовыгодным");}else if(p.type==="gift"){gs.resources.gold+=12;change(c,"trust",5,"Ардена с благодарностью приняла дар");}else if(p.type==="alliance"){c.relation="ally";change(c,"trust",12,"заключён союз");}else if(p.type==="peace"){c.relation="neutral";c.warStartTurn=null;change(c,"grievances",-20,"заключён мир");}else if(p.type==="threat"){if(gs.resources.gold>=10)gs.resources.gold-=10;change(c,"grievances",-12,"Ардена уступила дипломатическому давлению");}else if(p.type==="jointWar"){const target=gs.rivals.find(x=>x.civilizationId===p.targetId);if(target){target.relation="war";change(c,"trust",10,"Ардена поддержала совместную войну");worldEvent(gs,"joint-war-declared","Ардена и "+c.name+" объявили совместную войну: "+target.name+".",c);}}
-    worldEvent(gs,"major-diplomatic-event",(accepted?"Принято: ":"Отклонено: ")+LABELS[p.type]+" — "+c.name+".",c);if(debug()&&debug().render)debug().render();render();return true;
+
+  function recordAttack(gs, civ, attacker) {
+    if (!civ) return;
+    if (attacker === "player") {
+      changeRelationship(gs, civ, "grievances", 12, "Ардена атаковала наших людей");
+      changeRelationship(gs, civ, "fear", 4, "военная сила Ардены внушает опасение");
+    } else {
+      changeRelationship(gs, civ, "trust", -8, civ.name + " атаковал Ардену");
+    }
   }
-  function render(){const gs=state();if(!gs)return;migrate(gs);document.querySelectorAll("[data-diplomacy-civ]").forEach(function(card){const c=gs.rivals.find(x=>x.civilizationId===card.dataset.diplomacyCiv);if(!c)return;let box=card.querySelector(".living-relation-details");if(!box){box=document.createElement("div");box.className="living-relation-details";card.querySelector(".strategy-diplomacy-actions").before(box);}box.innerHTML="<div><b>Доверие "+c.diplomacy.trust+"</b><b>Страх "+c.diplomacy.fear+"</b><b>Обиды "+c.diplomacy.grievances+"</b></div><small>Личность: "+escapeText(c.personality)+" · Стратегия: "+escapeText(c.developmentStrategy)+"</small>"+(c.diplomacy.history.length?"<ul>"+c.diplomacy.history.slice(0,3).map(h=>"<li>"+escapeText(h)+"</li>").join("")+"</ul>":"");});
-    let panel=document.getElementById("livingProposals");if(!panel){panel=document.createElement("aside");panel.id="livingProposals";panel.className="living-proposals";document.getElementById("gameApp").appendChild(panel);panel.addEventListener("click",function(e){const b=e.target.closest("[data-proposal]");if(b)resolve(b.dataset.proposal,b.dataset.answer==="yes");});}const pending=gs.diplomaticProposals.filter(p=>p.status==="pending");panel.innerHTML=pending.slice(0,2).map(function(p){const c=gs.rivals.find(x=>x.civilizationId===p.civId);return "<article><small>"+LABELS[p.type]+" · "+escapeText(c?c.name:"")+"</small><p>"+escapeText(p.text)+"</p><button data-proposal=\""+p.id+"\" data-answer=\"yes\">Принять</button><button class=\"secondary\" data-proposal=\""+p.id+"\" data-answer=\"no\">Отклонить</button></article>";}).join("");panel.classList.toggle("show",pending.length>0);
+
+  function createProposal(gs, civ, type, text, targetId) {
+    migrate(gs);
+    if (gs.diplomaticProposals.some(function (item) { return item.status === "pending" && item.civId === civ.civilizationId && item.type === type; })) return null;
+    const item = { id: "proposal-" + gs.turn + "-" + civ.civilizationId + "-" + type, turn: gs.turn, civId: civ.civilizationId, type: type, targetId: targetId || null, text: text, status: "pending" };
+    gs.diplomaticProposals.unshift(item);
+    addWorldEvent(gs, "diplomatic-proposal", civ.name + ": «" + text + "»", civ);
+    return item;
   }
-  function tick(){const gs=state();if(gs){migrate(gs);if(gs.turn!==lastTurn){lastTurn=gs.turn;processTurn(gs);}render();}window.setTimeout(tick,350);}
-  window.EpohiLivingCivilizations={version:2,personalities:PERSONALITIES,migrate:migrate,processTurn:processTurn,resolveProposal:resolve,changeRelationship:change,createProposal:propose,alliedHelp:alliedHelp,worldEvent:worldEvent};
-  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",tick,{once:true});else tick();
+
+  function chooseProposal(gs, civ) {
+    if (!civ.met || civ.defeated || gs.turn % 4 !== (Number(String(civ.civilizationId).replace(/\D/g, "")) || 0) % 4) return;
+    const diplomacy = civ.diplomacy, identity = profile(civ);
+    if (civ.relation === "war") return createProposal(gs, civ, "peace", "Предлагаем мир: взаимная вражда уже слишком дорога.");
+    if (diplomacy.grievances >= 45) return createProposal(gs, civ, "threat", "Возместите старые обиды даром, иначе последует война.");
+    if (civ.relation !== "ally" && diplomacy.trust >= 62) return createProposal(gs, civ, "alliance", "Наше доверие окрепло. Заключим союз?");
+    const enemy = (gs.rivals || []).find(function (other) { return other !== civ && other.relation === "war"; });
+    if (civ.relation === "ally" && enemy) return createProposal(gs, civ, "jointWar", "Выступим вместе против " + enemy.name + ".", enemy.civilizationId);
+    if (identity.generosity > 70 && gs.turn % 8 === 0) return createProposal(gs, civ, "gift", "Примите 12 золота в память о нашей дружбе.");
+    if (identity.commerce > 50) createProposal(gs, civ, "trade", "Откроем торговый путь: обе стороны получат золото.");
+  }
+
+  function resolveProposal(gs, id, accepted) {
+    migrate(gs);
+    const item = gs.diplomaticProposals.find(function (proposal) { return proposal.id === id; });
+    if (!item || item.status !== "pending") return false;
+    const civ = gs.rivals.find(function (candidate) { return candidate.civilizationId === item.civId; });
+    if (!civ) return false;
+    item.status = accepted ? "accepted" : "declined";
+    item.resolvedTurn = gs.turn;
+    if (!accepted) changeRelationship(gs, civ, "trust", -5, "Ардена отклонила предложение «" + LABELS[item.type] + "»");
+    else if (item.type === "trade") { gs.resources.gold += 8; civ.resources.gold += 8; changeRelationship(gs, civ, "trust", 7, "торговый договор оказался взаимовыгодным"); }
+    else if (item.type === "gift") { gs.resources.gold += 12; changeRelationship(gs, civ, "trust", 5, "Ардена с благодарностью приняла дар"); }
+    else if (item.type === "alliance") { civ.relation = "ally"; changeRelationship(gs, civ, "trust", 12, "заключён союз"); }
+    else if (item.type === "peace") { civ.relation = "neutral"; civ.warStartTurn = null; changeRelationship(gs, civ, "grievances", -20, "заключён мир"); }
+    else if (item.type === "threat") { if (gs.resources.gold >= 10) gs.resources.gold -= 10; changeRelationship(gs, civ, "grievances", -12, "Ардена уступила дипломатическому давлению"); }
+    else if (item.type === "jointWar") {
+      const target = gs.rivals.find(function (candidate) { return candidate.civilizationId === item.targetId; });
+      if (target) { target.relation = "war"; changeRelationship(gs, civ, "trust", 10, "Ардена поддержала совместную войну"); addWorldEvent(gs, "joint-war-declared", "Ардена и " + civ.name + " объявили совместную войну: " + target.name + ".", civ); }
+    }
+    addWorldEvent(gs, "major-diplomatic-event", (accepted ? "Принято: " : "Отклонено: ") + LABELS[item.type] + " — " + civ.name + ".", civ);
+    return true;
+  }
+
+  function alliedHelp(gs, civ, helpers) {
+    if (civ.relation !== "ally") return;
+    const city = gs.city || (gs.cities || [])[0], soldiers = (civ.units || []).filter(function (unit) { return unit.hp > 0 && unit.type !== "worker" && unit.type !== "settler"; });
+    if (!city) return;
+    const danger = (gs.barbarians || []).slice().sort(function (a, b) { return helpers.distance(a, city) - helpers.distance(b, city); })[0];
+    if (danger && helpers.distance(danger, city) <= 7 && soldiers.length) {
+      const unit = soldiers[0], distance = helpers.distance(unit, danger);
+      if (distance <= 1) { helpers.attackBarbarian(civ, unit, danger); addWorldEvent(gs, "allied-battle", civ.name + " пришёл на помощь и атаковал варваров.", civ, { x: danger.x, y: danger.y }); remember(gs, civ, "help", 5, "Союзники вместе сражались с варварами"); }
+      else if (distance <= 9 && helpers.stepToward(unit, danger, civ)) addWorldEvent(gs, "allied-aid", civ.name + " направляет отряд против угрозы Ардене.", civ, { x: unit.x, y: unit.y });
+    }
+    (gs.rivals || []).filter(function (enemy) { return enemy !== civ && enemy.relation === "war"; }).forEach(function (enemy) {
+      if (civ.diplomacy[enemy.civilizationId] !== "war") { civ.diplomacy[enemy.civilizationId] = "war"; addWorldEvent(gs, "joint-war-declared", civ.name + " выполняет союзный долг и вступает в войну против " + enemy.name + ".", civ); }
+      if (helpers.warAction && helpers.warAction(civ, enemy)) addWorldEvent(gs, "allied-war-action", civ.name + " оказывает военную помощь против " + enemy.name + ".", civ);
+    });
+  }
+
+  function processTurn(gs, helpers) {
+    migrate(gs);
+    (gs.rivals || []).forEach(function (civ) {
+      const identity = profile(civ);
+      civ.strategicGoal = identity.strategy;
+      alliedHelp(gs, civ, helpers);
+      chooseProposal(gs, civ);
+      if (gs.turn % 6 === 0 && civ.resources && civ.resources.science >= 12) {
+        const tech = identity.techs.find(function (id) { return civ.technologies.indexOf(id) < 0; });
+        if (tech) { civ.technologies.push(tech); civ.resources.science -= 12; addWorldEvent(gs, "technology-completed", civ.name + " изучил технологию «" + window.EpohiData.TECHS[tech].name + "».", civ); }
+      }
+      if (civ.diplomacy.grievances > 0 && gs.turn % 5 === 0) changeRelationship(gs, civ, "grievances", -1, "время понемногу смягчило старые обиды");
+    });
+  }
+
+  function renderUI(gs) {
+    migrate(gs);
+    document.querySelectorAll("[data-diplomacy-civ]").forEach(function (card) {
+      const civ = gs.rivals.find(function (candidate) { return candidate.civilizationId === card.dataset.diplomacyCiv; });
+      if (!civ) return;
+      let box = card.querySelector(".living-relation-details");
+      if (!box) { box = document.createElement("div"); box.className = "living-relation-details"; card.querySelector(".strategy-diplomacy-actions").before(box); }
+      box.innerHTML = "<div><b>Доверие " + civ.diplomacy.trust + "</b><b>Страх " + civ.diplomacy.fear + "</b><b>Обиды " + civ.diplomacy.grievances + "</b></div><small>Личность: " + escapeText(civ.personality) + " · Стратегия: " + escapeText(civ.developmentStrategy) + "</small>" + (civ.diplomacy.history.length ? "<ul>" + civ.diplomacy.history.slice(0, 3).map(function (line) { return "<li>" + escapeText(line) + "</li>"; }).join("") + "</ul>" : "");
+    });
+    let panel = document.getElementById("livingProposals");
+    if (!panel) {
+      panel = document.createElement("aside"); panel.id = "livingProposals"; panel.className = "living-proposals"; document.getElementById("gameApp").appendChild(panel);
+      panel.addEventListener("click", function (event) { const button = event.target.closest("[data-proposal]"); if (!button || !callbacks.getState) return; if (resolveProposal(callbacks.getState(), button.dataset.proposal, button.dataset.answer === "yes")) { if (callbacks.save) callbacks.save(); if (callbacks.render) callbacks.render(); } });
+    }
+    const pending = gs.diplomaticProposals.filter(function (item) { return item.status === "pending"; });
+    panel.replaceChildren();
+    pending.slice(0, 2).forEach(function (item) {
+      const civ = gs.rivals.find(function (candidate) { return candidate.civilizationId === item.civId; }), article = document.createElement("article"), title = document.createElement("small"), text = document.createElement("p");
+      title.textContent = LABELS[item.type] + " · " + (civ ? civ.name : ""); text.textContent = item.text; article.append(title, text);
+      [["Принять", "yes", ""], ["Отклонить", "no", "secondary"]].forEach(function (choice) { const button = document.createElement("button"); button.textContent = choice[0]; button.dataset.proposal = item.id; button.dataset.answer = choice[1]; button.className = choice[2]; article.appendChild(button); }); panel.appendChild(article);
+    });
+    panel.classList.toggle("show", pending.length > 0);
+  }
+
+  window.EpohiLivingCivilizations = { version: 2, personalities: PERSONALITIES, connect: connect, migrate: migrate, processTurn: processTurn, resolveProposal: resolveProposal, changeRelationship: changeRelationship, createProposal: createProposal, alliedHelp: alliedHelp, recordAttack: recordAttack, renderUI: renderUI, addWorldEvent: addWorldEvent };
 })();

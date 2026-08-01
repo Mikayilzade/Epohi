@@ -446,7 +446,9 @@
     candidate.resources.food = 0; candidate.resources.production = 0;
     if (!candidate.nextUnitId) candidate.nextUnitId = candidate.units.reduce(function (max, unit) { return Math.max(max, Number(String(unit.id).replace(/\D/g, "")) || 0); }, 0) + 1;
     if (!Array.isArray(candidate.history)) candidate.history = []; if (!Array.isArray(candidate.eventLog)) candidate.eventLog = []; if (!Array.isArray(candidate.rivals)) candidate.rivals = []; if (!candidate.nextRivalUnitId) candidate.nextRivalUnitId = 1; if (typeof candidate.defeat !== "boolean") candidate.defeat = false; if (typeof candidate.victory !== "boolean") candidate.victory = false;
-    migrateBarbarianDirector144(candidate); candidate.version = 5; delete candidate.scout; return candidate;
+    migrateBarbarianDirector144(candidate); candidate.version = 5; delete candidate.scout;
+    if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(candidate);
+    return candidate;
   }
 
   function validateSaveState(candidate) {
@@ -736,6 +738,7 @@
   function attackEnemy(unitId, x, y) {
     const unit = getUnit(unitId); if (!canAttack(unit, x, y)) return;
     const def = UNIT_DEFS[unit.type]; const barb = barbarianAt(x,y); const camp = campAt(x,y); const ru = rivalUnitAt(x,y); const rc = rivalCityAt(x,y); const target = barb || camp || (ru && ru.unit) || (rc && rc.city);
+    if (window.EpohiLivingCivilizations && (ru || rc)) window.EpohiLivingCivilizations.recordAttack(state, (ru || rc).civ, "player");
     target.hp -= damageAmount(def.attack || 8, barb ? BARBARIAN.raiderDefense + defenseBonus(x,y) : (ru ? (UNIT_DEFS[ru.unit.type].defense || 0) + defenseBonus(x,y) : 18));
     logEvent(state, rc ? "city-attacked" : "attack", def.name + " атакует цель.", { x:x, y:y }, { actorType:"player", actorId:"player" });
     unit.moves = 0; unit.acted = true;
@@ -763,6 +766,10 @@
     if (selectedUnitId && !getUnit(selectedUnitId)) selectedUnitId = state.units.length ? state.units[0].id : null;
     renderMap();
     renderTop();
+    if (window.EpohiLivingCivilizations) {
+      window.EpohiLivingCivilizations.connect({ getState:function(){ return state; }, render:render, save:saveGame });
+      window.EpohiLivingCivilizations.renderUI(state);
+    }
     renderContext();
     renderBadges();
   }
@@ -1580,6 +1587,25 @@
         const completedTech = finishResearch();
         const eventText = randomEvent();
         state.turn += 1;
+        if (window.EpohiLivingCivilizations) {
+          window.EpohiLivingCivilizations.processTurn(state, {
+            distance:function(a,b){ return chebyshev(a.x,a.y,b.x,b.y); },
+            stepToward:stepToward,
+            attackBarbarian:function(civ,unit){ return aiAttackBarbarian(civ,unit); },
+            warAction:function(ally,enemy){
+              const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.type!=="worker"&&item.type!=="settler";});
+              const target=(enemy.units||[]).find(function(item){return item.hp>0;})||(enemy.cities||[]).find(function(item){return item.hp>0;});
+              if(!unit||!target)return false;
+              if(isAdjacent(unit.x,unit.y,target.x,target.y)){
+                target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,target.type?(UNIT_DEFS[target.type].defense||0):18);
+                logEvent(state,"allied-war-battle",ally.name+" атакует войска "+enemy.name+" в общей войне.",{x:target.x,y:target.y},{actorType:"civilization",actorId:ally.civilizationId,phase:"rivals"});
+                if(target.hp<=0){ if(target.type)enemy.units=enemy.units.filter(function(item){return item!==target;}); else { target.hp=0; if(target.capital)enemy.defeated=true; } }
+                return true;
+              }
+              return stepToward(unit,target,ally);
+            }
+          });
+        }
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
         selected = null;
