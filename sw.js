@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-6-living-civilizations";
+  "epohi-v1-6-1-living-civilizations-stable";
 const APP_FILES = [
   "./",
   "./index.html",
