@@ -70,12 +70,13 @@ test.describe('Living Civilizations', () => {
     await page.evaluate(() => {
       const gs=window.__epohiDebug().state,defs=window.EpohiData.UNIT_DEFS;
       gs.rivals.forEach((civ,index) => { while(civ.units.length<9)civ.units.push({id:`budget-${index}-${civ.units.length}`,civilizationId:civ.civilizationId,type:'warrior',x:civ.cities[0].x,y:civ.cities[0].y,moves:1,acted:false,hp:defs.warrior.maxHealth,maxHp:defs.warrior.maxHealth}); });
-      gs.rivals[2].relation='ally';
+      const ally=gs.rivals[2],city=gs.city||gs.cities[0],soldier=ally.units.find(unit=>unit.type==='warrior');ally.relation='ally';soldier.x=city.x+2;soldier.y=city.y;gs.barbarians=[{id:'budget-help',x:city.x+1,y:city.y,hp:60,maxHp:60}];
     });
     await page.getByRole('button', { name: /Завершить ход/i }).click();
     await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
-    const budget=await page.evaluate(() => window.__epohiDebug().state.lastAiActionBudget);
-    expect(budget.used).toBeLessThanOrEqual(budget.limit); expect(budget.remaining).toBe(budget.limit-budget.used);
+    const result=await page.evaluate(() => ({budget:window.__epohiDebug().state.lastAiActionBudget,audit:window.__epohiDebug().state.lastAiUnitActions,events:window.__epohiDebug().state.eventLog.map(event=>event.eventType)}));
+    expect(result.budget.used).toBeLessThanOrEqual(result.budget.limit); expect(result.budget.remaining).toBe(result.budget.limit-result.budget.used);
+    expect(result.events).toContain('allied-battle'); expect(Math.max(...Object.values(result.audit))).toBe(1);
   });
 
   test('война ИИ взаимна, а атакованная сторона отвечает', async ({ page }) => {
@@ -88,6 +89,14 @@ test.describe('Living Civilizations', () => {
     await page.getByRole('button', { name: /Завершить ход/i }).click(); await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
     const after=await page.evaluate(({a,b}) => {const gs=window.__epohiDebug().state,x=gs.rivals.find(c=>c.civilizationId===a),y=gs.rivals.find(c=>c.civilizationId===b);return {ab:x.diplomacy[b],ba:y.diplomacy[a],aHp:x.units[0]&&x.units[0].hp,bHp:y.units[0]&&y.units[0].hp,events:gs.eventLog.map(e=>e.eventType)};},before);
     expect(after.ab).toBe('war');expect(after.ba).toBe('war');expect(after.events).toContain('rival-battle');
+  });
+
+  test('принятая совместная война немедленно взаимна', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 2); await ready(page);
+    const proposal=await page.evaluate(() => {const gs=window.__epohiDebug().state,[ally,target]=gs.rivals;ally.met=true;target.met=true;const item=window.EpohiLivingCivilizations.createProposal(gs,ally,'jointWar','Ударим вместе',target.civilizationId);window.__epohiDebug().render();return {id:item.id,ally:ally.civilizationId,target:target.civilizationId};});
+    await page.locator(`[data-proposal="${proposal.id}"][data-answer="yes"]`).click();
+    const relation=await page.evaluate(({ally,target}) => {const gs=window.__epohiDebug().state,a=gs.rivals.find(c=>c.civilizationId===ally),b=gs.rivals.find(c=>c.civilizationId===target);return {forward:a.diplomacy[target],reverse:b.diplomacy[ally]};},proposal);
+    expect(relation.forward).toBe('war');expect(relation.reverse).toBe('war');
   });
 
   test('личности меняют реальный выбор производства', async ({ page }) => {
