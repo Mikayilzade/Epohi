@@ -1585,7 +1585,7 @@
         if(window.EpohiLivingCivilizations)window.EpohiLivingCivilizations.processAlliedActions(state,{
           actionBudget:aiBudget,distance:function(a,b){return chebyshev(a.x,a.y,b.x,b.y);},stepToward:stepToward,
           attackBarbarian:function(civ,unit){return aiAttackBarbarian(civ,unit);},
-          warAction:function(ally,enemy){const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.moves>0&&!item.acted&&item.type!=="worker"&&item.type!=="settler";});const target=(enemy.units||[]).find(function(item){return item.hp>0;})||(enemy.cities||[]).find(function(item){return item.hp>0;});if(!unit||!target)return false;if(isAdjacent(unit.x,unit.y,target.x,target.y)){target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,target.type?(UNIT_DEFS[target.type].defense||0):18);logEvent(state,"allied-war-battle",ally.name+" атакует войска "+enemy.name+" в общей войне.",{x:target.x,y:target.y},{actorType:"civilization",actorId:ally.civilizationId,phase:"rivals"});unit.moves=0;unit.acted=true;return true;}const moved=stepToward(unit,target,ally);if(moved){unit.moves=0;unit.acted=true;}return moved;}
+          warAction:performAlliedWarAction
         });
         const rivalActions = processRivals(aiBudget);
         const barbarianText = processBarbarians();
@@ -1602,18 +1602,7 @@
             distance:function(a,b){ return chebyshev(a.x,a.y,b.x,b.y); },
             stepToward:stepToward,
             attackBarbarian:function(civ,unit){ return aiAttackBarbarian(civ,unit); },
-            warAction:function(ally,enemy){
-              const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.moves>0&&!item.acted&&item.type!=="worker"&&item.type!=="settler";});
-              const target=(enemy.units||[]).find(function(item){return item.hp>0;})||(enemy.cities||[]).find(function(item){return item.hp>0;});
-              if(!unit||!target)return false;
-              if(isAdjacent(unit.x,unit.y,target.x,target.y)){
-                target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,target.type?(UNIT_DEFS[target.type].defense||0):18);
-                logEvent(state,"allied-war-battle",ally.name+" атакует войска "+enemy.name+" в общей войне.",{x:target.x,y:target.y},{actorType:"civilization",actorId:ally.civilizationId,phase:"rivals"});
-                if(target.hp<=0){ if(target.type)enemy.units=enemy.units.filter(function(item){return item!==target;}); else { target.hp=0; if(target.capital)enemy.defeated=true; } }
-                unit.moves=0;unit.acted=true;return true;
-              }
-              const moved=stepToward(unit,target,ally);if(moved){unit.moves=0;unit.acted=true;}return moved;
-            }
+            warAction:performAlliedWarAction
           });
         }
         state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
@@ -2291,9 +2280,25 @@
   }
   function attackRivalTarget(civ,unit,war){
     setRivalWar(civ,war.enemy);
-    const target=war.target; target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,target.type?(UNIT_DEFS[target.type].defense||0):18);
-    logEvent(state,'rival-battle',civ.name+' атакует '+war.enemy.name+'.',{x:target.x,y:target.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'});
-    if(target.hp<=0){if(target.type)war.enemy.units=war.enemy.units.filter(function(item){return item!==target;});else{target.hp=0;if(target.capital)war.enemy.defeated=true;}}
+    resolveAiToAiCombat(civ,unit,war.enemy,war.target,'rival-battle',civ.name+' атакует '+war.enemy.name+'.');
+  }
+  function resolveAiToAiCombat(attacker,unit,enemy,target,eventType,text){
+    target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,target.type?(UNIT_DEFS[target.type].defense||0):18);
+    logEvent(state,eventType,text,{x:target.x,y:target.y},{actorType:'civilization',actorId:attacker.civilizationId,phase:'rivals'});
+    if(target.hp>0)return false;
+    target.hp=0;
+    if(target.type)enemy.units=enemy.units.filter(function(item){return item!==target;});
+    else if(target.capital){enemy.defeated=true;enemy.units=[];}
+    else enemy.cities=enemy.cities.filter(function(item){return item!==target;});
+    return true;
+  }
+  function performAlliedWarAction(ally,enemy){
+    const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.moves>0&&!item.acted&&item.type!=="worker"&&item.type!=="settler";});
+    const target=(enemy.units||[]).find(function(item){return item.hp>0;})||(enemy.cities||[]).find(function(item){return item.hp>0;});
+    if(!unit||!target)return false;
+    if(isAdjacent(unit.x,unit.y,target.x,target.y))resolveAiToAiCombat(ally,unit,enemy,target,'allied-war-battle',ally.name+' атакует войска '+enemy.name+' в общей войне.');
+    else if(!stepToward(unit,target,ally))return false;
+    unit.moves=0;unit.acted=true;state.lastAiUnitActions=state.lastAiUnitActions||{};state.lastAiUnitActions[unit.id]=(state.lastAiUnitActions[unit.id]||0)+1;return true;
   }
   function processRivals(budget){
     budget=budget||{remaining:AI_LIMITS.maxActionsPerTurn,used:0}; const started=budget.used||0,rivals=state.rivals||[];

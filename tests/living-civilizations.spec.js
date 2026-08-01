@@ -99,6 +99,19 @@ test.describe('Living Civilizations', () => {
     expect(relation.forward).toBe('war');expect(relation.reverse).toBe('war');
   });
 
+  test('союзник удаляет уничтоженный отряд противника из состояния игры', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 3); await ready(page);
+    const targetId=await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,enemy=gs.rivals[0],ally=gs.rivals[2],target=enemy.units[0],soldier=ally.units.find(unit=>unit.type==='warrior');
+      ally.relation='ally';enemy.relation='war';gs.barbarians=[];ally.units=[soldier].concat(ally.units.filter(unit=>unit!==soldier));
+      soldier.x=6;soldier.y=5;target.x=5;target.y=5;target.hp=1;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='plains';
+      return target.id;
+    });
+    await page.getByRole('button', { name: /Завершить ход/i }).click();await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const result=await page.evaluate(id => ({exists:window.__epohiDebug().state.rivals[0].units.some(unit=>unit.id===id),events:window.__epohiDebug().state.eventLog.map(event=>event.eventType)}),targetId);
+    expect(result.exists).toBe(false);expect(result.events).toContain('allied-war-battle');
+  });
+
   test('личности меняют реальный выбор производства', async ({ page }) => {
     await clearStorage(page); await createGame(page, 2); await ready(page);
     await page.evaluate(() => {const [zarr,velm]=window.__epohiDebug().state.rivals;[zarr,velm].forEach(c=>{c.cities.forEach(city=>city.queue=null);c.units=c.units.filter(u=>u.type==='scout');c.resources.production=0;c.resources.gold=100;});});
