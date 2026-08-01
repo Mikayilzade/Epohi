@@ -64,4 +64,44 @@ test.describe('Living Civilizations', () => {
     expect(result.turn).toBe(5); expect(result.proposals.some(item => item.type === 'threat')).toBe(true);
     await expect(page.locator('#livingProposals')).toHaveClass(/show/);
   });
+
+  test('обычный ИИ и союзная помощь делят единый бюджет действий', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 3); await ready(page);
+    await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,defs=window.EpohiData.UNIT_DEFS;
+      gs.rivals.forEach((civ,index) => { while(civ.units.length<9)civ.units.push({id:`budget-${index}-${civ.units.length}`,civilizationId:civ.civilizationId,type:'warrior',x:civ.cities[0].x,y:civ.cities[0].y,moves:1,acted:false,hp:defs.warrior.maxHealth,maxHp:defs.warrior.maxHealth}); });
+      gs.rivals[2].relation='ally';
+    });
+    await page.getByRole('button', { name: /Завершить ход/i }).click();
+    await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const budget=await page.evaluate(() => window.__epohiDebug().state.lastAiActionBudget);
+    expect(budget.used).toBeLessThanOrEqual(budget.limit); expect(budget.remaining).toBe(budget.limit-budget.used);
+  });
+
+  test('война ИИ взаимна, а атакованная сторона отвечает', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 2); await ready(page);
+    const before=await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,[a,b]=gs.rivals,au=a.units.find(u=>u.type==='warrior'),bu=b.units.find(u=>u.type==='warrior');
+      a.diplomacy[b.civilizationId]='war'; delete b.diplomacy[a.civilizationId]; au.x=5;au.y=5;bu.x=6;bu.y=5;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='plains';
+      return {a:a.civilizationId,b:b.civilizationId,aHp:au.hp,bHp:bu.hp};
+    });
+    await page.getByRole('button', { name: /Завершить ход/i }).click(); await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const after=await page.evaluate(({a,b}) => {const gs=window.__epohiDebug().state,x=gs.rivals.find(c=>c.civilizationId===a),y=gs.rivals.find(c=>c.civilizationId===b);return {ab:x.diplomacy[b],ba:y.diplomacy[a],aHp:x.units[0]&&x.units[0].hp,bHp:y.units[0]&&y.units[0].hp,events:gs.eventLog.map(e=>e.eventType)};},before);
+    expect(after.ab).toBe('war');expect(after.ba).toBe('war');expect(after.events).toContain('rival-battle');
+  });
+
+  test('личности меняют реальный выбор производства', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 2); await ready(page);
+    await page.evaluate(() => {const [zarr,velm]=window.__epohiDebug().state.rivals;[zarr,velm].forEach(c=>{c.cities.forEach(city=>city.queue=null);c.units=c.units.filter(u=>u.type==='scout');c.resources.production=0;c.resources.gold=100;});});
+    await page.getByRole('button', { name: /Завершить ход/i }).click();await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const queues=await page.evaluate(() => window.__epohiDebug().state.rivals.map(c=>({culture:c.cultureKey,type:c.cities[0].queue&&c.cities[0].queue.id,goal:c.strategicGoal})));
+    expect(queues.find(c=>c.culture==='zarr').type).toBe('warrior');expect(queues.find(c=>c.culture==='velm').type).toBe('settler');
+  });
+
+  test('маршрутная атака создаёт память и видимый знак события', async ({ page }) => {
+    await clearStorage(page); await createGame(page, 1); await ready(page);
+    const result=await page.evaluate(() => {const gs=window.__epohiDebug().state,civ=gs.rivals[0],unit=gs.units.find(u=>u.type==='warrior')||gs.units[0],enemy=civ.units.find(u=>u.type==='warrior');civ.relation='war';unit.x=5;unit.y=5;unit.moves=2;unit.acted=false;enemy.x=6;enemy.y=5;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='plains';gs.map[5][5].revealed=true;gs.map[5][6].revealed=true;window.__epohiDebug().render();const target=window.EpohiHumansPathing.targetFromTile(gs,6,5);return {assigned:window.EpohiHumansPathing.assignTravelOrder(unit.id,target),civId:civ.civilizationId};});
+    expect(result.assigned).toBe(true);await page.waitForFunction(id=>window.__epohiDebug().state.rivals.find(c=>c.civilizationId===id).diplomacy.memories.some(m=>m.reason.includes('атаковала')),result.civId);
+    await expect(page.locator('#map .world-event-pulse')).toBeVisible();
+  });
 });

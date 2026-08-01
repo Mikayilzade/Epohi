@@ -319,6 +319,7 @@
 
   function resolveAttack(gs, unit, located) {
     centerCombat(located.x, located.y);
+    if (located.civ && window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.recordAttack(gs, located.civ, "player");
     const enemyDefense = located.kind === "camp"
       ? 12
       : (located.kind === "barbarian"

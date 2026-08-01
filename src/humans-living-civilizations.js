@@ -15,6 +15,28 @@
   function escapeText(value) { return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
   function connect(next) { callbacks = next || {}; }
 
+  function adjustGoalScores(civ, scores) {
+    const identity = profile(civ);
+    scores["подготовка к войне"] *= 1 + identity.aggression / 100;
+    scores["нападение на игрока"] *= 1 + identity.aggression / 80;
+    scores["развитие столицы"] *= identity.commerce > 70 ? 1.7 : 1.1;
+    scores["основание нового поселения"] *= identity.name === "Хранитель" ? 1.65 : 1;
+    scores["защита"] *= identity.name === "Хранитель" ? 1.7 : 1;
+    return scores;
+  }
+
+  function chooseProduction(civ, context) {
+    const identity = profile(civ);
+    if (context.threat) return "warrior";
+    if (identity.aggression >= 70 && context.warriors < 4) return "warrior";
+    if (identity.name === "Хранитель" && context.workers < 2) return "worker";
+    if (identity.commerce >= 70 && context.canSettle) return "settler";
+    if (context.workers < 1) return "worker";
+    if (context.warriors < 2) return "warrior";
+    if (context.canSettle) return "settler";
+    return "scout";
+  }
+
   function addWorldEvent(gs, type, text, civ, position) {
     const item = { id: "living-" + gs.turn + "-" + (gs.nextLivingEventId++), turn: gs.turn, eventType: type, text: text, position: position || null, actorType: "civilization", actorId: civ && civ.civilizationId, phase: "diplomacy" };
     gs.eventLog.unshift(item);
@@ -115,22 +137,25 @@
 
   function alliedHelp(gs, civ, helpers) {
     if (civ.relation !== "ally") return;
+    const spendAction = helpers.spendAction || function () { return true; };
     const city = gs.city || (gs.cities || [])[0], soldiers = (civ.units || []).filter(function (unit) { return unit.hp > 0 && unit.type !== "worker" && unit.type !== "settler"; });
     if (!city) return;
     const danger = (gs.barbarians || []).slice().sort(function (a, b) { return helpers.distance(a, city) - helpers.distance(b, city); })[0];
     if (danger && helpers.distance(danger, city) <= 7 && soldiers.length) {
       const unit = soldiers[0], distance = helpers.distance(unit, danger);
-      if (distance <= 1) { helpers.attackBarbarian(civ, unit, danger); addWorldEvent(gs, "allied-battle", civ.name + " пришёл на помощь и атаковал варваров.", civ, { x: danger.x, y: danger.y }); remember(gs, civ, "help", 5, "Союзники вместе сражались с варварами"); }
-      else if (distance <= 9 && helpers.stepToward(unit, danger, civ)) addWorldEvent(gs, "allied-aid", civ.name + " направляет отряд против угрозы Ардене.", civ, { x: unit.x, y: unit.y });
+      if (distance <= 1 && spendAction()) { helpers.attackBarbarian(civ, unit, danger); addWorldEvent(gs, "allied-battle", civ.name + " пришёл на помощь и атаковал варваров.", civ, { x: danger.x, y: danger.y }); remember(gs, civ, "help", 5, "Союзники вместе сражались с варварами"); }
+      else if (distance > 1 && distance <= 9 && spendAction() && helpers.stepToward(unit, danger, civ)) addWorldEvent(gs, "allied-aid", civ.name + " направляет отряд против угрозы Ардене.", civ, { x: unit.x, y: unit.y });
     }
     (gs.rivals || []).filter(function (enemy) { return enemy !== civ && enemy.relation === "war"; }).forEach(function (enemy) {
       if (civ.diplomacy[enemy.civilizationId] !== "war") { civ.diplomacy[enemy.civilizationId] = "war"; addWorldEvent(gs, "joint-war-declared", civ.name + " выполняет союзный долг и вступает в войну против " + enemy.name + ".", civ); }
-      if (helpers.warAction && helpers.warAction(civ, enemy)) addWorldEvent(gs, "allied-war-action", civ.name + " оказывает военную помощь против " + enemy.name + ".", civ);
+      if (helpers.warAction && spendAction() && helpers.warAction(civ, enemy)) addWorldEvent(gs, "allied-war-action", civ.name + " оказывает военную помощь против " + enemy.name + ".", civ);
     });
   }
 
   function processTurn(gs, helpers) {
     migrate(gs);
+    const budget = helpers.actionBudget || { remaining: 18, used: 0 };
+    helpers.spendAction = function () { if (budget.remaining <= 0) return false; budget.remaining -= 1; budget.used += 1; return true; };
     (gs.rivals || []).forEach(function (civ) {
       const identity = profile(civ);
       civ.strategicGoal = identity.strategy;
@@ -166,7 +191,21 @@
       [["Принять", "yes", ""], ["Отклонить", "no", "secondary"]].forEach(function (choice) { const button = document.createElement("button"); button.textContent = choice[0]; button.dataset.proposal = item.id; button.dataset.answer = choice[1]; button.className = choice[2]; article.appendChild(button); }); panel.appendChild(article);
     });
     panel.classList.toggle("show", pending.length > 0);
+    document.querySelectorAll("#map .world-event-pulse").forEach(function (node) { node.remove(); });
+    gs.eventLog.filter(function (item) {
+      return item.turn >= gs.turn - 1 && ["city-founded", "rival-city-founded", "attack", "route-combat", "route-combat-win", "rival-battle", "city-captured", "war-declared", "joint-war-declared", "technology-completed", "major-diplomatic-event", "allied-battle", "allied-war-battle"].indexOf(item.eventType) >= 0;
+    }).slice(0, 6).forEach(function (item) {
+      const point = item.position || item.coordinates;
+      if (!point) return;
+      const tile = document.querySelector('#map .tile[data-x="' + point.x + '"][data-y="' + point.y + '"]');
+      if (!tile) return;
+      const marker = document.createElement("span");
+      marker.className = "world-event-pulse";
+      marker.title = item.text;
+      marker.textContent = item.eventType.indexOf("war") >= 0 || item.eventType.indexOf("attack") >= 0 || item.eventType.indexOf("battle") >= 0 ? "⚔" : "✦";
+      tile.appendChild(marker);
+    });
   }
 
-  window.EpohiLivingCivilizations = { version: 2, personalities: PERSONALITIES, connect: connect, migrate: migrate, processTurn: processTurn, resolveProposal: resolveProposal, changeRelationship: changeRelationship, createProposal: createProposal, alliedHelp: alliedHelp, recordAttack: recordAttack, renderUI: renderUI, addWorldEvent: addWorldEvent };
+  window.EpohiLivingCivilizations = { version: 2, personalities: PERSONALITIES, connect: connect, migrate: migrate, adjustGoalScores: adjustGoalScores, chooseProduction: chooseProduction, processTurn: processTurn, resolveProposal: resolveProposal, changeRelationship: changeRelationship, createProposal: createProposal, alliedHelp: alliedHelp, recordAttack: recordAttack, renderUI: renderUI, addWorldEvent: addWorldEvent };
 })();
