@@ -34,12 +34,24 @@ test.describe('Living Civilizations', () => {
     await expect(page.locator('#livingProposals')).toHaveClass(/show/); await expect(page.locator('#livingProposals')).toContainText('Предложение');
   });
 
-  test('принятое предложение меняет отношения и попадает в летопись', async ({ page }) => {
+  test('принятое торговое предложение меняет отношения и открывает маршрут', async ({ page }) => {
     await clearStorage(page); await createGame(page, 1); await ready(page);
-    const before = await page.evaluate(() => { const api=window.EpohiLivingCivilizations,gs=window.__epohiDebug().state,c=gs.rivals[0]; c.met=true; const p=api.createProposal(gs,c,'trade','Выгодный путь'); window.__epohiDebug().render(); return {id:p.id,gold:gs.resources.gold,trust:c.diplomacy.trust}; });
+    const before = await page.evaluate(() => {
+      const api=window.EpohiLivingCivilizations,gs=window.__epohiDebug().state,c=gs.rivals[0];
+      c.met=true; c.relation='neutral';
+      gs.researched=Array.from(new Set([...(gs.researched||[]),'trade']));
+      c.technologies=Array.from(new Set([...(c.technologies||[]),'trade']));
+      api.migrate(gs); c.diplomacy.trust=60; c.diplomacy.grievances=0; c.diplomacy.score=20;
+      const p=api.createProposal(gs,c,'trade','Выгодный путь'); window.__epohiDebug().render();
+      return {id:p.id,gold:gs.resources.gold,trust:c.diplomacy.trust};
+    });
     await page.locator(`[data-proposal="${before.id}"][data-answer="yes"]`).click();
-    const after = await page.evaluate(() => { const gs=window.__epohiDebug().state,c=gs.rivals[0]; return {gold:gs.resources.gold,trust:c.diplomacy.trust,status:gs.diplomaticProposals[0].status,events:gs.eventLog.map(e=>e.eventType)}; });
-    expect(after.gold).toBe(before.gold+8); expect(after.trust).toBe(before.trust+7); expect(after.status).toBe('accepted'); expect(after.events).toContain('major-diplomatic-event');
+    const after = await page.evaluate(() => {
+      const gs=window.__epohiDebug().state,c=gs.rivals[0],route=window.EpohiPlayerFeedback.activeTradeRoute(gs,c.civilizationId);
+      return {gold:gs.resources.gold,trust:c.diplomacy.trust,status:gs.diplomaticProposals[0].status,route,events:gs.eventLog.map(e=>e.eventType)};
+    });
+    expect(after.gold).toBe(before.gold); expect(after.trust).toBe(before.trust+7); expect(after.status).toBe('accepted');
+    expect(after.route.remainingTurns).toBe(8); expect(after.events).toContain('trade-route-opened');
   });
 
   test('союзник идёт к варварам и вступает в войну игрока', async ({ page }) => {
