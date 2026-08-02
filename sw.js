@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-6-1-living-civilizations-stable";
+  "epohi-v1-7-player-feedback-treasury";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -36,6 +36,7 @@ const APP_FILES = [
   "./src/humans-strategy-ux.js",
   "./src/humans-camera-layout-guard.js",
   "./src/humans-living-civilizations.js",
+  "./src/humans-player-feedback.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
