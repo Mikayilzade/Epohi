@@ -206,3 +206,13 @@ When chat memory, this document and repository code disagree, use this order:
 4. remembered chat context.
 
 This prevents an old conversation summary from overriding the actual game state.
+
+## 13. Combat, AI and world stability integration (2026-08-02)
+
+The `codex/combat-ai-world-stabilization-v1` package adds a centralized terrain contract in `src/data.js`: every current terrain declares movement cost, land passability, and numeric defense. `src/humans-pathing-core.js` now uses weighted Dijkstra routing and persists `travelOrder.movementBank`, so expensive terrain can require more than one turn without changing the displayed/executed route. Route badges are cumulative movement cost rather than tile ordinals.
+
+`src/humans-combat-world-stability.js` owns migration defaults and shared campaign-stability operations. Its public `window.EpohiCombatWorldStability` API includes faction collapse, urgent decisions, administration expansion, proposal hygiene, and stable major-event rendering. Capital collapse transfers every surviving city, scatters all remaining units, clears proposals/routes/relations and rewrites obsolete territory ownership. Urgent decisions retain their source `cityId`, survive saves, expire after their creation turn, and cannot silently redirect local production to another city.
+
+Player administration defaults to at least four cities (or the number already present in an older save). Settlement uses `state.cityCapacity`; Treasury expansion costs 60 gold initially and rises by 40 per purchase. Treasury production now requires an explicitly selected city. The service-worker cache is `epohi-v1-8-0-combat-world-stability` and includes the new module.
+
+Local checks on 2026-08-02: all JavaScript syntax checks and `git diff --check` passed. The complete 121-test Playwright suite was invoked, but Chromium failed before test 1 because the image lacks `libatk-1.0.so.0`; installing browser dependencies also failed because the environment package proxy returned HTTP 403. Therefore the honest browser result is **0 passed, 0 skipped, 1 failed at browser launch, 120 did not run**, not a green run. Physical iPhone testing was not performed.

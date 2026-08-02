@@ -561,7 +561,9 @@
   }
 
   function fundProduction(gs) {
-    const city = gs.city || (gs.cities || [])[0];
+    const value = debug();
+    const selectedId = value && value.getSelectedCityId ? value.getSelectedCityId() : null;
+    const city = (gs.cities || []).find(function (item) { return String(item.id) === String(selectedId); }) || null;
     if (!city || (gs.resources.gold || 0) < 20) return false;
     gs.resources.gold -= 20;
     city.production = (city.production || 0) + 12;
@@ -656,7 +658,9 @@
       const def = window.EpohiData.UNIT_DEFS[offer.type];
       return '<article class="game-card"><div><h3>🤝 ' + escapeText(offer.civ.name) + ': ' + escapeText(def.name) + '</h3><p>Союзный отряд поступает под твой контроль на ' + offer.turns + ' ходов.</p></div><button class="card-button" data-treasury-action="contingent" data-civ-id="' + offer.civ.civilizationId + '" data-type="' + offer.type + '" ' + ((gs.resources.gold || 0) < offer.cost ? 'disabled' : '') + '>' + offer.cost + ' 🪙</button></article>';
     }).join("") : '<div class="inline-note">Нет доступных союзных контингентов. Нужен союз, доверие 60+ и подходящий отряд у союзника.</div>';
-    const city = gs.city || (gs.cities || [])[0];
+    const value = debug();
+    const selectedId = value && value.getSelectedCityId ? value.getSelectedCityId() : null;
+    const city = (gs.cities || []).find(function (item) { return String(item.id) === String(selectedId); }) || null;
     content.innerHTML = '<div class="feedback-treasury-balance"><small>Доступно</small><strong>' + Math.floor(gs.resources.gold || 0) + ' 🪙</strong></div>' +
       '<div class="section-title">Торговые пути</div>' + tradeHtml +
       '<div class="section-title">Рынок наёмников</div><div class="card-list">' + mercenaries + '</div>' +
@@ -664,7 +668,7 @@
       '<div class="section-title">Союзные контингенты</div><div class="card-list">' + contingentHtml + '</div>' +
       '<div class="section-title">Государственные расходы</div><div class="card-list">' +
       '<article class="game-card"><div><h3>❤️ Лечение выбранного отряда</h3><p>' + (selected ? escapeText(selected.name || window.EpohiData.UNIT_DEFS[selected.type].name) + ': ' + Math.ceil(selected.hp) + '/' + selected.maxHp : 'Сначала выбери свой отряд.') + '</p></div><button class="card-button" data-treasury-action="heal" ' + ((!selected || selected.hp >= selected.maxHp || (gs.resources.gold || 0) < 12) ? 'disabled' : '') + '>12 🪙</button></article>' +
-      '<article class="game-card"><div><h3>🔨 Финансировать мастерские</h3><p>' + escapeText(city ? city.name : "Столица") + ' получает +12 локального производства.</p></div><button class="card-button" data-treasury-action="production" ' + ((gs.resources.gold || 0) < 20 ? 'disabled' : '') + '>20 🪙</button></article>' +
+      '<article class="game-card"><div><h3>🔨 Финансировать мастерские' + (city ? ': ' + escapeText(city.name) : '') + '</h3><p>' + (city ? escapeText(city.name) + ' получает +12 локального производства.' : 'Сначала выбери город.') + '</p></div><button class="card-button" data-treasury-action="production" ' + ((!city || (gs.resources.gold || 0) < 20) ? 'disabled' : '') + '>20 🪙</button></article>' +
       '<article class="game-card"><div><h3>🗺️ Купить карты путешественников</h3><p>Открывает участок 5×5 у границы разведанных земель.</p></div><button class="card-button" data-treasury-action="map" ' + ((gs.resources.gold || 0) < 24 ? 'disabled' : '') + '>24 🪙</button></article>' +
       '</div>';
   }
@@ -770,9 +774,10 @@
     const x = Number(tile.dataset.x), y = Number(tile.dataset.y);
     const data = gs.map[y] && gs.map[y][x];
     if (!data) return;
-    text.textContent += window.EpohiUtils.passableTile(data)
-      ? " · Стоимость пути: 1 шаг. В текущем прототипе холмы и лес не замедляют, но дают защиту; маршрут выбирает один из кратчайших вариантов."
-      : " · Стоимость пути: недоступно.";
+    const rule = window.EpohiData.TERRAIN[data.terrain];
+    text.textContent += rule.passable === false
+      ? " · Стоимость движения: непроходимо — " + rule.impassableReason + ". Защита: " + rule.defenseModifier + "%."
+      : " · Стоимость движения: " + rule.movementCost + " очк. Защита: " + (rule.defenseModifier >= 0 ? "+" : "") + rule.defenseModifier + "%.";
   }
 
   function patchWiki() {
@@ -783,7 +788,7 @@
     const details = document.createElement("details");
     details.className = "wiki-details";
     details.dataset.feedbackMovementWiki = "1";
-    details.innerHTML = '<summary>Маршруты и стоимость перемещения</summary><div class="wiki-details-body"><div class="wiki-callout"><strong>Текущие правила прототипа.</strong> Каждая проходимая сухопутная клетка стоит 1 шаг, вода без специального доступа недоступна. Холмы и лес пока влияют на защиту в бою, но не замедляют движение. Автомаршрут выбирает кратчайший путь; если несколько путей равны, визуально он может выбрать любой из них. Полная система разной проходимости местности остаётся отдельным будущим этапом.</div></div>';
+    details.innerHTML = '<summary>Маршруты и стоимость перемещения</summary><div class="wiki-details-body"><div class="wiki-callout"><strong>Взвешенные маршруты.</strong> Равнина и пустошь: 1 очко; лес, холмы и мёртвые земли: 2; болото: 3; вода непроходима. Защита: лес +20%, холмы +25%, болото +10%, мёртвые земли −10%. Маршрут минимизирует суммарную стоимость и копит очки между ходами.</div></div>';
     content.insertBefore(details, content.firstChild);
     wikiPatching = false;
   }

@@ -5,7 +5,7 @@
     throw new Error("EpohiData and EpohiUtils are required before humans-pathing-core.js");
   }
 
-  const { UNIT_DEFS, BARBARIAN } = window.EpohiData;
+  const { UNIT_DEFS, BARBARIAN, TERRAIN } = window.EpohiData;
   const { neighborsOf, passableTile, chebyshev, isAdjacent } = window.EpohiUtils;
   const VERSION = 2;
   let toastTimer = 0;
@@ -127,6 +127,16 @@
     return x + "," + y;
   }
 
+  function movementCost(gs, unit, point) {
+    const tile = gs.map[point.y] && gs.map[point.y][point.x];
+    const rule = tile && TERRAIN[tile.terrain];
+    return rule && rule.passable !== false && Number.isFinite(rule.movementCost) ? rule.movementCost : Infinity;
+  }
+
+  function pathCost(gs, unit, path) {
+    return (path || []).reduce(function (sum, point) { return sum + movementCost(gs, unit, point); }, 0);
+  }
+
   function reconstruct(parent, endKey) {
     const result = [];
     let cursor = endKey;
@@ -146,28 +156,31 @@
       : function (point) { return point.x === goal.x && point.y === goal.y; };
     if (isGoal({ x: unit.x, y: unit.y })) return [];
 
-    const queue = [{ x: unit.x, y: unit.y }];
-    const seen = new Set([pointKey(unit.x, unit.y)]);
+    const queue = [{ x: unit.x, y: unit.y, cost: 0 }];
+    const distances = new Map([[pointKey(unit.x, unit.y), 0]]);
     const parent = new Map();
 
-    for (let index = 0; index < queue.length; index += 1) {
-      const current = queue[index];
+    while (queue.length) {
+      queue.sort(function (a, b) { return a.cost - b.cost || chebyshev(a.x, a.y, goal.x, goal.y) - chebyshev(b.x, b.y, goal.x, goal.y); });
+      const current = queue.shift();
+      if (current.cost !== distances.get(pointKey(current.x, current.y))) continue;
       const candidates = neighborsOf(current.x, current.y, size).slice().sort(function (a, b) {
         return chebyshev(a.x, a.y, goal.x, goal.y) - chebyshev(b.x, b.y, goal.x, goal.y);
       });
 
       for (const next of candidates) {
         const nextKey = pointKey(next.x, next.y);
-        if (seen.has(nextKey)) continue;
-        seen.add(nextKey);
         if (isBlocked(gs, unit, next.x, next.y, options)) continue;
+        const nextCost = current.cost + movementCost(gs, unit, next);
+        if (!Number.isFinite(nextCost) || nextCost >= (distances.get(nextKey) ?? Infinity)) continue;
+        distances.set(nextKey, nextCost);
         parent.set(nextKey, {
           from: pointKey(current.x, current.y),
           point: { x: next.x, y: next.y }
         });
-        if (isGoal(next)) return reconstruct(parent, nextKey);
-        queue.push(next);
+        queue.push({ x: next.x, y: next.y, cost: nextCost });
       }
+      if (isGoal(current) && (current.x !== unit.x || current.y !== unit.y)) return reconstruct(parent, pointKey(current.x, current.y));
     }
     return null;
   }
@@ -265,13 +278,13 @@
     }
   }
 
-  function moveOne(gs, unit, point) {
-    if (!point || unit.moves <= 0 || unit.acted) return false;
+  function moveOne(gs, unit, point, available) {
+    if (!point || available < movementCost(gs, unit, point)) return false;
     if (isBlocked(gs, unit, point.x, point.y)) return false;
     unit.x = point.x;
     unit.y = point.y;
-    unit.moves = Math.max(0, unit.moves - 1);
-    if (unit.moves <= 0) unit.acted = true;
+    unit.moves = 0;
+    unit.acted = true;
     const sight = unit.type === "scout"
       ? 1 + ((gs.permanentBonuses || {}).scoutSight || 0)
       : 1;
@@ -284,6 +297,13 @@
     const remainingThisTurn = Math.max(0, unit.moves || 0);
     if (steps <= remainingThisTurn) return 0;
     return Math.ceil((steps - remainingThisTurn) / maxMoves);
+  }
+
+  function estimatePathTurns(gs, unit, path) {
+    const cost = pathCost(gs, unit, path);
+    const bank = Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0) + Math.max(0, unit.moves || 0);
+    const perTurn = Math.max(1, (UNIT_DEFS[unit.type] && UNIT_DEFS[unit.type].maxMoves) || 1);
+    return cost <= bank ? 0 : Math.ceil((cost - bank) / perTurn);
   }
 
   function centerCombat(x, y) {
@@ -362,8 +382,8 @@
       } else if (located.kind === "rival-city" && located.civ) {
         located.target.hp = 0;
         if (located.target.capital) {
-          located.civ.defeated = true;
-          located.civ.units = [];
+          if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.resolveFactionDefeat(gs, located.civ, gs);
+          else { located.civ.defeated = true; located.civ.units = []; }
         }
       }
       unit.travelOrder = null;
@@ -393,10 +413,15 @@
     if (!unit || !unit.travelOrder || unit.travelOrder.status === "awaiting-choice" || unit.hp <= 0) return false;
     if (unit.moves <= 0 || unit.acted) return false;
 
+    const orderAtStart = unit.travelOrder;
+    orderAtStart.movementBank = Math.max(0, Number(orderAtStart.movementBank) || 0) + unit.moves;
+    unit.moves = 0;
+    unit.acted = true;
+
     let changed = false;
     let guard = 0;
 
-    while (unit.travelOrder && unit.moves > 0 && !unit.acted && guard < 16) {
+    while (unit.travelOrder && guard < 16) {
       guard += 1;
       const order = unit.travelOrder;
       const route = pathForOrder(gs, unit, order);
@@ -442,11 +467,18 @@
         break;
       }
 
-      if (!moveOne(gs, unit, route.path[0])) {
+      const nextCost = movementCost(gs, unit, route.path[0]);
+      if (order.movementBank < nextCost) {
+        order.status = "waiting";
+        order.reason = "копит очки движения: нужно " + nextCost;
+        break;
+      }
+      if (!moveOne(gs, unit, route.path[0], order.movementBank)) {
         order.status = "waiting";
         order.reason = "маршрут изменился; будет пересчитан";
         break;
       }
+      order.movementBank -= nextCost;
       changed = true;
     }
 
@@ -633,6 +665,9 @@
     locateTarget: locateTarget,
     pathForOrder: pathForOrder,
     estimateTurns: estimateTurns,
+    estimatePathTurns: estimatePathTurns,
+    movementCost: movementCost,
+    pathCost: pathCost,
     targetFromTile: targetFromTile,
     assignTravelOrder: assignTravelOrder,
     cancelTravelOrder: cancelTravelOrder,

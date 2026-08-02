@@ -240,3 +240,18 @@ When locally green:
    - exact local test result;
    - honest untested physical-device areas.
 6. Do not merge the PR and do not retarget it to `main`.
+
+## Integration pass status (2026-08-02)
+
+- [x] Central terrain rules now contain passability, weighted movement cost, and numeric defense modifiers.
+- [x] Player routes use weighted Dijkstra routing, consume cumulative terrain cost, preserve partial movement credit in saves, and display cumulative cost/ETA.
+- [x] Existing deterministic stack cycling remains ID-based; hostile inspection continues to remove stale friendly orders.
+- [x] Route combat now delegates capital collapse to one shared faction-defeat resolver that transfers cities, clears armies, treaties, proposals, trade, diplomacy, and territory ownership.
+- [x] Major-event and urgent-decision overlays have stable DOM ownership, close/reopen controls, city-bound rewards, end-turn confirmation, expiration, and migration defaults.
+- [x] Treasury production targets the explicitly selected city; administrative capacity is visible, migrated, gates settlement, and has an escalating Treasury expansion purchase.
+- [x] Existing temporary-contract expiry, contingent cooldown/restock, selected-unit healing, AI survival production, finite-POI consumption, trade eligibility, and defeated-faction guards were preserved and integrated with the new migration layer.
+- [x] Service-worker cache was bumped once and includes the new runtime module.
+- [x] Added focused Playwright acceptance coverage in `tests/combat-world-stability.spec.js`.
+- [ ] Complete Playwright execution is green in this container. Chromium could not start because `libatk-1.0.so.0` is absent; `playwright install-deps chromium` was blocked by the environment's HTTP 403 package proxy. No passing count is claimed.
+
+Deliberate implementation boundary: the milestone strengthens and centralizes the existing early-era AI rather than introducing a second planner. AI production already prioritizes warriors under nearby threat, turn budgets prevent cheats, and existing finite-POI resolution is shared globally. Physical-device behavior remains untested.
