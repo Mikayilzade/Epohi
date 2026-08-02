@@ -216,3 +216,13 @@ The `codex/combat-ai-world-stabilization-v1` package adds a centralized terrain 
 Player administration defaults to at least four cities (or the number already present in an older save). Settlement uses `state.cityCapacity`; Treasury expansion costs 60 gold initially and rises by 40 per purchase. Treasury production now requires an explicitly selected city. The service-worker cache is `epohi-v1-8-0-combat-world-stability` and includes the new module.
 
 Local checks on 2026-08-02: all JavaScript syntax checks and `git diff --check` passed. The complete 121-test Playwright suite was invoked, but Chromium failed before test 1 because the image lacks `libatk-1.0.so.0`; installing browser dependencies also failed because the environment package proxy returned HTTP 403. Therefore the honest browser result is **0 passed, 0 skipped, 1 failed at browser launch, 120 did not run**, not a green run. Physical iPhone testing was not performed.
+
+### PR #74 review stabilization
+
+The review follow-up connects the earlier APIs to live game flows. Enemy inspection now owns visible unit/city attack controls and unavailable explanations. Both player and AI capital captures call the same collapse resolver. Territory formerly owned by a collapsed rival is reassigned to transferred city IDs for player yield/accounting compatibility, rather than merely being cleared.
+
+The existing `EpohiHumansJourney` event queue is wrapped into the urgent-decision lifecycle. A real turn-created Saga event opens immediately, retains the capital/source city, resolves through the original Journey reward implementation, and expires out of both urgent UI and the Saga queue. World-event reopening now calls `EpohiPlayerFeedback.reopenWorldEvents`, which clears the feed's internal close signature.
+
+Permanent Treasury units now cost at least twice comparable ten-turn contingents; contracts display remaining turns, threatened allies keep their sole defender, and cooldown-based availability remains intact. Rival turns may spend actual rival gold on one emergency heal and threatened-city production acceleration, and the last local warrior is reserved as a defender. Diplomacy shows defeated status and known demographic/military/Trade information without actionable controls, while invalid or repeated joint-war proposals are suppressed at creation.
+
+Stabilization validation: syntax checks for every changed JavaScript/test file, `git diff --check`, and a headless Node weighted-route assertion passed. Playwright discovered **122 tests** but Chromium could not load `libatk-1.0.so.0`; with `--max-failures=1`, the exact result was **0 passed, 0 skipped, 1 failed at browser launch, 121 did not run**. Physical-device testing was not performed.

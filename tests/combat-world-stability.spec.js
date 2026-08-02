@@ -34,52 +34,62 @@ test.describe('Combat, AI and world stability', () => {
     expect(rules.water.impassableReason).toContain('воду');
   });
 
-  test('capital collapse transfers all cities, clears forces and diplomacy, and migrates after reload shape', async ({ page }) => {
+  test('visible city attack collapses a rival and transfers all cities', async ({ page }) => {
     await ready(page, 2);
-    const result = await page.evaluate(() => {
+    const setup = await page.evaluate(() => {
       const gs=window.__epohiDebug().state, loser=gs.rivals[0], observer=gs.rivals[1];
+      const attacker=gs.units.find(unit=>unit.type==='warrior')||gs.units[0], capital=loser.cities[0];
+      attacker.type='warrior'; attacker.x=5; attacker.y=5; attacker.moves=1; attacker.acted=false; attacker.hp=100; attacker.maxHp=100;
+      Object.assign(capital,{x:6,y:5,hp:1,maxHp:180,capital:true}); loser.units=[]; loser.relation='war'; loser.met=true;
+      gs.map[5][5].terrain='plains'; gs.map[5][6].terrain='plains'; gs.map[5][5].revealed=true; gs.map[5][6].revealed=true;
       loser.cities.push({id:'captured-second',name:'Второй',x:8,y:8,population:2,hp:150,maxHp:150,buildings:[],queue:null});
       observer.diplomacy[loser.civilizationId]='war';
       gs.diplomaticProposals=[{id:'collapse-proposal',type:'peace',civId:loser.civilizationId,status:'pending'}];
       gs.tradeRoutes=[{id:'collapse-trade',civId:loser.civilizationId,status:'active',remainingTurns:4}];
-      const transferred=loser.cities.length, forces=loser.units.length;
-      window.EpohiCombatWorldStability.resolveFactionDefeat(gs, loser, gs);
-      const snapshot=JSON.parse(JSON.stringify(gs)); window.EpohiCombatWorldStability.migrate(snapshot);
-      return { transferred,forces,defeated:loser.defeated,cities:gs.cities.filter(c=>c.formerCivilizationId===loser.civilizationId).length,units:loser.units.length,proposal:gs.diplomaticProposals[0].status,trade:gs.tradeRoutes[0].status,relation:observer.diplomacy[loser.civilizationId],event:gs.eventLog[0].eventType,migrated:snapshot.combatWorldStabilityVersion };
+      window.__epohiDebug().render(); return {civId:loser.civilizationId,transferred:loser.cities.length};
     });
-    expect(result).toMatchObject({ defeated:true, cities:result.transferred, units:0, proposal:'cancelled', trade:'cancelled', relation:undefined, event:'capital-fallen', migrated:1 });
-    expect(result.forces).toBeGreaterThan(0);
+    await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
+    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
+    await page.locator('[data-context-action="attack"]').click();
+    const result=await page.evaluate(({civId})=>{const gs=window.__epohiDebug().state,loser=gs.rivals.find(c=>c.civilizationId===civId);return{defeated:loser.defeated,cities:gs.cities.filter(c=>c.formerCivilizationId===civId).length,proposal:gs.diplomaticProposals[0].status,trade:gs.tradeRoutes[0].status,event:gs.eventLog[0].eventType};},setup);
+    expect(result).toMatchObject({defeated:true,cities:setup.transferred,proposal:'cancelled',trade:'cancelled',event:'capital-fallen'});
     await expect(page.locator('#stabilityMajorModal')).toHaveClass(/show/);
     await page.locator('[data-stability-close="major"]').click();
     await expect(page.locator('#stabilityMajorModal')).not.toHaveClass(/show/);
   });
 
-  test('urgent decision is immediate, city-bound, persistent when closed, and expires', async ({ page }) => {
+  test('turn-driven era decision is immediate, persistent when closed, and city-bound', async ({ page }) => {
     await ready(page, 0);
     const ids = await page.evaluate(() => {
-      const gs=window.__epohiDebug().state, city=gs.cities[0]; city.production=0;
-      const decision=window.EpohiCombatWorldStability.createUrgentDecision(gs,{title:'Странствующий мастер',text:'Помочь мастерским?',cityId:city.id,options:[{id:'work',label:'Принять помощь',production:9}]});
-      return {decision:decision.id,city:city.id};
+      const gs=window.__epohiDebug().state, city=gs.cities[0]; city.production=0; gs.resources.gold=20; gs.turn=5;
+      window.EpohiHumansJourney.sync({render:false});
+      return {city:city.id};
     });
     await expect(page.locator('#stabilityDecisionModal')).toHaveClass(/show/);
     await page.locator('[data-stability-close="decision"]').click();
     await expect(page.locator('#urgentDecisionIndicator')).toHaveClass(/show/);
     await page.locator('#urgentDecisionIndicator').click();
-    await page.locator('[data-option-id="work"]').click();
+    await page.locator('[data-option-id="hire"]').click();
     const resolved = await page.evaluate(({city}) => { const gs=window.__epohiDebug().state; return {production:gs.cities.find(c=>c.id===city).production,status:gs.urgentDecisions[0].status}; }, ids);
-    expect(resolved).toEqual({production:9,status:'resolved'});
+    expect(resolved).toEqual({production:18,status:'resolved'});
   });
 
-  test('administration capacity is migrated, priced progressively, and expandable', async ({ page }) => {
+  test('enemy selected from the map exposes and resolves a visible unit attack', async ({ page }) => {
+    await ready(page, 1);
+    const enemyId=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return enemy.id;});
+    await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
+    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
+    await page.locator('[data-context-action="attack"]').click();
+    expect(await page.evaluate(id=>window.__epohiDebug().state.rivals[0].units.some(unit=>unit.id===id),enemyId)).toBe(false);
+  });
+
+  test('Treasury visibly expands administration with an escalating price', async ({ page }) => {
     await ready(page, 0);
-    const result = await page.evaluate(() => {
-      const gs=window.__epohiDebug().state; gs.resources.gold=500;
-      const before={capacity:gs.cityCapacity,cost:window.EpohiCombatWorldStability.administrationCost(gs)};
-      window.EpohiCombatWorldStability.expandAdministration(gs);
-      return {before,capacity:gs.cityCapacity,cost:window.EpohiCombatWorldStability.administrationCost(gs),gold:gs.resources.gold};
-    });
-    expect(result.capacity).toBe(result.before.capacity + 1);
-    expect(result.cost).toBe(result.before.cost + 40);
-    expect(result.gold).toBe(500 - result.before.cost);
+    const before=await page.evaluate(()=>{const gs=window.__epohiDebug().state;gs.resources.gold=500;window.EpohiPlayerFeedback.openTreasury();window.EpohiCombatWorldStability.render();return{capacity:gs.cityCapacity,cost:window.EpohiCombatWorldStability.administrationCost(gs)};});
+    await page.locator('[data-expand-administration]').click();
+    const result=await page.evaluate(()=>{const gs=window.__epohiDebug().state;return{capacity:gs.cityCapacity,cost:window.EpohiCombatWorldStability.administrationCost(gs),gold:gs.resources.gold};});
+    expect(result.capacity).toBe(before.capacity + 1);
+    expect(result.cost).toBe(before.cost + 40);
+    expect(result.gold).toBe(500 - before.cost);
   });
 });

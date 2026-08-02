@@ -18,9 +18,9 @@
     "mercenary-contract-ended", "major-diplomatic-event"
   ]);
   const MERCENARIES = {
-    scout: { label: "Разведчики вольных земель", type: "scout", cost: 28, unlockTurn: 1, description: "Новый разведчик без очереди города." },
-    worker: { label: "Рабочая артель", type: "worker", cost: 30, unlockTurn: 1, description: "Рабочий прибывает к столице." },
-    warrior: { label: "Отряд наёмников", type: "warrior", cost: 42, unlockTurn: 7, description: "Воин сразу поступает на службу Ардене." },
+    scout: { label: "Разведчики вольных земель", type: "scout", cost: 56, unlockTurn: 1, description: "Постоянный разведчик без очереди города." },
+    worker: { label: "Рабочая артель", type: "worker", cost: 60, unlockTurn: 1, description: "Постоянный рабочий прибывает к столице." },
+    warrior: { label: "Отряд наёмников", type: "warrior", cost: 76, unlockTurn: 7, description: "Постоянный воин сразу поступает на службу Ардене." },
     settler: { label: "Караван переселенцев", type: "settler", cost: 72, unlockTurn: 18, tech: "trade", description: "Дорогой способ получить поселенца без городской очереди." }
   };
 
@@ -521,7 +521,9 @@
       if ((Number(diplomacy.trust) || 0) < 60) return;
       ["scout", "warrior", "worker"].forEach(function (type) {
         const def = window.EpohiData.UNIT_DEFS[type];
-        const exists = (civ.units || []).some(function (unit) { return unit.type === type && unit.hp > 0; });
+        const matching = (civ.units || []).filter(function (unit) { return unit.type === type && unit.hp > 0; });
+        const threatened = (gs.barbarians || []).some(function (enemy) { return (civ.cities || []).some(function (city) { return window.EpohiUtils.chebyshev(enemy.x, enemy.y, city.x, city.y) <= 5; }); });
+        const exists = matching.length > 0 && !(type === "warrior" && (matching.length <= 1 || threatened));
         if (!exists || !hasCivTech(civ, def.tech)) return;
         const base = type === "warrior" ? 38 : (type === "worker" ? 30 : 27);
         result.push({ civ: civ, type: type, cost: base, turns: 10 });
@@ -656,7 +658,7 @@
     const contingents = alliedContingents(gs);
     const contingentHtml = contingents.length ? contingents.map(function (offer) {
       const def = window.EpohiData.UNIT_DEFS[offer.type];
-      return '<article class="game-card"><div><h3>🤝 ' + escapeText(offer.civ.name) + ': ' + escapeText(def.name) + '</h3><p>Союзный отряд поступает под твой контроль на ' + offer.turns + ' ходов.</p></div><button class="card-button" data-treasury-action="contingent" data-civ-id="' + offer.civ.civilizationId + '" data-type="' + offer.type + '" ' + ((gs.resources.gold || 0) < offer.cost ? 'disabled' : '') + '>' + offer.cost + ' 🪙</button></article>';
+      return '<article class="game-card"><div><h3>🤝 ' + escapeText(offer.civ.name) + ': ' + escapeText(def.name) + ' · ' + offer.turns + ' ходов</h3><p>Временный союзный отряд. После найма оставшийся срок виден в карточке отряда.</p></div><button class="card-button" data-treasury-action="contingent" data-civ-id="' + offer.civ.civilizationId + '" data-type="' + offer.type + '" ' + ((gs.resources.gold || 0) < offer.cost ? 'disabled' : '') + '>' + offer.cost + ' 🪙</button></article>';
     }).join("") : '<div class="inline-note">Нет доступных союзных контингентов. Нужен союз, доверие 60+ и подходящий отряд у союзника.</div>';
     const value = debug();
     const selectedId = value && value.getSelectedCityId ? value.getSelectedCityId() : null;
@@ -762,6 +764,11 @@
       return '<button type="button" class="feedback-world-event" ' + (point ? 'data-event-x="' + point.x + '" data-event-y="' + point.y + '"' : 'disabled') + '><small>Ход ' + item.turn + '</small><span>' + escapeText(item.text) + '</span></button>';
     }).join("");
     panel.classList.add("show");
+  }
+
+  function reopenWorldEvents(gs) {
+    closedEventSignature = "";
+    renderWorldEvents(gs || state());
   }
 
   function patchMovementExplanation() {
@@ -922,6 +929,7 @@
     ensureImmediatePoi: ensureImmediatePoi,
     cleanContextCommands: cleanContextCommands,
     renderWorldEvents: renderWorldEvents,
+    reopenWorldEvents: reopenWorldEvents,
     continueAfterOutcome: continueAfterOutcome,
     refresh: refresh
   };

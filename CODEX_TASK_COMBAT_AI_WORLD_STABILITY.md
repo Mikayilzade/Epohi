@@ -255,3 +255,16 @@ When locally green:
 - [ ] Complete Playwright execution is green in this container. Chromium could not start because `libatk-1.0.so.0` is absent; `playwright install-deps chromium` was blocked by the environment's HTTP 403 package proxy. No passing count is claimed.
 
 Deliberate implementation boundary: the milestone strengthens and centralizes the existing early-era AI rather than introducing a second planner. AI production already prioritizes warriors under nearby threat, turn budgets prevent cheats, and existing finite-POI resolution is shared globally. Physical-device behavior remains untested.
+
+### PR #74 review stabilization
+
+- [x] Enemy units and cities selected on the map now expose visible attack actions with concrete unavailable reasons; the actions execute the shared route-combat path.
+- [x] AI-to-AI capital capture now uses the same collapse resolver as player capture, including transferred territory, diplomacy/proposal/trade cleanup, and a major chronicle event.
+- [x] Existing Saga decisions are integrated into the urgent lifecycle instead of being represented only by a helper API: turn-driven creation opens the modal, source-city binding is retained, Saga resolution is reused, and expiration closes the queued event.
+- [x] World-event reopening clears the feed's real closed signature rather than only manipulating DOM classes.
+- [x] Defeated-state diplomacy is read-only and displays status, city/population totals, army category, and Trade knowledge.
+- [x] Joint-war requests are rejected at creation when duplicate/recent, already joined, already at war, or aimed at a defeated state.
+- [x] Permanent recruitment is at least twice the comparable temporary contract, contract duration is prominent, threatened allies retain their last defender, and contingent cooldown restock remains turn-based.
+- [x] AI survival spending now uses its recorded gold for emergency healing and threatened-city production acceleration, while a sole city defender stays home.
+- [x] Added visible-UI attack/collapse, turn-created urgent-decision, and Treasury administration browser scenarios; tests arrange a deterministic board but never call a helper to fabricate the asserted final state.
+- [ ] Playwright is executable in this image. The stabilization run discovered 122 tests; Chromium again failed before test 1 because `libatk-1.0.so.0` is missing: 0 passed, 0 skipped, 1 launch failure, 121 did not run.

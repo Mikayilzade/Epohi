@@ -53,10 +53,11 @@
       cities.forEach(function (city) { city.capital = false; city.hp = city.maxHp || 150; city.formerCivilizationId = defeated.civilizationId; if (!captor.cities.some(function (item) { return item.id === city.id; })) captor.cities.push(city); });
     }
     defeated.cities = [];
-    (gs.map || []).forEach(function (row) { row.forEach(function (tile) { if (tile.owner === defeated.civilizationId) tile.owner = captor && captor.civilizationId ? captor.civilizationId : null; }); });
-    (gs.rivals || []).forEach(function (civ) { if (civ.diplomacy) delete civ.diplomacy[defeated.civilizationId]; });
-    (gs.diplomaticProposals || []).forEach(function (proposal) { if (proposal.status === "pending" && (proposal.civId === defeated.civilizationId || proposal.targetId === defeated.civilizationId)) proposal.status = "cancelled"; });
+    (gs.map || []).forEach(function (row, y) { row.forEach(function (tile, x) { if (tile.owner !== defeated.civilizationId) return; if (captor && captor.civilizationId) tile.owner=captor.civilizationId; else { const nearest=cities.slice().sort(function(a,b){return Math.max(Math.abs(a.x-x),Math.abs(a.y-y))-Math.max(Math.abs(b.x-x),Math.abs(b.y-y));})[0]; tile.owner=nearest?nearest.id:null; } }); });
+    (gs.rivals || []).forEach(function (civ) { if (civ.diplomacy) delete civ.diplomacy[defeated.civilizationId]; if(civ.jointWars)delete civ.jointWars[defeated.civilizationId]; });
+    (gs.diplomaticProposals || []).forEach(function (proposal) { if (proposal.status === "pending" && (proposal.civId === defeated.civilizationId || proposal.targetId === defeated.civilizationId)) { proposal.status = "cancelled"; proposal.resolvedTurn=gs.turn; proposal.reason="государство разгромлено"; } });
     (gs.tradeRoutes || []).forEach(function (route) { if (route.civId === defeated.civilizationId && route.status === "active") route.status = "cancelled"; });
+    defeated.nextTradeProposalTurn=Infinity; defeated.nextContingentTurn=Infinity; defeated.nextJointWarProposalTurn=Infinity; defeated.allianceCooldownUntil=Infinity;
     const victorName = captor && captor.name ? captor.name : "Ардена";
     addEvent(gs, "capital-fallen", "Пала столица государства «" + defeated.name + "». Победитель: " + victorName + "; передано городов: " + cities.length + "; сложили оружие отрядов: " + forces + ".", cities[0] && { x:cities[0].x, y:cities[0].y });
     render();
@@ -85,7 +86,7 @@
   }
 
   function expireUrgentDecisions(gs) {
-    (gs.urgentDecisions || []).forEach(function (item) { if (item.status === "pending" && (gs.turn || 1) > item.expiresTurn) { item.status = "expired"; addEvent(gs, "urgent-decision-expired", item.title + ": возможность упущена."); } });
+    (gs.urgentDecisions || []).forEach(function (item) { if (item.status === "pending" && (gs.turn || 1) > item.expiresTurn) { item.status = "expired"; if(item.journeyEventId&&gs.humanJourney){gs.humanJourney.queuedEvents=(gs.humanJourney.queuedEvents||[]).filter(function(id){return id!==item.journeyEventId;});if(!(gs.humanJourney.resolvedEvents||[]).includes(item.journeyEventId))gs.humanJourney.resolvedEvents.push(item.journeyEventId);} addEvent(gs, "urgent-decision-expired", item.title + ": возможность упущена."); } });
   }
 
   function administrationCost(gs) { return 60 + (gs.cityCapacityPurchases || 0) * 40; }
@@ -134,13 +135,20 @@
       const close = event.target.closest && event.target.closest("[data-stability-close]");
       if (close) document.getElementById(close.dataset.stabilityClose === "major" ? "stabilityMajorModal" : "stabilityDecisionModal").classList.remove("show");
       if (event.target.closest && event.target.closest("#urgentDecisionIndicator")) document.getElementById("stabilityDecisionModal").classList.add("show");
-      const choice = event.target.closest && event.target.closest("[data-decision-id]"); if (choice) resolveUrgentDecision(state(), choice.dataset.decisionId, choice.dataset.optionId);
+      const choice = event.target.closest && event.target.closest("[data-decision-id]"); if (choice) { const gs=state(), item=(gs.urgentDecisions||[]).find(function(entry){return entry.id===choice.dataset.decisionId;}); if(item&&item.journeyEventId&&window.EpohiHumansJourney)window.EpohiHumansJourney.resolveEvent(item.journeyEventId,choice.dataset.optionId);else resolveUrgentDecision(gs,choice.dataset.decisionId,choice.dataset.optionId); }
       const expand = event.target.closest && event.target.closest("[data-expand-administration]"); if (expand) expandAdministration(state());
-      if (event.target.closest && event.target.closest("[data-world-events-open]")) { const panel=document.getElementById("feedbackWorldEvents"); if (panel) { panel.classList.add("show"); panel.dataset.closedSignature=""; } }
+      if (event.target.closest && event.target.closest("[data-world-events-open]")) { if(window.EpohiPlayerFeedback&&window.EpohiPlayerFeedback.reopenWorldEvents)window.EpohiPlayerFeedback.reopenWorldEvents(state()); }
       window.setTimeout(render, 0);
     });
     const end = document.getElementById("endTurnBtn"); if (end) end.addEventListener("click", function (event) { const gs=state(), pending=gs && (gs.urgentDecisions || []).some(function (item) { return item.status === "pending" && item.expiresTurn === gs.turn; }); if (pending && !window.confirm("Есть нерешённое срочное событие. Завершить ход без награды?")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
     const turn = document.getElementById("turnValue"); if (turn) new MutationObserver(function () { const gs=state(); if (gs) { expireUrgentDecisions(gs); render(); } }).observe(turn, { childList:true, subtree:true });
+    if(window.EpohiHumansJourney&&!window.EpohiHumansJourney.stabilityWrapped){
+      const journey=window.EpohiHumansJourney, originalSync=journey.sync, originalResolve=journey.resolveEvent;
+      journey.stabilityWrapped=true;
+      journey.sync=function(options){const result=originalSync(options);const gs=state(),eventId=result&&result.queuedEvents&&result.queuedEvents[0],event=eventId&&journey.eventById(eventId);if(gs&&event&&!gs.urgentDecisions.some(function(item){return item.journeyEventId===event.id&&item.status==='pending';})){const city=(gs.cities||[]).find(function(item){return item.capital;})||(gs.cities||[])[0];createUrgentDecision(gs,{id:'journey-'+event.id+'-'+gs.turn,journeyEventId:event.id,title:event.title,text:event.text,cityId:city&&city.id,options:event.choices.map(function(option){return{id:option.id,label:option.label};})});}return result;};
+      journey.resolveEvent=function(eventId,choiceId){const ok=originalResolve(eventId,choiceId),gs=state();if(ok&&gs){const item=(gs.urgentDecisions||[]).find(function(entry){return entry.journeyEventId===eventId&&entry.status==='pending';});if(item){item.status='resolved';item.resolvedTurn=gs.turn;item.chosenOption=choiceId;}render();}return ok;};
+      journey.sync({render:false});
+    }
     render();
   }
 

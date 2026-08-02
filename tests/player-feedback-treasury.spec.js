@@ -179,7 +179,7 @@ test.describe('Player feedback stabilization and treasury', () => {
       return { units: gs.units.length, gold: gs.resources.gold, last: gs.units[gs.units.length - 1] };
     });
     expect(after.units).toBe(before.units + 1);
-    expect(after.gold).toBe(before.gold - 28);
+    expect(after.gold).toBe(before.gold - 56);
     expect(after.last.name).toContain('Разведчики вольных земель');
   });
 
