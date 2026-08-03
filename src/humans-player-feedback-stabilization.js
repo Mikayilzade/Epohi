@@ -5,7 +5,6 @@
   let contentObserver = null;
   let contextGuard = false;
   let stackSelectionPending = null;
-  let suppressPathStartUntilPointerDown = false;
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -109,6 +108,8 @@
     pathing.ci179AdjacentWrapped = true;
     const originalAssign = pathing.assignTravelOrder;
     pathing.assignTravelOrder = function (unitId, destination) {
+      const beforeState = gameState();
+      const previousEvents = new Set(beforeState && Array.isArray(beforeState.eventLog) ? beforeState.eventLog : []);
       const result = originalAssign(unitId, destination);
       const state = gameState();
       const unit = state && (state.units || []).find(function (item) {
@@ -125,19 +126,26 @@
         const value = debug();
         if (value && typeof value.render === "function") value.render();
       }
-      if (result && unit && !unit.travelOrder) {
-        suppressPathStartUntilPointerDown = true;
-        setTimeout(resetCompletedOrderContext, 0);
-      }
+      promoteNewMajorEvent(state, previousEvents);
       return result;
     };
   }
 
-  function resetCompletedOrderContext() {
-    if (!suppressPathStartUntilPointerDown) return;
-    document.querySelectorAll('#contextActions [data-path-action="start"]').forEach(function (button) {
-      button.remove();
+  function promoteNewMajorEvent(state, previousEvents) {
+    if (!state || !Array.isArray(state.eventLog)) return;
+    const majorTypes = [
+      "capital-fallen",
+      "state-destroyed",
+      "victory",
+      "defeat",
+      "major-diplomatic-event"
+    ];
+    const index = state.eventLog.findIndex(function (event) {
+      return !previousEvents.has(event) && majorTypes.indexOf(event.eventType) >= 0;
     });
+    if (index <= 0) return;
+    const major = state.eventLog.splice(index, 1)[0];
+    state.eventLog.unshift(major);
   }
 
   function installVisibleAttackResolver() {
@@ -203,7 +211,8 @@
         frame = 0;
         const app = document.getElementById("gameApp");
         const value = debug();
-        if (!app || app.classList.contains("is-hidden") || !value || typeof value.applyCamera !== "function") return;
+        if (!app || app.classList.contains("is-hidden") || !value || !value.state ||
+            typeof value.applyCamera !== "function") return;
         value.applyCamera(true);
       });
     }).observe(viewport);
@@ -278,13 +287,9 @@
     if (context) new MutationObserver(function () {
       stabilizeMovementExplanation();
       addStackSelectionAcknowledgement();
-      resetCompletedOrderContext();
     }).observe(context, { childList: true, subtree: true, characterData: true });
 
-    document.addEventListener("pointerdown", function (event) {
-      suppressPathStartUntilPointerDown = false;
-      rememberStackSelection(event);
-    }, true);
+    document.addEventListener("pointerdown", rememberStackSelection, true);
     document.addEventListener("click", function () { setTimeout(addStackSelectionAcknowledgement, 0); }, true);
 
     const journeyModal = document.getElementById("humansJourneyModal");
@@ -308,7 +313,7 @@
   }
 
   window.EpohiPlayerFeedbackStabilization = {
-    version: 3,
+    version: 4,
     ensureStableControls: ensureStableControls,
     preserveFreePlay: preserveFreePlay,
     stabilizeMovementExplanation: stabilizeMovementExplanation,

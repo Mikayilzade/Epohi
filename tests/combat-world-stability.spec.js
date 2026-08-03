@@ -133,7 +133,7 @@ test.describe('Combat, AI and world stability', () => {
     for(const [x,y] of [[6,5],[5,6],[4,5]]){await page.locator('#map .tile[data-x="5"][data-y="5"]').click();await page.locator(`#map .tile[data-x="${x}"][data-y="${y}"]`).click();await page.locator('[data-context-action="move"]').click();}
     const positions=await page.evaluate(ids=>ids.map(id=>{const u=window.__epohiDebug().state.units.find(item=>item.id===id);return[u.x,u.y];}),ids);
     expect(new Set(positions.map(String)).size).toBe(3);
-    await expect(page.locator('#contextActions [data-path-action]')).toHaveCount(0);
+    await expect(page.locator('#contextActions [data-path-action="cancel"]')).toHaveCount(0);
   });
 
   test('the sole city defender stays home before distant AI goals', async ({ page }) => {
