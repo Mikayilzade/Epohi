@@ -27,7 +27,7 @@
     const selectedId = value && typeof value.getSelectedUnitId === "function"
       ? value.getSelectedUnitId()
       : null;
-    return (gs.units || []).find(function (unit) { return unit.id === selectedId; }) || null;
+    return (gs.units || []).find(function (unit) { return String(unit.id) === String(selectedId); }) || null;
   }
 
   function routeUnit(gs) {
@@ -44,6 +44,8 @@
     if (!tile) return null;
     const x = Number(tile.dataset.x);
     const y = Number(tile.dataset.y);
+    const selected=actualSelectedUnit(gs);
+    if(selected&&selected.x===x&&selected.y===y&&selected.hp>0)return selected;
     return (gs.units || []).find(function (unit) {
       if (unit.x !== x || unit.y !== y || unit.hp <= 0) return false;
       const def = UNIT_DEFS[unit.type] || { name: unit.type || "Юнит" };

@@ -329,6 +329,12 @@
     return Math.max(0, (UNIT_DEFS[unit.type] && UNIT_DEFS[unit.type].defense) || 0);
   }
 
+  function terrainAdjustedDefense(gs, unit, x, y, fallback) {
+    const base=unit?defenseValue(unit):fallback;
+    const tile=gs.map[y]&&gs.map[y][x], rule=tile&&TERRAIN[tile.terrain];
+    return base*(1+(Number(rule&&rule.defenseModifier)||0)/100);
+  }
+
   function damage(attack, defense) {
     return Math.max(4, Math.round(attack - defense * 0.32));
   }
@@ -344,7 +350,7 @@
       ? 12
       : (located.kind === "barbarian"
         ? (BARBARIAN.raiderDefense || 10)
-        : (located.kind === "rival-city" ? 18 : defenseValue(located.target)));
+        : terrainAdjustedDefense(gs, located.kind === "rival-city" ? null : located.target, located.x, located.y, located.kind === "rival-city" ? 18 : 0));
     const dealt = damage(attackValue(unit), enemyDefense);
     unit.moves = 0;
     unit.acted = true;
@@ -395,7 +401,7 @@
     const counter = located.kind === "barbarian"
       ? (BARBARIAN.raiderAttack || 20)
       : (located.kind === "rival-city" ? 10 : attackValue(located.target));
-    unit.hp -= damage(counter, defenseValue(unit));
+    unit.hp -= damage(counter, terrainAdjustedDefense(gs, unit, unit.x, unit.y, 0));
     if (unit.hp <= 0) {
       killOwnUnit(gs, unit);
       notify(unitName(unit) + " погиб");
@@ -413,13 +419,9 @@
     if (!unit || !unit.travelOrder || unit.travelOrder.status === "awaiting-choice" || unit.hp <= 0) return false;
     if (unit.moves <= 0 || unit.acted) return false;
 
-    const orderAtStart = unit.travelOrder;
-    orderAtStart.movementBank = Math.max(0, Number(orderAtStart.movementBank) || 0) + unit.moves;
-    unit.moves = 0;
-    unit.acted = true;
-
     let changed = false;
     let guard = 0;
+    let credited = false;
 
     while (unit.travelOrder && guard < 16) {
       guard += 1;
@@ -465,6 +467,12 @@
         order.status = "waiting";
         order.reason = "путь временно перекрыт";
         break;
+      }
+
+      if(!credited){
+        const maxTerrainCost=Math.max.apply(null,Object.keys(TERRAIN).map(function(key){return Number(TERRAIN[key].movementCost)||0;}));
+        order.movementBank=Math.min(maxTerrainCost,Math.max(0,Number(order.movementBank)||0)+unit.moves);
+        unit.moves=0;unit.acted=true;credited=true;
       }
 
       const nextCost = movementCost(gs, unit, route.path[0]);

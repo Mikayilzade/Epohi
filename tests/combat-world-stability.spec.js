@@ -92,4 +92,60 @@ test.describe('Combat, AI and world stability', () => {
     expect(result.cost).toBe(before.cost + 40);
     expect(result.gold).toBe(500 - before.cost);
   });
+
+  test('manual hill movement uses the routed terrain cost and waits for the second turn', async ({ page }) => {
+    await ready(page,0);
+    await page.evaluate(()=>{const gs=window.__epohiDebug().state,u=gs.units[0];u.x=5;u.y=5;u.moves=1;u.acted=false;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='hill';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();});
+    await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
+    await page.locator('[data-context-action="move"]').click();
+    expect(await page.evaluate(()=>{const u=window.__epohiDebug().state.units[0];return{x:u.x,bank:u.travelOrder.movementBank};})).toEqual({x:5,bank:1});
+    await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
+    expect(await page.evaluate(()=>window.__epohiDebug().state.units[0].x)).toBe(6);
+  });
+
+  test('a blocked route does not accumulate movement credit', async ({ page }) => {
+    await ready(page,0);
+    const banks=await page.evaluate(()=>{const gs=window.__epohiDebug().state,u=gs.units[0];u.x=5;u.y=5;u.moves=1;u.acted=false;for(let y=4;y<=6;y++)for(let x=4;x<=6;x++){gs.map[y][x].terrain=x===5&&y===5?'plains':'water';gs.map[y][x].revealed=true;}u.travelOrder={version:2,type:'move',targetKind:'tile',x:7,y:5,status:'active',path:[],movementBank:0};const values=[];for(let turn=0;turn<4;turn++){window.EpohiHumansPathing.processUnit(gs,u,{render:false});values.push(u.travelOrder.movementBank);u.moves=1;u.acted=false;}return values;});
+    expect(banks).toEqual([0,0,0,0]);
+  });
+
+  test('Treasury funding follows the selected non-capital city and stays live', async ({ page }) => {
+    await ready(page,0);
+    const cityId=await page.evaluate(()=>{const gs=window.__epohiDebug().state,cap=gs.cities[0],city={id:'review-city-2',name:'Новая гавань',x:cap.x+4,y:cap.y,population:2,food:0,production:3,buildings:[],queue:null,hp:150,maxHp:150};gs.cities.push(city);gs.resources.gold=100;window.__epohiDebug().setActiveCity(city.id);window.EpohiPlayerFeedback.openTreasury();window.EpohiCombatWorldStability.render();return city.id;});
+    await expect(page.locator('[data-treasury-action="production"]')).toContainText('20');
+    await expect(page.locator('#feedbackTreasuryContent')).toContainText('Новая гавань');
+    await page.locator('[data-treasury-action="production"]').click();
+    const result=await page.evaluate(id=>{const gs=window.__epohiDebug().state;return{second:gs.cities.find(c=>c.id===id).production,capital:gs.cities[0].production,gold:gs.resources.gold,text:document.querySelector('[data-administration-card]').textContent};},cityId);
+    expect(result.second).toBe(15); expect(result.capital).not.toBe(15); expect(result.gold).toBe(80); expect(result.text).toContain('2/4');
+  });
+
+  test('AI claims a known finite POI first and the player cannot collect it twice', async ({ page }) => {
+    await ready(page,1);
+    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],ai=civ.units[0],player=gs.units[0];ai.type='scout';ai.x=5;ai.y=5;ai.moves=2;ai.acted=false;player.x=8;player.y=5;const tile=gs.map[5][6];tile.terrain='plains';tile.revealed=true;tile.poi={type:'depot',used:false};civ.explored['6,5']=true;gs.barbarians=[];window.__epohiDebug().render();return{x:6,y:5,before:civ.resources.science+civ.resources.gold+civ.resources.production};});
+    await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
+    const claimed=await page.evaluate(({x,y,before})=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],tile=gs.map[y][x],target=window.EpohiHumansPathing.targetFromTile(gs,x,y);return{used:tile.poi.used,targetKind:target.targetKind,gain:civ.resources.science+civ.resources.gold+civ.resources.production-before,events:gs.eventLog.map(e=>e.eventType)};},setup);
+    expect(claimed.used).toBe(true); expect(claimed.targetKind).not.toBe('poi'); expect(claimed.gain).toBeGreaterThan(0); expect(claimed.events).toContain('point-of-interest-resolved');
+  });
+
+  test('three same-type stacked units keep distinct selection and orders', async ({ page }) => {
+    await ready(page,0);
+    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,base=gs.units[0],def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
+    for(const [x,y] of [[6,5],[5,6],[4,5]]){await page.locator('#map .tile[data-x="5"][data-y="5"]').click();await page.locator(`#map .tile[data-x="${x}"][data-y="${y}"]`).click();await page.locator('[data-context-action="move"]').click();}
+    const positions=await page.evaluate(ids=>ids.map(id=>{const u=window.__epohiDebug().state.units.find(item=>item.id===id);return[u.x,u.y];}),ids);
+    expect(new Set(positions.map(String)).size).toBe(3);
+    await expect(page.locator('#contextActions [data-path-action]')).toHaveCount(0);
+  });
+
+  test('the sole city defender stays home before distant AI goals', async ({ page }) => {
+    await ready(page,1);
+    const before=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],city=civ.cities[0],warrior=civ.units.find(u=>u.type==='warrior')||civ.units[0];warrior.type='warrior';warrior.x=city.x;warrior.y=city.y;civ.units=[warrior];civ.relation='neutral';civ.resources.gold=0;civ.resources.production=0;city.queue={type:'unit',id:'worker',progress:0,cost:999,upfront:{}};gs.barbarians=[];return{id:warrior.id,x:city.x,y:city.y};});
+    await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
+    expect(await page.evaluate(({id,x,y})=>{const u=window.__epohiDebug().state.rivals[0].units.find(item=>item.id===id);return u.x===x&&u.y===y;},before)).toBe(true);
+  });
+
+  test('legacy major events receive stable unique IDs', async ({ page }) => {
+    await ready(page,0);
+    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state;gs.eventLog=[{turn:2,eventType:'victory',text:'Победа'},{turn:2,eventType:'major-diplomatic-event',text:'Договор'}];window.EpohiCombatWorldStability.migrate(gs);const first=gs.eventLog.map(e=>e.eventId);window.EpohiCombatWorldStability.migrate(gs);return{first,second:gs.eventLog.map(e=>e.eventId)};});
+    expect(new Set(ids.first).size).toBe(2); expect(ids.second).toEqual(ids.first); expect(ids.first.every(Boolean)).toBe(true);
+  });
 });

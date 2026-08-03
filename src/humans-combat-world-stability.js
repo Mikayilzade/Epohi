@@ -24,6 +24,8 @@
       if (typeof civ.defeated !== "boolean") civ.defeated = false;
       if (!Number.isFinite(civ.nextJointWarProposalTurn)) civ.nextJointWarProposalTurn = 0;
     });
+    (gs.eventLog||[]).forEach(function(item,index){if(!item.eventId)item.eventId="event-"+(item.turn||0)+"-"+(item.eventType||"world")+"-"+String(item.actorId||"none")+"-"+index;});
+    gs.majorEventsSeen=gs.majorEventsSeen.filter(function(id){return typeof id==="string"&&id.length>0;});
     return gs;
   }
 
@@ -119,9 +121,9 @@
       if (!pending.presented) { pending.presented = true; document.getElementById("stabilityDecisionModal").classList.add("show"); }
     }
     const cityContent = document.getElementById("cityContent");
-    if (cityContent && !cityContent.querySelector("[data-administration-status]")) cityContent.insertAdjacentHTML("afterbegin", '<div class="inline-note" data-administration-status>Административная ёмкость: <strong>' + (gs.cities || []).length + '/' + gs.cityCapacity + '</strong></div>');
+    if (cityContent) { let status=cityContent.querySelector("[data-administration-status]"); if(!status){cityContent.insertAdjacentHTML("afterbegin",'<div class="inline-note" data-administration-status></div>');status=cityContent.querySelector("[data-administration-status]");} status.innerHTML='Административная ёмкость: <strong>'+(gs.cities||[]).length+'/'+gs.cityCapacity+'</strong>'; }
     const treasury = document.getElementById("feedbackTreasuryContent");
-    if (treasury && !treasury.querySelector("[data-expand-administration]")) treasury.insertAdjacentHTML("beforeend", '<article class="game-card"><div><h3>🏛️ Расширить администрацию</h3><p>Города: ' + (gs.cities || []).length + '/' + gs.cityCapacity + '. Повышает ёмкость на один.</p></div><button class="card-button" data-expand-administration ' + ((gs.resources.gold || 0) < administrationCost(gs) ? 'disabled' : '') + '>' + administrationCost(gs) + ' 🪙</button></article>');
+    if (treasury) { let card=treasury.querySelector("[data-administration-card]"); if(!card){treasury.insertAdjacentHTML("beforeend",'<article class="game-card" data-administration-card></article>');card=treasury.querySelector("[data-administration-card]");} card.innerHTML='<div><h3>🏛️ Расширить администрацию</h3><p>Города: '+(gs.cities||[]).length+'/'+gs.cityCapacity+'. Повышает ёмкость на один.</p></div><button class="card-button" data-expand-administration '+((gs.resources.gold||0)<administrationCost(gs)?'disabled':'')+'>'+administrationCost(gs)+' 🪙</button>'; }
     const menuContent = document.getElementById("menuContent");
     if (menuContent && !menuContent.querySelector("[data-world-events-open]")) menuContent.insertAdjacentHTML("afterbegin", '<button class="wide-btn secondary" data-world-events-open>🌍 События мира</button>');
     (gs.diplomaticProposals || []).forEach(function (proposal) { if (proposal.status === "pending" && !proposalValid(gs, proposal)) proposal.status = "cancelled"; });

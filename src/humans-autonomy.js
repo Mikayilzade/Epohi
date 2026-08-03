@@ -293,11 +293,10 @@
     return count;
   }
 
-  function defenseBonus(state, x, y) {
+  function defenseBonus(state, x, y, baseDefense) {
     const tile = state.map[y][x];
-    let bonus = 0;
-    if (tile.terrain === "forest") bonus += 3;
-    if (tile.terrain === "hill") bonus += 4;
+    const rule=window.EpohiData.TERRAIN[tile.terrain]||{};
+    let bonus = (Number(baseDefense)||0)*(Number(rule.defenseModifier)||0)/100;
     if (tile.improvement && !tile.pillaged) bonus += 2;
     if (ownCityAt(state, x, y)) bonus += 5;
     return bonus;
@@ -327,7 +326,7 @@
       ? (UNIT_DEFS[hostile.target.type] || { defense: 0, attack: 0 })
       : { defense: window.EpohiData.BARBARIAN.raiderDefense || 10, attack: window.EpohiData.BARBARIAN.raiderAttack || 20 };
 
-    const dealt = damageAmount(attacker.attack || 4, (targetDef.defense || 0) + defenseBonus(state, hostile.x, hostile.y));
+    const dealt = damageAmount(attacker.attack || 4, (targetDef.defense || 0) + defenseBonus(state, hostile.x, hostile.y,targetDef.defense||0));
     hostile.target.hp -= dealt;
     unit.moves = 0;
     unit.acted = true;
@@ -338,7 +337,7 @@
       return true;
     }
 
-    const received = damageAmount(targetDef.attack || 4, (attacker.defense || 0) + defenseBonus(state, unit.x, unit.y));
+    const received = damageAmount(targetDef.attack || 4, (attacker.defense || 0) + defenseBonus(state, unit.x, unit.y,attacker.defense||0));
     unit.hp -= received;
     if (unit.hp <= 0) {
       report(state, unit, unitDisplayName(unit) + " погиб, защищая порученную область.", "guard-loss");

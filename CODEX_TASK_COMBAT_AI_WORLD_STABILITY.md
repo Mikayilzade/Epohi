@@ -268,3 +268,16 @@ Deliberate implementation boundary: the milestone strengthens and centralizes th
 - [x] AI survival spending now uses its recorded gold for emergency healing and threatened-city production acceleration, while a sole city defender stays home.
 - [x] Added visible-UI attack/collapse, turn-created urgent-decision, and Treasury administration browser scenarios; tests arrange a deterministic board but never call a helper to fabricate the asserted final state.
 - [ ] Playwright is executable in this image. The stabilization run discovered 122 tests; Chromium again failed before test 1 because `libatk-1.0.so.0` is missing: 0 passed, 0 skipped, 1 launch failure, 121 did not run.
+
+### Final PR #74 blocker pass (2026-08-03)
+
+- [x] Manual adjacent movement reads the same centralized terrain cost as routed movement; an expensive adjacent tile becomes a normal persisted route instead of bypassing its cost.
+- [x] Route movement credit is granted only after a usable path exists and is capped at the highest terrain cost, so blocked orders cannot bank unlimited future movement.
+- [x] Terrain defense percentages now multiply the defender's real defense in manual, routed, AI, barbarian, and autonomy combat rather than being converted through an unrelated flat approximation.
+- [x] Same-type stack inspection resolves by selected unit ID, occupied adjacent stacks take selection precedence over destination handling, and switching units rebuilds controls for the new ID.
+- [x] City and Treasury administration cards update existing DOM values on every render; Treasury funding has a visible non-capital-city regression.
+- [x] Legacy major events receive stable, unique IDs during migration before once-only modal tracking.
+- [x] A sole city warrior is reserved before distant war/POI/exploration actions while remaining able to fight an adjacent threat.
+- [x] AI units target known finite POIs, consume the same global tile once, reward only the claimant, and disclose the claim only on a player-revealed tile.
+- [x] Added critical browser scenarios for manual weighted movement, blocked credit, three same-type stacked orders, non-capital Treasury funding/live capacity, last-defender priority, finite-POI competition, and legacy major-event IDs.
+- [ ] Full browser execution is available in this container. Playwright discovered 129 tests; Chromium failed before test 1 because `libatk-1.0.so.0` is absent: **0 passed, 0 skipped, 1 launch failure, 128 did not run**.
