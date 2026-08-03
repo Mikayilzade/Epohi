@@ -27,7 +27,7 @@
     const selectedId = value && typeof value.getSelectedUnitId === "function"
       ? value.getSelectedUnitId()
       : null;
-    return (gs.units || []).find(function (unit) { return unit.id === selectedId; }) || null;
+    return (gs.units || []).find(function (unit) { return String(unit.id) === String(selectedId); }) || null;
   }
 
   function routeUnit(gs) {
@@ -44,6 +44,8 @@
     if (!tile) return null;
     const x = Number(tile.dataset.x);
     const y = Number(tile.dataset.y);
+    const selected=actualSelectedUnit(gs);
+    if(selected&&selected.x===x&&selected.y===y&&selected.hp>0)return selected;
     return (gs.units || []).find(function (unit) {
       if (unit.x !== x || unit.y !== y || unit.hp <= 0) return false;
       const def = UNIT_DEFS[unit.type] || { name: unit.type || "Юнит" };
@@ -173,13 +175,15 @@
     clearRouteOverlay();
 
     if (route.path) {
+      let cumulativeCost = 0;
       route.path.forEach(function (point, index) {
         const tile = document.querySelector('#map .tile[data-x="' + point.x + '"][data-y="' + point.y + '"]');
         if (!tile) return;
         tile.classList.add("route-step");
         const badge = document.createElement("span");
         badge.className = "route-badge";
-        badge.textContent = String(index + 1);
+        cumulativeCost += CORE.movementCost(gs, unit, point);
+        badge.textContent = String(cumulativeCost);
         tile.appendChild(badge);
       });
     }
@@ -205,10 +209,12 @@
   function routeDescription(unit, route) {
     if (unit.travelOrder.status === "awaiting-choice") return "Отряд ждёт решения у находки.";
     if (route.path === null) return "Путь временно перекрыт. Приказ сохранён и будет пересчитан.";
+    const gs = state();
     const steps = route.path.length;
-    const turns = CORE.estimateTurns(unit, steps);
+    const cost = CORE.pathCost(gs, unit, route.path);
+    const turns = CORE.estimatePathTurns(gs, unit, route.path);
     const arrival = turns === 0 ? "прибытие в этом ходу" : "ещё примерно " + turns + " " + pluralTurns(turns);
-    return "Маршрут: " + steps + " шагов · " + arrival + ".";
+    return "Маршрут: " + steps + " шагов · осталось " + cost + " очк. движения · " + arrival + ".";
   }
 
   function injectWorkerPicker(unit, actions) {
@@ -354,20 +360,7 @@
       if (!gs || endTurn.disabled) return;
       const beforeTurn = gs.turn || 1;
       CORE.processOrders(gs, { render: false });
-
-      let attempts = 0;
-      function afterTurn() {
-        attempts += 1;
-        const next = CORE.ensureState(state());
-        if (!next) return;
-        if ((next.turn || 1) > beforeTurn) {
-          CORE.processOrders(next);
-          scheduleUi();
-          return;
-        }
-        if (attempts < 20) window.setTimeout(afterTurn, 60);
-      }
-      window.setTimeout(afterTurn, 60);
+      endTurn.dataset.pathingTurn = String(beforeTurn);
     }, true);
   }
 
@@ -381,7 +374,15 @@
 
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (map) new MutationObserver(scheduleUi).observe(map, { childList: true });
-    if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, characterData: true, subtree: true });
+    if (turn) new MutationObserver(function () {
+      const gs = CORE.ensureState(state());
+      const endTurn = document.getElementById("endTurnBtn");
+      if (gs && endTurn && Number(endTurn.dataset.pathingTurn || 0) < (gs.turn || 1)) {
+        endTurn.dataset.pathingTurn = String(gs.turn || 1);
+        CORE.processOrders(gs);
+      }
+      scheduleUi();
+    }).observe(turn, { childList: true, characterData: true, subtree: true });
 
     document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);
