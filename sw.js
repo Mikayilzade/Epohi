@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-3-ci181-final";
+  "epohi-v1-8-4-ci182-modal-layer";
 const APP_FILES = [
   "./",
   "./index.html",
