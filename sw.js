@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-0-combat-world-stability";
+  "epohi-v1-8-1-ci179-stability";
 const APP_FILES = [
   "./",
   "./index.html",
