@@ -5,6 +5,7 @@
   let contentObserver = null;
   let contextGuard = false;
   let stackSelectionPending = null;
+  let suppressPathStartUntilPointerDown = false;
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -124,8 +125,71 @@
         const value = debug();
         if (value && typeof value.render === "function") value.render();
       }
+      if (result && unit && !unit.travelOrder) {
+        suppressPathStartUntilPointerDown = true;
+        setTimeout(resetCompletedOrderContext, 0);
+      }
       return result;
     };
+  }
+
+  function resetCompletedOrderContext() {
+    if (!suppressPathStartUntilPointerDown) return;
+    document.querySelectorAll('#contextActions [data-path-action="start"]').forEach(function (button) {
+      button.remove();
+    });
+  }
+
+  function installVisibleAttackResolver() {
+    document.addEventListener("click", function (event) {
+      const button = event.target.closest && event.target.closest('[data-context-action="attack"]');
+      if (!button || button.disabled) return;
+
+      const value = debug();
+      const state = value && value.state;
+      const pathing = window.EpohiHumansPathing;
+      const tile = document.querySelector("#map .tile.inspect-tile");
+      if (!state || !pathing || !tile || typeof value.getSelectedUnitId !== "function") return;
+
+      const target = pathing.targetFromTile(state, Number(tile.dataset.x), Number(tile.dataset.y));
+      if (!target || (target.targetKind !== "rival-city" && target.targetKind !== "rival" &&
+          target.targetKind !== "barbarian" && target.targetKind !== "camp")) return;
+
+      const readyUnits = (state.units || []).filter(function (unit) {
+        return unit.hp > 0 && !unit.acted && unit.moves > 0;
+      });
+      const selectedId = value.getSelectedUnitId();
+      const selected = readyUnits.find(function (unit) { return String(unit.id) === String(selectedId); });
+      const adjacent = readyUnits.filter(function (unit) {
+        return window.EpohiUtils.isAdjacent(unit.x, unit.y, target.x, target.y);
+      });
+      const attacker = selected && window.EpohiUtils.isAdjacent(selected.x, selected.y, target.x, target.y)
+        ? selected
+        : adjacent[0];
+
+      if (!attacker) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      pathing.assignTravelOrder(attacker.id, target);
+    }, true);
+  }
+
+  function installJourneyEntryGuard() {
+    document.addEventListener("click", function (event) {
+      const opener = event.target.closest && event.target.closest("[data-open-human-journey]");
+      if (!opener) return;
+
+      const urgentModal = document.getElementById("stabilityDecisionModal");
+      if (urgentModal) urgentModal.classList.remove("show");
+
+      setTimeout(function () {
+        const journeyModal = document.getElementById("humansJourneyModal");
+        if (!journeyModal || journeyModal.classList.contains("show")) return;
+        const journeyUi = window.EpohiHumansJourneyUI;
+        if (journeyUi && typeof journeyUi.open === "function") journeyUi.open();
+        closeUrgentDecisionForJourney();
+      }, 0);
+    }, true);
   }
 
   function installCameraResizeGuard() {
@@ -203,6 +267,8 @@
 
     installJourneyGuard();
     installImmediateAdjacentOrders();
+    installVisibleAttackResolver();
+    installJourneyEntryGuard();
     installCameraResizeGuard();
     ensureStableControls();
     preserveFreePlay();
@@ -212,9 +278,13 @@
     if (context) new MutationObserver(function () {
       stabilizeMovementExplanation();
       addStackSelectionAcknowledgement();
+      resetCompletedOrderContext();
     }).observe(context, { childList: true, subtree: true, characterData: true });
 
-    document.addEventListener("pointerdown", rememberStackSelection, true);
+    document.addEventListener("pointerdown", function (event) {
+      suppressPathStartUntilPointerDown = false;
+      rememberStackSelection(event);
+    }, true);
     document.addEventListener("click", function () { setTimeout(addStackSelectionAcknowledgement, 0); }, true);
 
     const journeyModal = document.getElementById("humansJourneyModal");
@@ -238,7 +308,7 @@
   }
 
   window.EpohiPlayerFeedbackStabilization = {
-    version: 2,
+    version: 3,
     ensureStableControls: ensureStableControls,
     preserveFreePlay: preserveFreePlay,
     stabilizeMovementExplanation: stabilizeMovementExplanation,
