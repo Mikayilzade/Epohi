@@ -2337,7 +2337,7 @@
         if(adjacentBarbarian&&u.type!=='scout'){if(!spend())return;aiAttackBarbarian(civ,u);finish(u);return;}
         if(home&&u.type==='warrior'&&warriors.length<=1){finish(u);return;}
         if(u.type==='settler'&&canRivalFoundCity(civ,u)){if(!spend())return;const city={id:civ.civilizationId+'-city'+civ.cities.length,name:'Ривен '+civ.cities.length,x:u.x,y:u.y,population:1,food:0,production:0,buildings:[],queue:null,hp:150,maxHp:150,youngUntil:state.turn+3};civ.cities.push(city);civ.units=civ.units.filter(function(item){return item.id!==u.id;});logEvent(state,'rival-city-founded',civ.name+' основал город '+city.name+'.',{x:city.x,y:city.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'});finish(u);return;}
-        const target=state.barbarians[0]||nearestKnownFinitePoi(civ,u)||nearestUnknown(u,civ);if(target&&spend()){stepToward(u,target,civ);aiResolvePoi(civ,u);finish(u);}
+        const knownPoi=nearestKnownFinitePoi(civ,u), target=(u.type==='scout'&&knownPoi)||(state.barbarians[0])||knownPoi||nearestUnknown(u,civ);if(target&&spend()){stepToward(u,target,civ);aiResolvePoi(civ,u);finish(u);}
       });
     });
     const livingRivals=rivals.filter(function(civ){return !civ.defeated;});if(livingRivals.length>=2&&state.turn>=AI_LIMITS.minWarTurn&&!livingRivals[0].diplomacy[livingRivals[1].civilizationId]){setRivalWar(livingRivals[0],livingRivals[1]);logEvent(state,'rival-war-declared',livingRivals[0].name+' и '+livingRivals[1].name+' начали войну.',null,{actorType:'civilization',actorId:livingRivals[0].civilizationId,phase:'rivals'});}

@@ -111,7 +111,7 @@
     if (!civ || civ.defeated) return null;
     if (type === "jointWar") {
       const target=(gs.rivals||[]).find(function(item){return item.civilizationId===targetId;});
-      if(!target||target.defeated||target.relation==="war"||!civ.diplomacy||civ.diplomacy[targetId]!=="war"||(civ.nextJointWarProposalTurn||0)>gs.turn)return null;
+      if(!target||target===civ||target.defeated||target.relation==="war"||(civ.diplomacy&&civ.diplomacy[targetId]==="war")||(civ.nextJointWarProposalTurn||0)>gs.turn)return null;
       if(gs.diplomaticProposals.some(function(item){return item.type==="jointWar"&&item.civId===civ.civilizationId&&item.targetId===targetId&&(item.status==="pending"||item.turn>=gs.turn-10);}))return null;
     }
     if (gs.diplomaticProposals.some(function (item) { return item.status === "pending" && item.civId === civ.civilizationId && item.type === type; })) return null;
@@ -127,7 +127,7 @@
     if (civ.relation === "war") return createProposal(gs, civ, "peace", "Предлагаем мир: взаимная вражда уже слишком дорога.");
     if (diplomacy.grievances >= 45) return createProposal(gs, civ, "threat", "Возместите старые обиды даром, иначе последует война.");
     if (civ.relation !== "ally" && diplomacy.trust >= 62) return createProposal(gs, civ, "alliance", "Наше доверие окрепло. Заключим союз?");
-    const enemy = (gs.rivals || []).find(function (other) { return other !== civ && !other.defeated && other.relation !== "war" && civ.diplomacy && civ.diplomacy[other.civilizationId] === "war"; });
+    const enemy = (gs.rivals || []).find(function (other) { return other !== civ && !other.defeated && other.relation !== "war" && (!civ.diplomacy || civ.diplomacy[other.civilizationId] !== "war"); });
     if (civ.relation === "ally" && enemy) return createProposal(gs, civ, "jointWar", "Выступим вместе против " + enemy.name + ".", enemy.civilizationId);
     if (identity.generosity > 70 && gs.turn % 8 === 0) return createProposal(gs, civ, "gift", "Примите 12 золота в память о нашей дружбе.");
     if (identity.commerce > 50) createProposal(gs, civ, "trade", "Откроем торговый путь: обе стороны получат золото.");

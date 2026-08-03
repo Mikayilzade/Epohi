@@ -236,3 +236,11 @@ Stack selection is ID-first even when every unit has the same type/name. Clickin
 World-event migration assigns missing stable IDs before once-only modal tracking. AI reserves its last city defender before distant actions. Rivals also compete for finite POIs they actually know: they path to the nearest known site, consume it globally through the same `used`/feature removal state, receive the reward once, and create a public event only when the tile is player-revealed.
 
 Final validation: syntax checks for all changed JavaScript and tests, `git diff --check`, and headless Node assertions for a longer five-cost weighted route plus zero credit over four blocked-route attempts passed. Playwright discovered **129 tests** but Chromium still could not load `libatk-1.0.so.0`; exact `--max-failures=1` result: **0 passed, 0 skipped, 1 browser-launch failure, 128 did not run**. Physical-device testing was not performed.
+
+### Final three-item PR #74 closure
+
+Joint-war requests describe a war that has not started for either participant: creation rejects a target already at war with the player or proposer, and acceptance remains the single point that joins both sides. A new End Turn regression covers valid generation and rejection after the proposer is marked at war.
+
+Scout target ordering now puts a known finite POI before an unrelated global barbarian; other unit types retain threat-first behavior. Diplomacy relation cards render active trade-route state and remaining turns directly from persisted `tradeRoutes`, while the existing feedback hook may enrich the same node without duplication.
+
+Static validation passed. The latest available browser result remains the prior **129 discovered, 0 passed, 0 skipped, 1 launch failure, 128 not run** because Chromium cannot load `libatk-1.0.so.0`; the two newly added browser scenarios were not executable in this image. Physical-device testing was not performed.

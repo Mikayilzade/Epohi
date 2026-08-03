@@ -307,7 +307,7 @@
           const relation = card.querySelector(".living-relation-details");
           (relation || card.querySelector(".strategy-diplomacy-actions")).before(routeBox);
         }
-        routeBox.textContent = "⚖️ Торговый путь: +" + route.goldPerTurn + " золота за ход · осталось " + route.remainingTurns + " ходов";
+        routeBox.textContent = "⚖️ Торговый путь активен: +" + route.goldPerTurn + " золота за ход · осталось " + route.remainingTurns + " ходов";
       } else if (routeBox) {
         routeBox.remove();
       }

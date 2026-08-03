@@ -281,3 +281,10 @@ Deliberate implementation boundary: the milestone strengthens and centralizes th
 - [x] AI units target known finite POIs, consume the same global tile once, reward only the claimant, and disclose the claim only on a player-revealed tile.
 - [x] Added critical browser scenarios for manual weighted movement, blocked credit, three same-type stacked orders, non-capital Treasury funding/live capacity, last-defender priority, finite-POI competition, and legacy major-event IDs.
 - [ ] Full browser execution is available in this container. Playwright discovered 129 tests; Chromium failed before test 1 because `libatk-1.0.so.0` is absent: **0 passed, 0 skipped, 1 launch failure, 128 did not run**.
+
+### Final three-item review closure
+
+- [x] Joint-war validation now requires that neither the player nor proposer has already joined the target war; a valid allied request is proven through the real End Turn pipeline and an already-joined repeat is rejected.
+- [x] Scouts prefer a known finite POI over an unrelated barbarian elsewhere; the competition regression now keeps such a barbarian in the world.
+- [x] Diplomacy cards own an active trade-route status with the exact remaining duration, independent of later decoration hooks.
+- [ ] The two added browser regressions were executable here. The latest available browser attempt remains the 129-test launch failure above; the new files pass syntax validation but Chromium still lacks `libatk-1.0.so.0`.
