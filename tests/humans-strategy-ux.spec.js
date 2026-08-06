@@ -137,17 +137,19 @@ test.describe('Стратегический UX', () => {
     await expectNoConsoleProblems(problems);
   });
 
-  test('панель незавершённых дел открывает город и науку', async ({ page }) => {
+  test('панель активности переключает города и открывает науку', async ({ page }) => {
     const problems = watchConsole(page);
     await clearStorage(page);
     await createGame(page, 0, 'small');
     await waitStrategy(page);
+    await page.waitForFunction(() => Boolean(window.EpohiContextReviewCleanup));
 
     const snapshot = await page.evaluate(() => {
       const debug = window.__epohiDebug();
       debug.state.currentResearch = null;
       debug.render();
       window.EpohiStrategyUX.refresh();
+      window.EpohiContextReviewCleanup.sync();
       const bar = document.getElementById('strategyReadiness');
       return {
         units: bar.querySelector('[data-ready-kind="units"] b').textContent,
@@ -156,12 +158,15 @@ test.describe('Стратегический UX', () => {
         science: bar.querySelector('[data-ready-kind="science"] b').textContent
       };
     });
-    expect(Number(snapshot.cities)).toBeGreaterThanOrEqual(1);
+    expect(snapshot.units).toMatch(/^\d+\/\d+$/);
+    expect(snapshot.workers).toMatch(/^\d+\/\d+$/);
+    expect(snapshot.cities).toMatch(/^\d+\/\d+$/);
+    expect(Number(snapshot.cities.split('/')[1])).toBeGreaterThanOrEqual(1);
     expect(snapshot.science).toBe('!');
 
     await page.locator('[data-ready-kind="cities"]').click();
-    await expect(page.locator('#cityModal')).toHaveClass(/show/);
-    await page.locator('[data-close="cityModal"]').click();
+    expect(await page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('city');
+    await expect(page.locator('#cityModal')).not.toHaveClass(/show/);
     await page.locator('[data-ready-kind="science"]').click();
     await expect(page.locator('#scienceModal')).toHaveClass(/show/);
     await expectNoConsoleProblems(problems);
