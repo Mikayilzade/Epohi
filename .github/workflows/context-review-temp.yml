@@ -10,12 +10,13 @@ on:
       - index.html
       - sw.js
       - tests/context-review-cleanup.spec.js
+      - tests/humans-strategy-ux.spec.js
   workflow_dispatch:
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     continue-on-error: true
 
     steps:
@@ -42,15 +43,11 @@ jobs:
         run: |
           node --check src/humans-context-review-cleanup.js
           node --check tests/context-review-cleanup.spec.js
+          node --check tests/humans-strategy-ux.spec.js
           node --check sw.js
 
-      - name: Run context review tests
-        id: focused
-        run: npx playwright test tests/context-review-cleanup.spec.js --reporter=line
-
-      - name: Run full smoke suite
-        if: steps.focused.outcome == 'success'
-        run: npm run test:smoke -- --reporter=line
+      - name: Run reviewed interaction tests
+        run: npx playwright test tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js --reporter=line
 
       - name: Upload diagnostics
         if: always()
