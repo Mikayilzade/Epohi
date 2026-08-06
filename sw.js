@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-6-mobile-review-layout-v2";
+  "epohi-v1-8-6-diplomacy-activity-events-v3";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -41,6 +41,7 @@ const APP_FILES = [
   "./src/humans-combat-world-stability.js",
   "./src/humans-population-workforce.js",
   "./src/humans-context-review-cleanup.js",
+  "./src/humans-diplomacy-event-flow.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
