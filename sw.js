@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-5-population-workforce";
+  "epohi-v1-8-6-context-review-cleanup";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -40,6 +40,7 @@ const APP_FILES = [
   "./src/humans-player-feedback-stabilization.js",
   "./src/humans-combat-world-stability.js",
   "./src/humans-population-workforce.js",
+  "./src/humans-context-review-cleanup.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
