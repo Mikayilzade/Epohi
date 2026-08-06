@@ -1,0 +1,58 @@
+name: Population Workforce Temporary Check
+
+on:
+  push:
+    branches:
+      - codex/population-workforce-v1
+    paths:
+      - .github/workflows/population-workforce-temp.yml
+      - src/humans-population-workforce.js
+      - index.html
+      - sw.js
+      - tests/population-workforce.spec.js
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run population workforce tests
+        id: focused
+        run: npx playwright test tests/population-workforce.spec.js --reporter=line
+
+      - name: Run full smoke suite
+        if: steps.focused.outcome == 'success'
+        id: full
+        run: npm run test:smoke -- --reporter=line
+
+      - name: Upload focused diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: population-workforce-test-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
