@@ -8,6 +8,7 @@ on:
       - .github/workflows/diplomacy-activity-events-temp.yml
       - src/humans-diplomacy-event-flow.js
       - src/humans-event-overlay-policy.js
+      - src/humans-chronicle-ui.js
       - index.html
       - sw.js
       - tests/diplomacy-activity-events.spec.js
@@ -43,6 +44,7 @@ jobs:
         run: |
           node --check src/humans-diplomacy-event-flow.js
           node --check src/humans-event-overlay-policy.js
+          node --check src/humans-chronicle-ui.js
           node --check tests/diplomacy-activity-events.spec.js
           node --check sw.js
 
