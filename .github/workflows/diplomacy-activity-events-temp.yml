@@ -58,3 +58,5 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: ignore
+
+# Temporary branch-only workflow; remove after the focused run.
