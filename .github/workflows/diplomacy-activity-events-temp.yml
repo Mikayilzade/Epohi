@@ -1,6 +1,9 @@
 name: Diplomacy Activity Events Temporary Check
 
 on:
+  pull_request:
+    branches:
+      - prototype/humans-v1
   push:
     branches:
       - codex/diplomacy-activity-events-v3
