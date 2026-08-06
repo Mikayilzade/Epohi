@@ -12,6 +12,8 @@ async function openGame(page, rivals = 2) {
   await createGame(page, rivals, 'small');
   await page.waitForFunction(() => Boolean(
     window.EpohiDiplomacyEventFlow &&
+    window.EpohiEventOverlayPolicy &&
+    window.EpohiChronicleUI &&
     window.__epohiDebug &&
     window.__epohiDebug().state &&
     document.getElementById('strategyReadiness')
@@ -118,7 +120,7 @@ test.describe('Дипломатия, выбор объектов и событи
     await expectNoConsoleProblems(problems);
   });
 
-  test('события попадают в летопись, старое окно скрыто, сообщение исчезает', async ({ page }) => {
+  test('события попадают в летопись, старые окна скрыты, сообщение исчезает', async ({ page }) => {
     const problems = await openGame(page, 0);
 
     const text = 'Проверочное событие для летописи.';
@@ -129,10 +131,35 @@ test.describe('Дипломатия, выбор объектов и событи
     }, text);
 
     await expect(page.locator('#feedbackWorldEvents')).toBeHidden();
+    await expect(page.locator('#stabilityMajorModal')).toBeHidden();
     await expect(page.locator('#flowEventToast')).toHaveClass(/show/);
     expect(await page.evaluate(eventText => window.__epohiDebug().state.history.some(line => line.includes(eventText)), text)).toBe(true);
+
+    await page.evaluate(() => window.EpohiChronicleUI.open());
+    await expect(page.locator('#flowChronicleModal')).toHaveClass(/show/);
+    await expect(page.locator('#flowChronicleContent')).toContainText(text);
+    await page.locator('[data-flow-chronicle-close]').click();
+
     await page.waitForTimeout(2000);
     await expect(page.locator('#flowEventToast')).not.toHaveClass(/show/);
+    await expectNoConsoleProblems(problems);
+  });
+
+  test('крупное событие не блокирует экран и остаётся в летописи', async ({ page }) => {
+    const problems = await openGame(page, 0);
+
+    const text = 'Пала столица тестового государства.';
+    await page.evaluate(eventText => {
+      const state = window.__epohiDebug().state;
+      state.eventLog.unshift({ eventId: 'flow-major-test', turn: state.turn, eventType: 'capital-fallen', text: eventText });
+      window.EpohiCombatWorldStability.render();
+      window.EpohiEventOverlayPolicy.normalize();
+    }, text);
+
+    await expect(page.locator('#stabilityMajorModal')).not.toHaveClass(/show/);
+    await expect(page.locator('#flowEventToast')).toContainText(text);
+    await expect(page.locator('#endTurnBtn')).toBeEnabled();
+    expect(await page.evaluate(eventText => window.__epohiDebug().state.history.some(line => line.includes(eventText)), text)).toBe(true);
     await expectNoConsoleProblems(problems);
   });
 
