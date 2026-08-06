@@ -48,7 +48,26 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     await expect(page.locator('#contextTabs .inspect-tab')).toHaveCount(3);
     await expect(page.locator('#contextActions .inspect-tab')).toHaveCount(0);
     expect(await page.locator('#contextTabs').evaluate(el => el.parentElement.id)).toBe('contextPanel');
-    await page.evaluate(() => { document.querySelector('#contextTabs').innerHTML=''; document.querySelector('#contextActions').innerHTML=''; });
+
+    const empty = await page.evaluate(() => {
+      const d = window.__epohiDebug();
+      const s = d.state;
+      const x = Math.min(s.mapSize - 1, s.city.x + 2);
+      const y = s.city.y;
+      const tile = s.map[y][x];
+      s.units = [];
+      tile.terrain = 'plains';
+      tile.revealed = true;
+      tile.camp = null;
+      tile.poi = null;
+      tile.improvement = null;
+      tile.owner = null;
+      d.render();
+      return { x, y };
+    });
+    await page.locator(`.tile[data-x="${empty.x}"][data-y="${empty.y}"]`).click();
+    await expect(page.locator('#contextTabs')).toBeEmpty();
+    await expect(page.locator('#contextActions')).toBeEmpty();
     const displays = await page.evaluate(() => ({ tabs:getComputedStyle(document.querySelector('#contextTabs')).display, actions:getComputedStyle(document.querySelector('#contextActions')).display }));
     expect(displays).toEqual({ tabs: 'none', actions: 'none' });
   });
@@ -167,4 +186,3 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     expect(metrics.actionsOverflow).toBe('auto');
   });
 });
-

@@ -101,7 +101,12 @@ test.describe('v1.4.2-alpha manual iPhone bugfixes', () => {
       }
       [[1,2],[2,1],[3,2],[2,3]].forEach(([x,y]) => { s.map[y][x].terrain = 'plains'; });
       const positions = [];
-      for (let i = 0; i < 6; i++) { d.processRivals(); positions.push(`${scout.x},${scout.y}`); }
+      for (let i = 0; i < 6; i++) {
+        scout.moves = window.EpohiData.UNIT_DEFS.scout.maxMoves;
+        scout.acted = false;
+        d.processRivals();
+        positions.push(`${scout.x},${scout.y}`);
+      }
       return { alive: civ.units.includes(scout), unique: new Set(positions).size, positions, terrain: s.map[scout.y][scout.x].terrain };
     });
     expect(result.alive).toBeTruthy();

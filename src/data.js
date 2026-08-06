@@ -2,13 +2,13 @@
   "use strict";
 
   const TERRAIN = {
-    plains: { name: "Равнина", icon: "🌿", base: { food: 1, production: 0, gold: 0, science: 0 } },
-    forest: { name: "Лес", icon: "🌲", base: { food: 0, production: 1, gold: 0, science: 0 } },
-    hill: { name: "Холмы", icon: "⛰️", base: { food: 0, production: 1, gold: 0, science: 0 } },
-    water: { name: "Побережье", icon: "🌊", base: { food: 1, production: 0, gold: 1, science: 0 } },
-    desert: { name: "Пустошь", icon: "🏜️", base: { food: 0, production: 0, gold: 1, science: 0 } },
-    swamp: { name: "Болото", icon: "♒", base: { food: 1, production: 0, gold: 0, science: 1 } },
-    dead: { name: "Мёртвые земли", icon: "☠", base: { food: 0, production: 0, gold: 0, science: 1 } }
+    plains: { name: "Равнина", icon: "🌿", movementCost: 1, passable: true, defenseModifier: 0, base: { food: 1, production: 0, gold: 0, science: 0 } },
+    forest: { name: "Лес", icon: "🌲", movementCost: 2, passable: true, defenseModifier: 20, base: { food: 0, production: 1, gold: 0, science: 0 } },
+    hill: { name: "Холмы", icon: "⛰️", movementCost: 2, passable: true, defenseModifier: 25, base: { food: 0, production: 1, gold: 0, science: 0 } },
+    water: { name: "Побережье", icon: "🌊", movementCost: null, passable: false, defenseModifier: 0, impassableReason: "сухопутные отряды не могут входить в воду", base: { food: 1, production: 0, gold: 1, science: 0 } },
+    desert: { name: "Пустошь", icon: "🏜️", movementCost: 1, passable: true, defenseModifier: 0, base: { food: 0, production: 0, gold: 1, science: 0 } },
+    swamp: { name: "Болото", icon: "♒", movementCost: 3, passable: true, defenseModifier: 10, base: { food: 1, production: 0, gold: 0, science: 1 } },
+    dead: { name: "Мёртвые земли", icon: "☠", movementCost: 2, passable: true, defenseModifier: -10, base: { food: 0, production: 0, gold: 0, science: 1 } }
   };
 
   const FEATURES = {
