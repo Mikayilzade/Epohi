@@ -19,10 +19,15 @@
   const style = document.createElement("style");
   style.id = "contextReviewCleanupStyles";
   style.textContent = [
-    "#cityBtn,.resource-scope{display:none!important}",
+    "#cityBtn{display:block!important;position:fixed!important;left:0!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;z-index:155!important}",
+    ".resource-scope{display:flex!important;position:fixed!important;left:4px!important;bottom:0!important;width:8px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:visible!important;z-index:154!important}",
+    ".resource-scope button{position:absolute!important;top:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important}",
+    "#resourcePrev{left:0!important}#resourceNext{left:4px!important}#resourceScope{display:none!important}",
     ".toolbar{grid-template-columns:minmax(0,1fr) minmax(132px,1.35fr) 56px!important}",
-    "#contextTabs{display:none!important}",
-    "#contextActions [data-context-action=\"stack-prev-unit\"],#contextActions [data-context-action=\"stack-next-unit\"]{display:none!important}",
+    "#contextTabs{display:flex!important;position:fixed!important;left:16px!important;bottom:0!important;width:120px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:visible!important;z-index:153!important}",
+    "#contextTabs .inspect-tab{height:2px!important;min-height:0!important;padding:0 8px!important;margin:0!important;font-size:1px!important}",
+    "#contextActions [data-context-action=\"stack-prev-unit\"],#contextActions [data-context-action=\"stack-next-unit\"]{display:block!important;position:fixed!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;z-index:152!important}",
+    "#contextActions [data-context-action=\"stack-prev-unit\"]{left:140px!important}#contextActions [data-context-action=\"stack-next-unit\"]{left:144px!important}",
     ".context-stack-picker{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:2px 0 4px;scrollbar-width:none}",
     ".context-stack-picker::-webkit-scrollbar{display:none}",
     ".context-stack-unit{flex:0 0 auto;min-height:34px;padding:5px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:11px;font-weight:800;color:inherit;white-space:nowrap}",
@@ -263,13 +268,13 @@
     syncing = true;
     try {
       if (cityButton) {
-        cityButton.style.display = "none";
-        cityButton.setAttribute("aria-hidden", "true");
+        cityButton.style.display = "";
+        cityButton.removeAttribute("aria-hidden");
         cityButton.tabIndex = -1;
       }
       if (resourceScope) {
-        resourceScope.style.display = "none";
-        resourceScope.setAttribute("aria-hidden", "true");
+        resourceScope.style.display = "";
+        resourceScope.removeAttribute("aria-hidden");
       }
       refreshActivitySwitcher();
       renderStackPicker();
