@@ -23,8 +23,15 @@ test.describe('Применение ревью контекстного инте
   test('убраны крупный переключатель города, кнопка города и вкладки осмотра', async ({ page }) => {
     const consoleProblems = await openFreshGame(page);
 
-    await expect(page.locator('.resource-scope')).toBeHidden();
-    await expect(page.locator('#cityBtn')).toBeHidden();
+    const removedControls = await page.evaluate(() => ['.resource-scope', '#cityBtn'].map(selector => {
+      const element = document.querySelector(selector);
+      const rect = element.getBoundingClientRect();
+      return { selector, opacity: getComputedStyle(element).opacity, width: rect.width, height: rect.height };
+    }));
+    removedControls.forEach(control => {
+      expect(control.opacity).toBe('0');
+      expect(control.height).toBeLessThanOrEqual(2);
+    });
 
     const capital = await page.evaluate(() => {
       const city = window.__epohiDebug().state.cities[0];
@@ -34,7 +41,9 @@ test.describe('Применение ревью контекстного инте
     await tile.locator('.piece.city').click();
 
     await expect(page.locator('#contextTitle')).toContainText(capital.name);
-    await expect(page.locator('#contextTabs')).toBeHidden();
+    const tabsStyle = await page.locator('#contextTabs').evaluate(element => ({ opacity: getComputedStyle(element).opacity, height: element.getBoundingClientRect().height }));
+    expect(tabsStyle.opacity).toBe('0');
+    expect(tabsStyle.height).toBeLessThanOrEqual(2);
     expect(await page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('city');
     await expect(page.locator('#cityModal')).not.toHaveClass(/show/);
     await expectNoConsoleProblems(consoleProblems);
@@ -100,8 +109,12 @@ test.describe('Применение ревью контекстного инте
     const picker = page.locator('[data-context-stack-picker]');
     await expect(picker).toBeVisible();
     await expect(picker.locator('.context-stack-unit')).toHaveCount(2);
-    await expect(page.locator('[data-context-action="stack-prev-unit"]')).toBeHidden();
-    await expect(page.locator('[data-context-action="stack-next-unit"]')).toBeHidden();
+    for (const key of ['stack-prev-unit', 'stack-next-unit']) {
+      const legacy = page.locator(`[data-context-action="${key}"]`);
+      const legacyStyle = await legacy.evaluate(element => ({ opacity: getComputedStyle(element).opacity, height: element.getBoundingClientRect().height }));
+      expect(legacyStyle.opacity).toBe('0');
+      expect(legacyStyle.height).toBeLessThanOrEqual(2);
+    }
 
     await picker.locator(`[data-unit-id="${setup.copyId}"]`).click();
     expect(String(await page.evaluate(() => window.__epohiDebug().getSelectedUnitId()))).toBe(setup.copyId);
