@@ -3,10 +3,17 @@
 
   let timer = 0;
   let handling = false;
+  let lastTurn = "";
 
   function state() {
     const value = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
     return value && value.state ? value.state : null;
+  }
+
+  function dismissToast() {
+    window.clearTimeout(timer);
+    const node = document.getElementById("flowEventToast");
+    if (node) node.classList.remove("show");
   }
 
   function toast(text) {
@@ -40,6 +47,13 @@
     }
   }
 
+  function handleTurnChange() {
+    const turn = document.getElementById("turnValue");
+    const current = turn ? turn.textContent.trim() : "";
+    if (lastTurn && current && current !== lastTurn) dismissToast();
+    lastTurn = current;
+  }
+
   function install() {
     const style = document.createElement("style");
     style.id = "eventOverlayPolicyStyles";
@@ -47,11 +61,16 @@
     document.head.appendChild(style);
     const modal = document.getElementById("stabilityMajorModal");
     if (modal) new MutationObserver(normalize).observe(modal, { attributes: true, attributeFilter: ["class"] });
+    const turn = document.getElementById("turnValue");
+    if (turn) {
+      lastTurn = turn.textContent.trim();
+      new MutationObserver(handleTurnChange).observe(turn, { childList: true, characterData: true, subtree: true });
+    }
     document.addEventListener("click", function () { window.setTimeout(normalize, 0); });
     normalize();
   }
 
-  window.EpohiEventOverlayPolicy = { version: 1, normalize: normalize };
+  window.EpohiEventOverlayPolicy = { version: 2, normalize: normalize, dismissToast: dismissToast, handleTurnChange: handleTurnChange };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
   else install();
