@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-4-ci182-modal-layer";
+  "epohi-v1-8-5-population-workforce";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -39,6 +39,7 @@ const APP_FILES = [
   "./src/humans-player-feedback.js",
   "./src/humans-player-feedback-stabilization.js",
   "./src/humans-combat-world-stability.js",
+  "./src/humans-population-workforce.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
