@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-6-context-review-cleanup";
+  "epohi-v1-8-6-mobile-review-layout-v2";
 const APP_FILES = [
   "./",
   "./index.html",
