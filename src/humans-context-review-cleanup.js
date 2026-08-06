@@ -3,10 +3,14 @@
 
   const map = document.getElementById("map");
   const contextPanel = document.getElementById("contextPanel");
+  const contextTitle = document.getElementById("contextTitle");
   const contextTabs = document.getElementById("contextTabs");
   const contextActions = document.getElementById("contextActions");
   const contextText = document.getElementById("contextText");
   const cityButton = document.getElementById("cityBtn");
+  const scienceButton = document.getElementById("scienceBtn");
+  const scienceWrap = scienceButton && scienceButton.closest(".badge-wrap");
+  const toolbar = document.querySelector(".toolbar");
   const resourceScope = document.querySelector(".resource-scope");
 
   if (!map || !contextPanel || !contextTabs || !contextActions) return;
@@ -15,20 +19,29 @@
   let replayingTileClick = false;
   let syncing = false;
   let syncQueued = false;
+  let lastActionSignature = "";
 
   const style = document.createElement("style");
   style.id = "contextReviewCleanupStyles";
   style.textContent = [
-    "#cityBtn{display:block!important;position:fixed!important;left:0!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;z-index:155!important}",
-    ".resource-scope{display:flex!important;position:fixed!important;left:4px!important;bottom:0!important;width:8px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:visible!important;z-index:154!important}",
-    ".resource-scope button{position:absolute!important;top:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important}",
+    "#cityBtn,.toolbar>.badge-wrap{display:block!important;position:fixed!important;left:0!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important;z-index:-1!important}",
+    ".toolbar>.badge-wrap #scienceBtn{width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;pointer-events:none!important}",
+    ".toolbar>.badge-wrap #scienceBadge{display:none!important}",
+    ".resource-scope{display:flex!important;position:fixed!important;left:4px!important;bottom:0!important;width:8px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important;z-index:-1!important}",
+    ".resource-scope button{position:absolute!important;top:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;pointer-events:none!important}",
     "#resourcePrev{left:0!important}#resourceNext{left:4px!important}#resourceScope{display:none!important}",
-    ".toolbar{grid-template-columns:minmax(0,1fr) minmax(132px,1.35fr) 56px!important}",
-    "#contextTabs{display:flex!important;position:fixed!important;left:16px!important;bottom:0!important;width:120px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:visible!important;z-index:153!important}",
-    "#contextTabs .inspect-tab{height:2px!important;min-height:0!important;padding:0 8px!important;margin:0!important;font-size:1px!important}",
-    "#contextActions [data-context-action=\"stack-prev-unit\"],#contextActions [data-context-action=\"stack-next-unit\"]{display:block!important;position:fixed!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;z-index:152!important}",
-    "#contextActions [data-context-action=\"stack-prev-unit\"]{left:140px!important}#contextActions [data-context-action=\"stack-next-unit\"]{left:144px!important}",
-    ".context-stack-picker{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:2px 0 4px;scrollbar-width:none}",
+    ".toolbar{grid-template-columns:minmax(0,1fr) 56px!important;gap:7px!important;min-height:49px!important;height:49px!important;position:relative!important;z-index:20!important}",
+    "#endTurnBtn{grid-column:1!important;width:100%!important}#menuBtn{grid-column:2!important;width:56px!important}",
+    "#endTurnBtn,#menuBtn{height:49px!important;min-height:49px!important;margin:0!important}",
+    "#contextTabs{display:flex!important;position:fixed!important;left:16px!important;bottom:0!important;width:120px!important;height:2px!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important;z-index:-1!important}",
+    "#contextTabs .inspect-tab{height:2px!important;min-height:0!important;padding:0 8px!important;margin:0!important;font-size:1px!important;pointer-events:none!important}",
+    "#contextActions [data-context-action=\"stack-prev-unit\"],#contextActions [data-context-action=\"stack-next-unit\"]{display:block!important;position:fixed!important;left:0!important;bottom:0!important;width:2px!important;height:2px!important;min-width:0!important;min-height:0!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;pointer-events:none!important;z-index:-1!important}",
+    ".context{position:relative!important;z-index:21!important;min-height:82px!important;max-height:min(178px,25dvh)!important;padding:7px 9px!important;gap:5px!important;overflow:hidden!important}",
+    ".context-copy{flex:0 0 auto!important}",
+    "#contextActions{display:grid!important;grid-template-columns:repeat(var(--context-action-count,1),minmax(78px,1fr))!important;align-items:stretch!important;justify-content:stretch!important;gap:6px!important;width:100%!important;max-width:100%!important;margin:0!important;padding:0 0 2px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-padding-inline:0!important}",
+    "#contextActions:empty{display:none!important}",
+    "#contextActions>.context-btn{width:100%!important;min-width:78px!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 7px!important}",
+    ".context-stack-picker{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:0 0 3px;scrollbar-width:none}",
     ".context-stack-picker::-webkit-scrollbar{display:none}",
     ".context-stack-unit{flex:0 0 auto;min-height:34px;padding:5px 9px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:11px;font-weight:800;color:inherit;white-space:nowrap}",
     ".context-stack-unit.is-active{background:var(--accent-2,#527f50);border-color:rgba(255,255,255,.26)}",
@@ -36,7 +49,7 @@
     "#strategyReadiness button[data-has-object=\"true\"]{cursor:pointer}",
     "#strategyReadiness button[data-ready-count=\"0\"]:not([data-ready-kind=\"science\"]){filter:saturate(.72);background:rgba(255,255,255,.055)}",
     "#strategyReadiness button[data-ready-count]:not([data-ready-count=\"0\"]){box-shadow:inset 0 0 0 1px rgba(255,214,119,.34)}",
-    "@media(max-width:520px){.toolbar{grid-template-columns:minmax(0,1fr) minmax(126px,1.45fr) 52px!important}}"
+    "@media(max-width:520px){.toolbar{grid-template-columns:minmax(0,1fr) 52px!important;height:47px!important;min-height:47px!important;gap:6px!important}#endTurnBtn,#menuBtn{height:47px!important;min-height:47px!important}#menuBtn{width:52px!important}.context{min-height:78px!important;max-height:min(164px,23dvh)!important;padding:6px 8px!important;gap:4px!important}.context-title{font-size:14px!important}.context-text{margin-top:3px!important;max-height:40px!important;font-size:10px!important;line-height:1.2!important}#contextActions{gap:5px!important}#contextActions>.context-btn{min-width:74px!important;height:40px!important;min-height:40px!important;font-size:11px!important}}"
   ].join("\n");
   document.head.appendChild(style);
 
@@ -180,6 +193,7 @@
       button.addEventListener("click", function () { selectStackUnit(unit.id); });
       picker.appendChild(button);
     });
+    picker.scrollLeft = 0;
   }
 
   function readinessSnapshot(gs) {
@@ -191,6 +205,13 @@
       workers: { items: workers, ready: workers.filter(unitReady).length },
       cities: { items: cities, ready: cities.filter(cityReady).length }
     };
+  }
+
+  function scienceNeedsChoice(gs) {
+    if (!gs || gs.currentResearch) return false;
+    const techs = window.EpohiData && window.EpohiData.TECHS ? window.EpohiData.TECHS : {};
+    const researched = new Set([].concat(gs.researched || [], gs.technologies || []));
+    return Object.keys(techs).some(function (id) { return !researched.has(id); });
   }
 
   function refreshActivitySwitcher() {
@@ -209,8 +230,47 @@
       button.dataset.hasObject = String(data.items.length > 0);
       button.dataset.readyCount = String(data.ready);
       button.title = kind === "units" ? "Военные отряды: готовы / всего" : (kind === "workers" ? "Рабочие: готовы / всего" : "Города без очереди / всего");
+      button.setAttribute("aria-label", button.title + ": " + text);
       button.classList.toggle("needs-attention", data.ready > 0);
     });
+
+    const science = bar.querySelector('[data-ready-kind="science"]');
+    if (science) {
+      const needsChoice = scienceNeedsChoice(gs);
+      const counter = science.querySelector("b");
+      if (counter) counter.textContent = needsChoice ? "!" : "✓";
+      science.disabled = false;
+      science.dataset.hasObject = "true";
+      science.dataset.readyCount = needsChoice ? "1" : "0";
+      science.title = needsChoice ? "Выбрать исследование" : "Открыть исследования";
+      science.setAttribute("aria-label", science.title);
+      science.classList.toggle("needs-attention", needsChoice);
+    }
+  }
+
+  function directActionButtons() {
+    return Array.from(contextActions.children).filter(function (element) {
+      if (!element.matches || !element.matches("button.context-btn")) return false;
+      const action = element.dataset.contextAction;
+      return action !== "stack-prev-unit" && action !== "stack-next-unit";
+    });
+  }
+
+  function syncActionLayout() {
+    const buttons = directActionButtons();
+    const value = debug();
+    const selectedId = value && value.getSelectedUnitId ? value.getSelectedUnitId() : "";
+    const signature = [
+      selectedId || "",
+      contextTitle ? contextTitle.textContent : "",
+      buttons.map(function (button) { return (button.dataset.contextAction || "") + ":" + button.textContent.trim(); }).join("|")
+    ].join("::");
+    contextActions.style.setProperty("--context-action-count", String(Math.max(1, buttons.length)));
+    contextActions.dataset.actionCount = String(buttons.length);
+    if (signature !== lastActionSignature) {
+      lastActionSignature = signature;
+      contextActions.scrollLeft = 0;
+    }
   }
 
   function tileElement(x, y) {
@@ -256,10 +316,7 @@
     if (kind === "units") cycle(snapshot.units.items, "units", focusUnit);
     else if (kind === "workers") cycle(snapshot.workers.items, "workers", focusUnit);
     else if (kind === "cities") cycle(snapshot.cities.items, "cities", focusCity);
-    else if (kind === "science") {
-      const science = document.getElementById("scienceBtn");
-      if (science) science.click();
-    }
+    else if (kind === "science" && scienceButton) scienceButton.click();
   }
 
   function syncUi() {
@@ -267,17 +324,16 @@
     if (syncing) return;
     syncing = true;
     try {
-      if (cityButton) {
-        cityButton.style.display = "";
-        cityButton.removeAttribute("aria-hidden");
-        cityButton.tabIndex = -1;
-      }
-      if (resourceScope) {
-        resourceScope.style.display = "";
-        resourceScope.removeAttribute("aria-hidden");
-      }
+      [cityButton, scienceWrap, resourceScope, contextTabs].forEach(function (element) {
+        if (!element) return;
+        element.setAttribute("aria-hidden", "true");
+        element.tabIndex = -1;
+      });
+      if (scienceButton) scienceButton.tabIndex = -1;
+      if (toolbar) toolbar.dataset.reviewLayout = "compact";
       refreshActivitySwitcher();
       renderStackPicker();
+      syncActionLayout();
     } finally {
       syncing = false;
     }
@@ -343,12 +399,13 @@
   observer.observe(document.body, { childList: true, subtree: true });
 
   window.EpohiContextReviewCleanup = {
-    version: 1,
+    version: 2,
     semanticLayer: semanticLayer,
     sync: syncUi,
     selectStackUnit: selectStackUnit,
     readinessSnapshot: readinessSnapshot,
-    handleActivity: handleActivity
+    handleActivity: handleActivity,
+    syncActionLayout: syncActionLayout
   };
 
   queueSync();
