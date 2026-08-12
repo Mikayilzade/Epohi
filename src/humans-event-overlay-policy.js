@@ -13,40 +13,28 @@
 
   function installObserverSafety() {
     if (window.__epohiCoherenceObserverSafetyInstalled) return;
-    const proto = window.MutationObserver && window.MutationObserver.prototype;
-    if (!proto || typeof proto.observe !== "function") return;
-    const originalObserve = proto.observe;
-    const classOnlyTargets = new Set([
-      "cityModal",
-      "captureChoiceModal",
-      "stabilityDecisionModal",
-      "stabilityMajorModal",
-      "coherenceProposalModal",
-      "strategyDiplomacyModal",
-      "livingProposals",
-      "victoryModal",
-      "feedbackTreasuryModal"
-    ]);
-    proto.observe = function (target, options) {
-      let next = options;
-      if (target && options) {
-        if (
-          classOnlyTargets.has(target.id) &&
-          options.attributes &&
-          Array.isArray(options.attributeFilter) &&
-          options.attributeFilter.indexOf("class") >= 0
-        ) {
-          next = { attributes: true, attributeFilter: ["class"] };
-        } else if (target === document.body && options.childList && options.subtree) {
-          next = { childList: true };
-        } else if (target.id === "map" && options.childList && options.subtree) {
-          next = { childList: true };
-        } else if (target.id === "contextPanel" && options.childList && options.subtree) {
-          next = { childList: true };
-        }
-      }
-      return originalObserve.call(this, target, next);
-    };
+    const NativeObserver = window.MutationObserver;
+    if (typeof NativeObserver !== "function") return;
+
+    function CoalescedMutationObserver(callback) {
+      let frame = 0;
+      let pending = [];
+      const observer = new NativeObserver(function (records, instance) {
+        pending = pending.concat(Array.from(records || []));
+        if (frame) return;
+        frame = window.requestAnimationFrame(function () {
+          frame = 0;
+          const batch = pending;
+          pending = [];
+          callback(batch, instance);
+        });
+      });
+      return observer;
+    }
+
+    CoalescedMutationObserver.prototype = NativeObserver.prototype;
+    Object.setPrototypeOf(CoalescedMutationObserver, NativeObserver);
+    window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
   }
 
@@ -194,7 +182,8 @@
       "#urgentDecisionIndicator{display:none!important}",
       "#coherenceProposalModal{z-index:184!important}",
       "#captureChoiceModal{z-index:185!important}",
-      "#stabilityDecisionModal{z-index:186!important}",
+      "#stabilityDecisionModal{z-index:186!important;pointer-events:auto!important;align-items:center!important;justify-content:center!important;padding:10px!important}",
+      "#stabilityDecisionModal .sheet{pointer-events:auto!important;position:relative!important;top:auto!important;right:auto!important;left:auto!important;width:min(560px,calc(100vw - 20px))!important;max-height:min(84dvh,720px)!important;margin:auto!important}",
       "#victoryModal{z-index:187!important}",
       "#stabilityDecisionModal [data-stability-close=\"decision\"]{display:none!important}"
     ].join("");
@@ -224,7 +213,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 7,
+    version: 8,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
