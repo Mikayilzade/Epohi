@@ -20,13 +20,15 @@ on:
       - sw.js
       - tests/coherence-capture-learning.spec.js
       - tests/diplomacy-activity-events.spec.js
-      - tests/coherence-diagnostics.spec.js
+      - tests/context-review-cleanup.spec.js
+      - tests/humans-strategy-ux.spec.js
+      - tests/combat-world-stability.spec.js
   workflow_dispatch:
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -57,14 +59,18 @@ jobs:
           node --check src/humans-diplomacy-event-flow.js
           node --check src/humans-event-overlay-policy.js
           node --check src/humans-chronicle-ui.js
-          node --check tests/coherence-diagnostics.spec.js
+          node --check tests/coherence-capture-learning.spec.js
+          node --check tests/diplomacy-activity-events.spec.js
+          node --check tests/context-review-cleanup.spec.js
+          node --check tests/humans-strategy-ux.spec.js
+          node --check tests/combat-world-stability.spec.js
           node --check sw.js
 
       - name: Run focused tests
         shell: bash
         run: |
           set +e
-          npx playwright test tests/coherence-diagnostics.spec.js --reporter=line --timeout=12000 --workers=1 2>&1 | tee playwright-output.txt
+          npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line --timeout=20000 --workers=4 --max-failures=20 2>&1 | tee playwright-output.txt
           code=${PIPESTATUS[0]}
           exit $code
 
