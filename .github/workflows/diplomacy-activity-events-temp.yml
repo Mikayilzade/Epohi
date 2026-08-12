@@ -25,7 +25,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line 2>&1 | tee playwright-output.txt
+          npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line --timeout=15000 --workers=4 --max-failures=20 2>&1 | tee playwright-output.txt
           code=${PIPESTATUS[0]}
           exit $code
 
