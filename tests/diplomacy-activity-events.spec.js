@@ -14,6 +14,9 @@ async function openGame(page, rivals = 2) {
     window.EpohiDiplomacyEventFlow &&
     window.EpohiEventOverlayPolicy &&
     window.EpohiChronicleUI &&
+    window.EpohiWorkerLearning &&
+    window.EpohiCaptureState &&
+    window.EpohiDiplomacyCoherence &&
     window.__epohiDebug &&
     window.__epohiDebug().state &&
     document.getElementById('strategyReadiness')
@@ -52,14 +55,14 @@ test.describe('Дипломатия, выбор объектов и событи
 
     const warriors = page.locator('#strategyReadiness [data-ready-kind="units"]');
     await warriors.click();
-    expect(String(await page.evaluate(() => window.__epohiDebug().getSelectedUnitId()))).toBe(setup.ready);
+    await expect.poll(() => page.evaluate(() => String(window.__epohiDebug().getSelectedUnitId()))).toBe(setup.ready);
 
     await warriors.click();
-    expect(String(await page.evaluate(() => window.__epohiDebug().getSelectedUnitId()))).not.toBe(setup.ready);
+    await expect.poll(() => page.evaluate(() => String(window.__epohiDebug().getSelectedUnitId()))).not.toBe(setup.ready);
 
     await page.locator('#strategyReadiness [data-ready-kind="cities"]').click();
     await warriors.click();
-    expect(String(await page.evaluate(() => window.__epohiDebug().getSelectedUnitId()))).toBe(setup.ready);
+    await expect.poll(() => page.evaluate(() => String(window.__epohiDebug().getSelectedUnitId()))).toBe(setup.ready);
     await expectNoConsoleProblems(problems);
   });
 
@@ -99,7 +102,7 @@ test.describe('Дипломатия, выбор объектов и событи
     await expectNoConsoleProblems(problems);
   });
 
-  test('предложения прямо показывают последствия принятия и отказа', async ({ page }) => {
+  test('предложения открываются в центре и показывают последствия принятия и отказа', async ({ page }) => {
     const problems = await openGame(page, 1);
 
     await page.evaluate(() => {
@@ -109,14 +112,15 @@ test.describe('Дипломатия, выбор объектов и событи
       civ.met = true;
       window.EpohiLivingCivilizations.createProposal(state, civ, 'peace', 'Предлагаем завершить войну.');
       window.EpohiLivingCivilizations.renderUI(state);
-      window.EpohiDiplomacyEventFlow.refresh();
+      window.EpohiDiplomacyCoherence.renderProposal(state);
     });
 
-    const proposal = page.locator('#livingProposals article').first();
-    await expect(proposal).toBeVisible();
-    await expect(proposal).toContainText('обиды −20');
-    await expect(proposal).toContainText('доверие −5');
-    await expect(proposal.locator('[data-answer="no"]')).toContainText('доверие −5');
+    const modal = page.locator('#coherenceProposalModal');
+    await expect(modal).toHaveClass(/show/);
+    await expect(modal).toContainText('Предлагаем завершить войну');
+    await expect(modal).toContainText('обиды −20');
+    await expect(modal).toContainText('доверие −5');
+    await expect(page.locator('#livingProposals')).toBeHidden();
     await expectNoConsoleProblems(problems);
   });
 
@@ -163,19 +167,26 @@ test.describe('Дипломатия, выбор объектов и событи
     await expectNoConsoleProblems(problems);
   });
 
-  test('перешедший город сохраняет специализацию', async ({ page }) => {
+  test('присоединённый город сохраняет специализацию после выбора судьбы', async ({ page }) => {
     const problems = await openGame(page, 1);
 
-    const result = await page.evaluate(() => {
+    const id = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       const civ = state.rivals[0];
       const city = civ.cities[0];
       city.specialization = 'production';
-      const id = city.id;
-      window.EpohiCombatWorldStability.resolveFactionDefeat(state, civ, state);
-      const captured = state.cities.find(item => item.id === id);
-      return captured && captured.specialization;
+      city.hp = 0;
+      window.EpohiCaptureState.queueCapture(state, civ, city);
+      return String(city.id);
     });
+
+    await expect(page.locator('#captureChoiceModal')).toHaveClass(/show/);
+    await page.locator(`[data-capture-choice="annex"][data-city-id="${id}"]`).click();
+
+    const result = await page.evaluate(cityId => {
+      const captured = window.__epohiDebug().state.cities.find(item => String(item.id) === cityId);
+      return captured && captured.specialization;
+    }, id);
 
     expect(result).toBe('production');
     await expectNoConsoleProblems(problems);
