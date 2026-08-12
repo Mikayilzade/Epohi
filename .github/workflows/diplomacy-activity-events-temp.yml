@@ -61,7 +61,12 @@ jobs:
           node --check sw.js
 
       - name: Run focused tests
-        run: npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line
+        shell: bash
+        run: |
+          set +e
+          npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line 2>&1 | tee playwright-output.txt
+          code=${PIPESTATUS[0]}
+          exit $code
 
       - name: Upload diagnostics
         if: always()
@@ -69,6 +74,7 @@ jobs:
         with:
           name: coherence-capture-learning-results
           path: |
+            playwright-output.txt
             playwright-report/
             test-results/
           if-no-files-found: ignore
