@@ -21,14 +21,34 @@ async function openGame(page, rivals = 1) {
   return problems;
 }
 
+async function ensureWorker(page) {
+  return page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    let worker = state.units.find(unit => unit.type === 'worker');
+    if (!worker) {
+      const city = state.cities[0];
+      const def = window.EpohiData.UNIT_DEFS.worker;
+      worker = {
+        id:'test-worker-fixture', type:'worker', x:city.x, y:city.y,
+        moves:def.maxMoves || 1, acted:false,
+        hp:def.maxHealth, maxHp:def.maxHealth,
+        name:'Тестовый рабочий'
+      };
+      state.units.push(worker);
+    }
+    return String(worker.id);
+  });
+}
+
 test.describe('Рабочие, опыт производства, дипломатия и захват городов', () => {
   test('рабочий строит улучшение рабочим временем без городского производства', async ({ page }) => {
     const problems = await openGame(page, 0);
-    const result = await page.evaluate(() => {
+    const workerId = await ensureWorker(page);
+    const result = await page.evaluate((workerId) => {
       const debug = window.__epohiDebug();
       const state = debug.state;
       const city = state.cities[0];
-      const worker = state.units.find(unit => unit.type === 'worker');
+      const worker = state.units.find(unit => String(unit.id) === workerId);
       const points = window.EpohiUtils.neighborsOf(city.x, city.y, state.map.length);
       const target = points.find(point => state.map[point.y][point.x].terrain !== 'water') || points[0];
       const tile = state.map[target.y][target.x];
@@ -49,7 +69,7 @@ test.describe('Рабочие, опыт производства, диплома
       state.turn += 1;
       window.EpohiWorkerLearning.processWorkerProjects(state);
       return { started, afterStart, total, improvement: tile.improvement };
-    });
+    }, workerId);
     expect(result.started).toBe(true);
     expect(result.afterStart).toBe(0);
     expect(result.total).toBe(2);
@@ -59,15 +79,16 @@ test.describe('Рабочие, опыт производства, диплома
 
   test('автоприказ рабочего не остаётся на паузе из-за старого требования производства', async ({ page }) => {
     const problems = await openGame(page, 0);
-    const result = await page.evaluate(() => {
+    const workerId = await ensureWorker(page);
+    const result = await page.evaluate((workerId) => {
       const state = window.__epohiDebug().state;
-      const worker = state.units.find(unit => unit.type === 'worker');
+      const worker = state.units.find(unit => String(unit.id) === workerId);
       worker.order = { type:'develop', status:'paused', reason:'городу не хватает локального производства', cityId:state.cities[0].id, priority:'food', target:null };
       worker.workerProject = { type:'improvement', improvementId:'farm', x:worker.x, y:worker.y, totalTurns:2, remainingTurns:1, startedTurn:state.turn };
       state.autonomyReports = [{ unitId:worker.id, text:'Рабочий остановил приказ: городу не хватает локального производства.' }];
       window.EpohiCoherenceFinalize.repairWorkerAutonomy(state);
       return { status:worker.order.status, reason:worker.order.reason, reports:state.autonomyReports.length };
-    });
+    }, workerId);
     expect(result.status).toBe('active');
     expect(result.reason).toContain('строит');
     expect(result.reports).toBe(0);
