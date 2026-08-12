@@ -4,10 +4,43 @@
   let timer = 0;
   let handling = false;
   let lastTurn = "";
+  let higherPriorityWasOpen = false;
 
   function state() {
     const value = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
     return value && value.state ? value.state : null;
+  }
+
+  function installObserverSafety() {
+    if (window.__epohiCoherenceObserverSafetyInstalled) return;
+    const proto = window.MutationObserver && window.MutationObserver.prototype;
+    if (!proto || typeof proto.observe !== "function") return;
+    const originalObserve = proto.observe;
+    const classOnlyTargets = new Set([
+      "cityModal",
+      "captureChoiceModal",
+      "stabilityDecisionModal",
+      "coherenceProposalModal",
+      "strategyDiplomacyModal",
+      "livingProposals"
+    ]);
+    proto.observe = function (target, options) {
+      let next = options;
+      if (
+        target &&
+        classOnlyTargets.has(target.id) &&
+        options &&
+        options.attributes &&
+        options.childList &&
+        options.subtree &&
+        Array.isArray(options.attributeFilter) &&
+        options.attributeFilter.indexOf("class") >= 0
+      ) {
+        next = { attributes: true, attributeFilter: ["class"] };
+      }
+      return originalObserve.call(this, target, next);
+    };
+    window.__epohiCoherenceObserverSafetyInstalled = true;
   }
 
   function dismissToast() {
@@ -71,6 +104,8 @@
     const urgent = pendingDecision(gs);
     const victoryOpen = !!(victory && victory.classList.contains("show"));
     const captureOpen = !!(capture && capture.classList.contains("show"));
+    const higherPriorityOpen = victoryOpen || captureOpen || !!urgent;
+    const previouslyBlocked = higherPriorityWasOpen;
 
     const indicator = document.getElementById("urgentDecisionIndicator");
     if (indicator) {
@@ -91,8 +126,15 @@
     } else if (urgent) {
       if (decision) decision.classList.add("show");
       if (proposal) proposal.classList.remove("show");
-    } else if (proposal && window.EpohiDiplomacyCoherence && typeof window.EpohiDiplomacyCoherence.renderProposal === "function") {
-      window.EpohiDiplomacyCoherence.renderProposal(gs);
+    }
+
+    higherPriorityWasOpen = higherPriorityOpen;
+
+    if (!higherPriorityOpen && previouslyBlocked && proposal && window.EpohiDiplomacyCoherence && typeof window.EpohiDiplomacyCoherence.renderProposal === "function") {
+      window.setTimeout(function () {
+        const next = state();
+        if (next && !pendingDecision(next)) window.EpohiDiplomacyCoherence.renderProposal(next);
+      }, 0);
     }
 
     if (blockingOverlay()) {
@@ -172,8 +214,10 @@
     normalize();
   }
 
+  installObserverSafety();
+
   window.EpohiEventOverlayPolicy = {
-    version: 4,
+    version: 5,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
