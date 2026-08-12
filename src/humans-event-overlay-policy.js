@@ -25,22 +25,25 @@
       "strategyDiplomacyModal",
       "livingProposals",
       "victoryModal",
-      "feedbackTreasuryModal",
-      "contextPanel"
+      "feedbackTreasuryModal"
     ]);
     proto.observe = function (target, options) {
       let next = options;
-      if (
-        target &&
-        classOnlyTargets.has(target.id) &&
-        options &&
-        options.attributes &&
-        options.childList &&
-        options.subtree &&
-        Array.isArray(options.attributeFilter) &&
-        options.attributeFilter.indexOf("class") >= 0
-      ) {
-        next = { attributes: true, attributeFilter: ["class"] };
+      if (target && options) {
+        if (
+          classOnlyTargets.has(target.id) &&
+          options.attributes &&
+          Array.isArray(options.attributeFilter) &&
+          options.attributeFilter.indexOf("class") >= 0
+        ) {
+          next = { attributes: true, attributeFilter: ["class"] };
+        } else if (target === document.body && options.childList && options.subtree) {
+          next = { childList: true };
+        } else if (target.id === "map" && options.childList && options.subtree) {
+          next = { childList: true };
+        } else if (target.id === "contextPanel" && options.childList && options.subtree) {
+          next = { childList: true };
+        }
       }
       return originalObserve.call(this, target, next);
     };
@@ -221,7 +224,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 6,
+    version: 7,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
