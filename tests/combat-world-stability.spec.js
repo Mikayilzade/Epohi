@@ -34,31 +34,45 @@ test.describe('Combat, AI and world stability', () => {
     expect(rules.water.impassableReason).toContain('воду');
   });
 
-  test('visible city attack collapses a rival and transfers all cities', async ({ page }) => {
+  test('visible capital attack opens capture choice and only annexes the defeated city', async ({ page }) => {
     await ready(page, 2);
     const setup = await page.evaluate(() => {
-      const gs=window.__epohiDebug().state, loser=gs.rivals[0], observer=gs.rivals[1];
+      const gs=window.__epohiDebug().state, loser=gs.rivals[0];
       const attacker=gs.units.find(unit=>unit.type==='warrior')||gs.units[0], capital=loser.cities[0];
       attacker.type='warrior'; attacker.x=5; attacker.y=5; attacker.moves=1; attacker.acted=false; attacker.hp=100; attacker.maxHp=100;
-      Object.assign(capital,{x:6,y:5,hp:1,maxHp:180,capital:true}); loser.units=[]; loser.relation='war'; loser.met=true;
+      Object.assign(capital,{x:6,y:5,hp:1,maxHp:180,capital:true,population:4,specialization:'production',buildings:['granary']});
+      loser.units=[]; loser.relation='war'; loser.met=true;
       gs.map[5][5].terrain='plains'; gs.map[5][6].terrain='plains'; gs.map[5][5].revealed=true; gs.map[5][6].revealed=true;
-      loser.cities.push({id:'captured-second',name:'Второй',x:8,y:8,population:2,hp:150,maxHp:150,buildings:[],queue:null});
-      observer.diplomacy[loser.civilizationId]='war';
-      gs.diplomaticProposals=[{id:'collapse-proposal',type:'peace',civId:loser.civilizationId,status:'pending'}];
-      gs.tradeRoutes=[{id:'collapse-trade',civId:loser.civilizationId,status:'active',remainingTurns:4}];
-      window.__epohiDebug().render(); return {civId:loser.civilizationId,transferred:loser.cities.length};
+      loser.cities.push({id:'surviving-second',name:'Второй',x:8,y:8,population:2,hp:150,maxHp:150,capital:false,buildings:[],queue:null});
+      gs.diplomaticProposals=[]; gs.tradeRoutes=[];
+      window.__epohiDebug().render();
+      return {civId:loser.civilizationId,capitalId:capital.id,secondId:'surviving-second'};
     });
     await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
     await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
     await page.locator('[data-context-action="attack"]').click();
-    const result=await page.evaluate(({civId})=>{const gs=window.__epohiDebug().state,loser=gs.rivals.find(c=>c.civilizationId===civId);return{defeated:loser.defeated,cities:gs.cities.filter(c=>c.formerCivilizationId===civId).length,proposal:gs.diplomaticProposals[0].status,trade:gs.tradeRoutes[0].status,event:gs.eventLog[0].eventType};},setup);
-    expect(result).toMatchObject({defeated:true,cities:setup.transferred,proposal:'cancelled',trade:'cancelled',event:'capital-fallen'});
-    await expect(page.locator('#stabilityMajorModal')).toHaveClass(/show/);
-    await page.locator('[data-stability-close="major"]').click();
+    await expect(page.locator('#captureChoiceModal')).toHaveClass(/show/);
+    await expect(page.locator(`[data-capture-choice="annex"][data-city-id="${setup.capitalId}"]`)).toBeVisible();
+    await page.locator(`[data-capture-choice="annex"][data-city-id="${setup.capitalId}"]`).click();
+    const result=await page.evaluate(({civId,capitalId,secondId})=>{
+      const gs=window.__epohiDebug().state,loser=gs.rivals.find(c=>c.civilizationId===civId);
+      const captured=gs.cities.find(c=>String(c.id)===String(capitalId));
+      const survivor=loser.cities.find(c=>String(c.id)===String(secondId));
+      return{
+        defeated:loser.defeated,
+        remaining:loser.cities.length,
+        newCapital:!!(survivor&&survivor.capital),
+        captured:!!captured,
+        specialization:captured&&captured.specialization,
+        cityCaptured:gs.eventLog.some(event=>event.eventType==='city-captured'),
+        relocated:gs.eventLog.some(event=>event.eventType==='capital-relocated')
+      };
+    },setup);
+    expect(result).toMatchObject({defeated:false,remaining:1,newCapital:true,captured:true,specialization:'production',cityCaptured:true,relocated:true});
     await expect(page.locator('#stabilityMajorModal')).not.toHaveClass(/show/);
   });
 
-  test('turn-driven era decision is immediate, persistent when closed, and city-bound', async ({ page }) => {
+  test('turn-driven era decision is immediate, mandatory and city-bound', async ({ page }) => {
     await ready(page, 0);
     const ids = await page.evaluate(() => {
       const gs=window.__epohiDebug().state, city=gs.cities[0]; city.production=0; gs.resources.gold=20; gs.turn=5;
@@ -66,9 +80,8 @@ test.describe('Combat, AI and world stability', () => {
       return {city:city.id};
     });
     await expect(page.locator('#stabilityDecisionModal')).toHaveClass(/show/);
-    await page.locator('[data-stability-close="decision"]').click();
-    await expect(page.locator('#urgentDecisionIndicator')).toHaveClass(/show/);
-    await page.locator('#urgentDecisionIndicator').click();
+    await expect(page.locator('[data-stability-close="decision"]')).toBeHidden();
+    await expect(page.locator('#urgentDecisionIndicator')).toBeHidden();
     await page.locator('[data-option-id="hire"]').click();
     const resolved = await page.evaluate(({city}) => { const gs=window.__epohiDebug().state; return {production:gs.cities.find(c=>c.id===city).production,status:gs.urgentDecisions[0].status}; }, ids);
     expect(resolved).toEqual({production:18,status:'resolved'});
