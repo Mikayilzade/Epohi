@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-8-coherence-capture-learning-v1";
+  "epohi-v1-8-9-coherence-capture-learning-v1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -47,6 +47,7 @@ const APP_FILES = [
   "./src/humans-worker-learning.js",
   "./src/humans-capture-state.js",
   "./src/humans-diplomacy-coherence-v2.js",
+  "./src/humans-coherence-finalize.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",
