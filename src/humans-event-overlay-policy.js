@@ -16,11 +16,15 @@
     if (node) node.classList.remove("show");
   }
 
+  function blockingOverlay() {
+    return ["victoryModal", "stabilityDecisionModal", "coherenceProposalModal", "captureChoiceModal"].some(function (id) {
+      const node = document.getElementById(id);
+      return node && node.classList.contains("show");
+    });
+  }
+
   function toast(text) {
-    if (!text) return;
-    const victory = document.getElementById("victoryModal");
-    const decision = document.getElementById("stabilityDecisionModal");
-    if ((victory && victory.classList.contains("show")) || (decision && decision.classList.contains("show"))) return;
+    if (!text || blockingOverlay()) return;
     const node = document.getElementById("flowEventToast");
     if (!node) return;
     node.textContent = text;
@@ -33,6 +37,7 @@
     if (handling) return;
     handling = true;
     try {
+      if (blockingOverlay()) dismissToast();
       const modal = document.getElementById("stabilityMajorModal");
       if (!modal || !modal.classList.contains("show")) return;
       const content = document.getElementById("stabilityMajorContent");
@@ -57,7 +62,12 @@
   function install() {
     const style = document.createElement("style");
     style.id = "eventOverlayPolicyStyles";
-    style.textContent = "#stabilityMajorModal{display:none!important;pointer-events:none!important}#feedbackWorldEvents{display:none!important;pointer-events:none!important}";
+    style.textContent = [
+      "#stabilityMajorModal{display:none!important;pointer-events:none!important}",
+      "#feedbackWorldEvents{display:none!important;pointer-events:none!important}",
+      "body:has(#coherenceProposalModal.show) #flowEventToast,body:has(#captureChoiceModal.show) #flowEventToast,body:has(#stabilityDecisionModal.show) #flowEventToast{opacity:0!important;pointer-events:none!important}",
+      "body:has(#stabilityDecisionModal.show) #coherenceProposalModal,body:has(#captureChoiceModal.show) #coherenceProposalModal{display:none!important;pointer-events:none!important}"
+    ].join("");
     document.head.appendChild(style);
     const modal = document.getElementById("stabilityMajorModal");
     if (modal) new MutationObserver(normalize).observe(modal, { attributes: true, attributeFilter: ["class"] });
@@ -66,11 +76,14 @@
       lastTurn = turn.textContent.trim();
       new MutationObserver(handleTurnChange).observe(turn, { childList: true, characterData: true, subtree: true });
     }
+    new MutationObserver(function () {
+      if (blockingOverlay()) dismissToast();
+    }).observe(document.body, { attributes: true, attributeFilter: ["class"], subtree: true });
     document.addEventListener("click", function () { window.setTimeout(normalize, 0); });
     normalize();
   }
 
-  window.EpohiEventOverlayPolicy = { version: 2, normalize: normalize, dismissToast: dismissToast, handleTurnChange: handleTurnChange };
+  window.EpohiEventOverlayPolicy = { version: 3, normalize: normalize, dismissToast: dismissToast, handleTurnChange: handleTurnChange, blockingOverlay: blockingOverlay };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });
   else install();
