@@ -1,4 +1,4 @@
-name: Diplomacy Activity Events Temporary Check
+name: Coherence Capture Learning Temporary Check
 
 on:
   pull_request:
@@ -6,14 +6,19 @@ on:
       - prototype/humans-v1
   push:
     branches:
-      - codex/diplomacy-activity-events-v3
+      - codex/coherence-capture-learning-v1
     paths:
       - .github/workflows/diplomacy-activity-events-temp.yml
+      - src/humans-worker-learning.js
+      - src/humans-capture-state.js
+      - src/humans-diplomacy-coherence-v2.js
+      - src/humans-coherence-finalize.js
       - src/humans-diplomacy-event-flow.js
       - src/humans-event-overlay-policy.js
       - src/humans-chronicle-ui.js
       - index.html
       - sw.js
+      - tests/coherence-capture-learning.spec.js
       - tests/diplomacy-activity-events.spec.js
   workflow_dispatch:
 
@@ -21,7 +26,6 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -45,23 +49,28 @@ jobs:
 
       - name: Check JavaScript syntax
         run: |
+          node --check src/humans-worker-learning.js
+          node --check src/humans-capture-state.js
+          node --check src/humans-diplomacy-coherence-v2.js
+          node --check src/humans-coherence-finalize.js
           node --check src/humans-diplomacy-event-flow.js
           node --check src/humans-event-overlay-policy.js
           node --check src/humans-chronicle-ui.js
+          node --check tests/coherence-capture-learning.spec.js
           node --check tests/diplomacy-activity-events.spec.js
           node --check sw.js
 
       - name: Run focused tests
-        run: npx playwright test tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line
+        run: npx playwright test tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line
 
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: diplomacy-activity-events-results
+          name: coherence-capture-learning-results
           path: |
             playwright-report/
             test-results/
           if-no-files-found: ignore
 
-# Temporary branch-only workflow; remove after the focused run.
+# Temporary branch-only workflow. Remove before merging the tested patch into prototype/humans-v1.
