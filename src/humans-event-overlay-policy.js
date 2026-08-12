@@ -20,9 +20,13 @@
       "cityModal",
       "captureChoiceModal",
       "stabilityDecisionModal",
+      "stabilityMajorModal",
       "coherenceProposalModal",
       "strategyDiplomacyModal",
-      "livingProposals"
+      "livingProposals",
+      "victoryModal",
+      "feedbackTreasuryModal",
+      "contextPanel"
     ]);
     proto.observe = function (target, options) {
       let next = options;
@@ -217,7 +221,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 5,
+    version: 6,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
