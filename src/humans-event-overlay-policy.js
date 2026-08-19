@@ -16,80 +16,139 @@
     const NativeObserver = window.MutationObserver;
     if (typeof NativeObserver !== "function") return;
 
+    const nativeObserve = NativeObserver.prototype.observe;
+    const nativeDisconnect = NativeObserver.prototype.disconnect;
+    const nativeTakeRecords = NativeObserver.prototype.takeRecords;
+    const nativeRaf = window.requestAnimationFrame.bind(window);
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const observerStates = [];
+    let safetyDepth = 0;
+
     const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
       observers: 0,
       callbacks: 0,
       records: 0,
-      maxBatch: 0
+      maxBatch: 0,
+      protectedTasks: 0
+    };
+    if (!Number.isFinite(stats.protectedTasks)) stats.protectedTasks = 0;
+
+    function appendPending(observerState, records) {
+      if (!records || !records.length) return;
+      observerState.pending = observerState.pending.concat(Array.from(records));
+      if (observerState.pending.length > 400) observerState.pending = observerState.pending.slice(-400);
+    }
+
+    function pauseObservers() {
+      observerStates.forEach(function (observerState) {
+        if (observerState.disconnectedByClient || !observerState.native) return;
+        appendPending(observerState, nativeTakeRecords.call(observerState.native));
+        nativeDisconnect.call(observerState.native);
+      });
+    }
+
+    function restoreObservers() {
+      observerStates.forEach(function (observerState) {
+        if (observerState.disconnectedByClient || !observerState.native) return;
+        observerState.registrations.forEach(function (entry) {
+          nativeObserve.call(observerState.native, entry.target, entry.options);
+        });
+        if (observerState.pending.length) observerState.scheduleDelivery();
+      });
+    }
+
+    function runProtectedTask(callback, thisArg, args) {
+      const outermost = safetyDepth === 0;
+      if (outermost) pauseObservers();
+      safetyDepth += 1;
+      stats.protectedTasks += 1;
+      try {
+        return callback.apply(thisArg, args || []);
+      } finally {
+        safetyDepth -= 1;
+        if (outermost) restoreObservers();
+      }
+    }
+
+    // Observer callbacks in this prototype usually enqueue a requestAnimationFrame or
+    // setTimeout decorator. Propagate the safety context into those queued tasks too;
+    // otherwise observer A schedules a DOM write after it reconnects and observer B
+    // schedules the same write back, producing the mobile 60-fps feedback loop.
+    window.requestAnimationFrame = function (callback) {
+      if (typeof callback !== "function" || safetyDepth <= 0) return nativeRaf(callback);
+      return nativeRaf(function (time) {
+        return runProtectedTask(callback, window, [time]);
+      });
+    };
+
+    window.setTimeout = function (callback, delay) {
+      const args = Array.prototype.slice.call(arguments, 2);
+      if (typeof callback !== "function" || safetyDepth <= 0) {
+        return nativeSetTimeout.apply(window, [callback, delay].concat(args));
+      }
+      return nativeSetTimeout(function () {
+        return runProtectedTask(callback, window, args);
+      }, delay);
     };
 
     function CoalescedMutationObserver(callback) {
-      let frame = 0;
-      let pending = [];
-      let registrations = [];
-      let disconnectedByClient = false;
-      const native = new NativeObserver(function (records) {
-        if (records && records.length) {
-          pending = pending.concat(Array.from(records));
-          if (pending.length > 400) pending = pending.slice(-400);
-        }
-        if (frame) return;
-        frame = window.requestAnimationFrame(function () {
-          frame = 0;
-          if (disconnectedByClient || !pending.length) {
-            pending = [];
+      const observerState = {
+        native: null,
+        frame: 0,
+        pending: [],
+        registrations: [],
+        disconnectedByClient: false,
+        scheduleDelivery: null
+      };
+
+      function scheduleDelivery() {
+        if (observerState.frame || observerState.disconnectedByClient || !observerState.pending.length) return;
+        observerState.frame = nativeRaf(function () {
+          observerState.frame = 0;
+          if (observerState.disconnectedByClient || !observerState.pending.length) {
+            observerState.pending = [];
             return;
           }
-          const batch = pending;
-          pending = [];
+          const batch = observerState.pending;
+          observerState.pending = [];
           stats.callbacks += 1;
           stats.records += batch.length;
           stats.maxBatch = Math.max(stats.maxBatch, batch.length);
-
-          // Decorator observers in the prototype often update the same subtree they watch.
-          // Native MutationObserver would immediately schedule another callback for those
-          // writes, which can become a permanent 60 fps feedback loop on mobile Safari.
-          // Temporarily detach this observer while its own callback runs, then restore its
-          // registrations. External mutations are still observed normally afterwards.
-          NativeObserver.prototype.disconnect.call(native);
-          try {
-            callback(batch, native);
-          } finally {
-            if (!disconnectedByClient) {
-              registrations.forEach(function (entry) {
-                NativeObserver.prototype.observe.call(native, entry.target, entry.options);
-              });
-            }
-          }
+          runProtectedTask(callback, observerState.native, [batch, observerState.native]);
         });
-      });
+      }
+      observerState.scheduleDelivery = scheduleDelivery;
 
-      const nativeObserve = NativeObserver.prototype.observe;
-      const nativeDisconnect = NativeObserver.prototype.disconnect;
-      const nativeTakeRecords = NativeObserver.prototype.takeRecords;
+      const native = new NativeObserver(function (records) {
+        appendPending(observerState, records);
+        scheduleDelivery();
+      });
+      observerState.native = native;
+      observerStates.push(observerState);
 
       native.observe = function (target, options) {
-        disconnectedByClient = false;
-        const existing = registrations.find(function (entry) { return entry.target === target; });
+        observerState.disconnectedByClient = false;
+        const existing = observerState.registrations.find(function (entry) { return entry.target === target; });
         if (existing) existing.options = options;
-        else registrations.push({ target: target, options: options });
+        else observerState.registrations.push({ target: target, options: options });
+        if (safetyDepth > 0) return;
         return nativeObserve.call(native, target, options);
       };
       native.disconnect = function () {
-        disconnectedByClient = true;
-        registrations = [];
-        pending = [];
-        if (frame) {
-          window.cancelAnimationFrame(frame);
-          frame = 0;
+        observerState.disconnectedByClient = true;
+        observerState.registrations = [];
+        observerState.pending = [];
+        if (observerState.frame) {
+          window.cancelAnimationFrame(observerState.frame);
+          observerState.frame = 0;
         }
         return nativeDisconnect.call(native);
       };
       native.takeRecords = function () {
         const records = nativeTakeRecords.call(native);
-        if (pending.length) {
-          const combined = pending.concat(Array.from(records || []));
-          pending = [];
+        if (observerState.pending.length) {
+          const combined = observerState.pending.concat(Array.from(records || []));
+          observerState.pending = [];
           return combined;
         }
         return records;
@@ -279,7 +338,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 9,
+    version: 10,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
