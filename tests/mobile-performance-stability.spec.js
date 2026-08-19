@@ -9,6 +9,7 @@ async function openGame(page, rivals = 1) {
     window.EpohiEventOverlayPolicy &&
     window.EpohiDiplomacyCoherence &&
     window.EpohiWorkerLearning &&
+    window.EpohiPerformance &&
     window.__epohiDebug &&
     window.__epohiDebug().state &&
     window.__epohiObserverSafetyStats
@@ -81,6 +82,35 @@ test.describe('Mobile runtime stability', () => {
     await page.waitForTimeout(400);
     const after = await callbackCount(page);
     expect(after - before).toBeLessThanOrEqual(6);
+    await expectNoConsoleProblems(problems);
+  });
+
+  test('opening city sheet stays open and heavy observers are quarantined', async ({ page }) => {
+    const problems = await openGame(page, 0);
+    await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const city = gs.cities[0];
+      window.__epohiDebug().render();
+      const tile = document.querySelector(`#map .tile[data-x="${city.x}"][data-y="${city.y}"]`);
+      const piece = tile && (tile.querySelector('.piece.city') || tile.querySelector('.city-pop'));
+      if (piece) piece.dispatchEvent(new MouseEvent('click', { bubbles:true, cancelable:true, view:window }));
+    });
+
+    const openCity = page.locator('#contextActions [data-context-action="open-city"]');
+    await expect(openCity).toBeVisible({ timeout: 1500 });
+    await openCity.click({ timeout: 1000 });
+    await expect(page.locator('#cityModal')).toHaveClass(/show/);
+
+    await page.waitForTimeout(250);
+    const before = await callbackCount(page);
+    await page.waitForTimeout(700);
+    const after = await callbackCount(page);
+    await expect(page.locator('#cityModal')).toHaveClass(/show/);
+    expect(after - before).toBeLessThanOrEqual(8);
+
+    const snapshot = await page.evaluate(() => window.EpohiPerformance.snapshot());
+    expect(snapshot.observerSuppressedHeavy).toBeGreaterThanOrEqual(2);
+    expect(snapshot.observerNarrowedHeavy).toBeGreaterThanOrEqual(1);
     await expectNoConsoleProblems(problems);
   });
 });
