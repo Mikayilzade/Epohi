@@ -21,14 +21,51 @@
       callbacks: 0,
       records: 0,
       maxBatch: 0,
-      protectedTasks: 0
+      protectedTasks: 0,
+      suppressedHeavy: 0,
+      narrowedHeavy: 0
     };
-    if (!Number.isFinite(stats.protectedTasks)) stats.protectedTasks = 0;
+    ["protectedTasks", "suppressedHeavy", "narrowedHeavy"].forEach(function (key) {
+      if (!Number.isFinite(stats[key])) stats[key] = 0;
+    });
 
     function appendPending(observerState, records) {
       if (!records || !records.length) return;
       observerState.pending = observerState.pending.concat(Array.from(records));
-      if (observerState.pending.length > 400) observerState.pending = observerState.pending.slice(-400);
+      if (observerState.pending.length > 240) observerState.pending = observerState.pending.slice(-240);
+    }
+
+    function normalizeObservation(target, options) {
+      const input = Object.assign({}, options || {});
+      const id = target && target.id || "";
+
+      // These two prototype observers were effectively global render listeners. A full map
+      // render rebuilds hundreds of nodes, so observing the whole map subtree or document
+      // body multiplies each player action into several decorator passes. All useful work
+      // they performed is also triggered by clicks, turn changes or narrower observers.
+      if (target === document.body && input.childList && input.subtree) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+      if (id === "map" && input.childList && input.subtree) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+
+      // Modal decorators only need to know when a modal opens/closes. Watching every card
+      // inserted into the modal makes note/label decorators observe their own rewrites and
+      // was the main cause of the city sheet flashing on iPhone.
+      const modalIds = new Set([
+        "cityModal", "feedbackTreasuryModal", "strategyDiplomacyModal",
+        "stabilityDecisionModal", "stabilityMajorModal", "captureChoiceModal",
+        "coherenceProposalModal", "victoryModal", "wikiModal", "menuModal"
+      ]);
+      if (modalIds.has(id) && input.childList && input.subtree) {
+        stats.narrowedHeavy += 1;
+        return { attributes: true, attributeFilter: ["class"] };
+      }
+
+      return input;
     }
 
     function pauseObservers() {
@@ -116,11 +153,13 @@
 
       native.observe = function (target, options) {
         observerState.disconnectedByClient = false;
+        const normalized = normalizeObservation(target, options);
+        if (!normalized) return;
         const existing = observerState.registrations.find(function (entry) { return entry.target === target; });
-        if (existing) existing.options = options;
-        else observerState.registrations.push({ target: target, options: options });
+        if (existing) existing.options = normalized;
+        else observerState.registrations.push({ target: target, options: normalized });
         if (safetyDepth > 0) return;
-        return nativeObserve.call(native, target, options);
+        return nativeObserve.call(native, target, normalized);
       };
 
       native.disconnect = function () {
@@ -152,24 +191,35 @@
     Object.setPrototypeOf(CoalescedMutationObserver, NativeObserver);
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
-    window.EpohiObserverSafety = { version: 2, stats: stats };
+    window.EpohiObserverSafety = { version: 3, stats: stats };
+  }
+
+  function installMobileGpuGuard() {
+    if (document.getElementById("epohiMobileGpuGuard")) return;
+    const style = document.createElement("style");
+    style.id = "epohiMobileGpuGuard";
+    style.textContent = "@media(max-width:720px){*{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.flow-event-toast{transition:none!important}}";
+    document.head.appendChild(style);
   }
 
   installObserverSafety();
+  installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 3,
-    mode: "observer-safe-static-visuals",
+    version: 4,
+    mode: "mobile-observer-quarantine",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
       return {
-        mode: "observer-safe-static-visuals",
+        mode: "mobile-observer-quarantine",
         uptimeMs: Date.now() - startedAt,
         waterTiles: document.querySelectorAll("#map .tile.water").length,
         routeBadges: document.querySelectorAll("#map .route-badge").length,
         observerCallbacks: Number(observerStats.callbacks || 0),
         observerRecords: Number(observerStats.records || 0),
-        observerProtectedTasks: Number(observerStats.protectedTasks || 0)
+        observerProtectedTasks: Number(observerStats.protectedTasks || 0),
+        observerSuppressedHeavy: Number(observerStats.suppressedHeavy || 0),
+        observerNarrowedHeavy: Number(observerStats.narrowedHeavy || 0)
       };
     }
   };
