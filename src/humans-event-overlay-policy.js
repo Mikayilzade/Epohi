@@ -16,20 +16,86 @@
     const NativeObserver = window.MutationObserver;
     if (typeof NativeObserver !== "function") return;
 
+    const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
+      observers: 0,
+      callbacks: 0,
+      records: 0,
+      maxBatch: 0
+    };
+
     function CoalescedMutationObserver(callback) {
       let frame = 0;
       let pending = [];
-      const observer = new NativeObserver(function (records, instance) {
-        pending = pending.concat(Array.from(records || []));
+      let registrations = [];
+      let disconnectedByClient = false;
+      const native = new NativeObserver(function (records) {
+        if (records && records.length) {
+          pending = pending.concat(Array.from(records));
+          if (pending.length > 400) pending = pending.slice(-400);
+        }
         if (frame) return;
         frame = window.requestAnimationFrame(function () {
           frame = 0;
+          if (disconnectedByClient || !pending.length) {
+            pending = [];
+            return;
+          }
           const batch = pending;
           pending = [];
-          callback(batch, instance);
+          stats.callbacks += 1;
+          stats.records += batch.length;
+          stats.maxBatch = Math.max(stats.maxBatch, batch.length);
+
+          // Decorator observers in the prototype often update the same subtree they watch.
+          // Native MutationObserver would immediately schedule another callback for those
+          // writes, which can become a permanent 60 fps feedback loop on mobile Safari.
+          // Temporarily detach this observer while its own callback runs, then restore its
+          // registrations. External mutations are still observed normally afterwards.
+          NativeObserver.prototype.disconnect.call(native);
+          try {
+            callback(batch, native);
+          } finally {
+            if (!disconnectedByClient) {
+              registrations.forEach(function (entry) {
+                NativeObserver.prototype.observe.call(native, entry.target, entry.options);
+              });
+            }
+          }
         });
       });
-      return observer;
+
+      const nativeObserve = NativeObserver.prototype.observe;
+      const nativeDisconnect = NativeObserver.prototype.disconnect;
+      const nativeTakeRecords = NativeObserver.prototype.takeRecords;
+
+      native.observe = function (target, options) {
+        disconnectedByClient = false;
+        const existing = registrations.find(function (entry) { return entry.target === target; });
+        if (existing) existing.options = options;
+        else registrations.push({ target: target, options: options });
+        return nativeObserve.call(native, target, options);
+      };
+      native.disconnect = function () {
+        disconnectedByClient = true;
+        registrations = [];
+        pending = [];
+        if (frame) {
+          window.cancelAnimationFrame(frame);
+          frame = 0;
+        }
+        return nativeDisconnect.call(native);
+      };
+      native.takeRecords = function () {
+        const records = nativeTakeRecords.call(native);
+        if (pending.length) {
+          const combined = pending.concat(Array.from(records || []));
+          pending = [];
+          return combined;
+        }
+        return records;
+      };
+      stats.observers += 1;
+      return native;
     }
 
     CoalescedMutationObserver.prototype = NativeObserver.prototype;
@@ -213,7 +279,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 8,
+    version: 9,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
