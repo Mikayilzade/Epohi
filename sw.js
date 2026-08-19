@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-10-coherence-capture-learning-v1";
+  "epohi-v1-8-11-mobile-stability-v1";
 const APP_FILES = [
   "./",
   "./index.html",
