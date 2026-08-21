@@ -1,14 +1,10 @@
 name: Epohi Autonomous Cross-Browser Gate
 
 on:
-  pull_request:
-    branches:
-      - prototype/humans-v1
   push:
     branches:
       - codex/coherence-capture-learning-v1
     paths:
-      - .github/workflows/diplomacy-activity-events-temp.yml
       - playwright.config.js
       - package.json
       - package-lock.json
@@ -113,4 +109,5 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-# Branch-only autonomy gate for PR #84. Replace/remove before final merge into prototype/humans-v1.
+# Branch-only autonomy gate for PR #84. Pushes that only update autonomy/status docs do not trigger CI.
+# Remove this temporary workflow before final merge into prototype/humans-v1.
