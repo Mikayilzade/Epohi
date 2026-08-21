@@ -1,4 +1,4 @@
-name: Coherence Capture Learning Temporary Check
+name: Epohi Autonomous Cross-Browser Gate
 
 on:
   pull_request:
@@ -9,27 +9,23 @@ on:
       - codex/coherence-capture-learning-v1
     paths:
       - .github/workflows/diplomacy-activity-events-temp.yml
-      - src/humans-worker-learning.js
-      - src/humans-capture-state.js
-      - src/humans-diplomacy-coherence-v2.js
-      - src/humans-coherence-finalize.js
-      - src/humans-diplomacy-event-flow.js
-      - src/humans-event-overlay-policy.js
-      - src/humans-chronicle-ui.js
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
       - index.html
       - sw.js
-      - tests/coherence-capture-learning.spec.js
-      - tests/diplomacy-activity-events.spec.js
-      - tests/context-review-cleanup.spec.js
-      - tests/humans-strategy-ux.spec.js
-      - tests/combat-world-stability.spec.js
-      - tests/mobile-performance-stability.spec.js
   workflow_dispatch:
+
+concurrency:
+  group: epohi-autonomy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 55
 
     steps:
       - name: Checkout repository
@@ -48,43 +44,73 @@ jobs:
             npm install
           fi
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
 
-      - name: Check JavaScript syntax
+      - name: Static integrity
+        shell: bash
         run: |
-          node --check src/humans-worker-learning.js
-          node --check src/humans-capture-state.js
-          node --check src/humans-diplomacy-coherence-v2.js
-          node --check src/humans-coherence-finalize.js
-          node --check src/humans-diplomacy-event-flow.js
-          node --check src/humans-event-overlay-policy.js
-          node --check src/humans-chronicle-ui.js
-          node --check tests/coherence-capture-learning.spec.js
-          node --check tests/diplomacy-activity-events.spec.js
-          node --check tests/context-review-cleanup.spec.js
-          node --check tests/humans-strategy-ux.spec.js
-          node --check tests/combat-world-stability.spec.js
-          node --check tests/mobile-performance-stability.spec.js
+          set -euo pipefail
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check playwright.config.js
           node --check sw.js
+          git diff --check HEAD^ HEAD
 
-      - name: Run focused tests
+      - name: Focused mobile runtime — Chromium and WebKit
         shell: bash
         run: |
           set +e
-          npx playwright test tests/mobile-performance-stability.spec.js tests/coherence-capture-learning.spec.js tests/diplomacy-activity-events.spec.js tests/context-review-cleanup.spec.js tests/humans-strategy-ux.spec.js tests/combat-world-stability.spec.js --reporter=line --timeout=20000 --workers=4 --max-failures=20 2>&1 | tee playwright-output.txt
-          code=${PIPESTATUS[0]}
-          exit $code
+          tests=(
+            tests/mobile-performance-stability.spec.js
+            tests/coherence-capture-learning.spec.js
+            tests/diplomacy-activity-events.spec.js
+            tests/context-review-cleanup.spec.js
+            tests/humans-strategy-ux.spec.js
+            tests/combat-world-stability.spec.js
+          )
 
-      - name: Upload diagnostics
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=4 --max-failures=20 2>&1 | tee focused-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=2 --max-failures=20 2>&1 | tee focused-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          echo "Chromium focused exit: $chromium_code"
+          echo "WebKit focused exit: $webkit_code"
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Full mobile regression — Chromium and WebKit
+        shell: bash
+        run: |
+          set +e
+
+          npx playwright test --project=chromium-mobile --reporter=line --workers=4 --max-failures=30 2>&1 | tee full-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test --project=webkit-mobile --reporter=line --workers=2 --max-failures=30 2>&1 | tee full-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          echo "Chromium full exit: $chromium_code"
+          echo "WebKit full exit: $webkit_code"
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload cross-browser diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coherence-capture-learning-results
+          name: epohi-autonomous-cross-browser-results
           path: |
-            playwright-output.txt
+            focused-chromium.txt
+            focused-webkit.txt
+            full-chromium.txt
+            full-webkit.txt
             playwright-report/
             test-results/
           if-no-files-found: ignore
+          retention-days: 7
 
-# Temporary branch-only workflow. Remove before merging the tested patch into prototype/humans-v1.
+# Branch-only autonomy gate for PR #84. Replace/remove before final merge into prototype/humans-v1.
