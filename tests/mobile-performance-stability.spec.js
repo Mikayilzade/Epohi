@@ -10,6 +10,7 @@ async function openGame(page, rivals = 1) {
     window.EpohiDiplomacyCoherence &&
     window.EpohiWorkerLearning &&
     window.EpohiPerformance &&
+    window.EpohiHumansObserver &&
     window.__epohiDebug &&
     window.__epohiDebug().state &&
     window.__epohiObserverSafetyStats
@@ -111,6 +112,33 @@ test.describe('Mobile runtime stability', () => {
     const snapshot = await page.evaluate(() => window.EpohiPerformance.snapshot());
     expect(snapshot.observerSuppressedHeavy).toBeGreaterThanOrEqual(2);
     expect(snapshot.observerNarrowedHeavy).toBeGreaterThanOrEqual(1);
+    await expectNoConsoleProblems(problems);
+  });
+
+  test('observer sync is bounded and city sheet survives 30 explicit open-close cycles', async ({ page }) => {
+    const problems = await openGame(page, 0);
+    const architecture = await page.evaluate(() => window.EpohiHumansObserver.stats());
+    expect(architecture.broadObservers).toBe(0);
+    expect(architecture.narrowObservers).toBeLessThanOrEqual(2);
+
+    const cityModal = page.locator('#cityModal');
+    const closeCity = page.locator('[data-close="cityModal"]');
+
+    for (let i = 0; i < 30; i += 1) {
+      await page.evaluate(() => document.getElementById('cityBtn').click());
+      await expect(cityModal).toHaveClass(/show/);
+      await closeCity.click({ timeout: 1000 });
+      await expect(cityModal).not.toHaveClass(/show/);
+    }
+
+    const before = await callbackCount(page);
+    const observerBefore = await page.evaluate(() => window.EpohiHumansObserver.stats().syncs);
+    await page.waitForTimeout(900);
+    const after = await callbackCount(page);
+    const observerAfter = await page.evaluate(() => window.EpohiHumansObserver.stats().syncs);
+
+    expect(after - before).toBeLessThanOrEqual(8);
+    expect(observerAfter - observerBefore).toBeLessThanOrEqual(2);
     await expectNoConsoleProblems(problems);
   });
 });

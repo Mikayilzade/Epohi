@@ -5,6 +5,17 @@
   let pendingArmed = false;
   let lastState = null;
   let scheduled = false;
+  let lastReason = "startup";
+
+  const runtimeStats = {
+    schedules: 0,
+    syncs: 0,
+    clickSignals: 0,
+    turnSignals: 0,
+    menuSignals: 0,
+    broadObservers: 0,
+    narrowObservers: 0
+  };
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -62,12 +73,11 @@
     form.insertBefore(label, create);
 
     create.addEventListener("click", function () {
-      pendingOpenMap = document.getElementById("openMapMode").checked;
+      const checkbox = document.getElementById("openMapMode");
+      pendingOpenMap = !!(checkbox && checkbox.checked);
       pendingArmed = true;
+      schedule("create-party");
     }, true);
-    create.addEventListener("click", function () {
-      sync();
-    });
   }
 
   function injectMenuControl() {
@@ -89,14 +99,26 @@
         const value = debug();
         if (value && typeof value.render === "function") value.render();
         menu.classList.remove("show");
-        schedule();
+        schedule("open-map-enabled");
       });
     }
     content.insertBefore(wrapper, content.firstChild);
   }
 
+  function announceSettled(reason) {
+    try {
+      document.dispatchEvent(new CustomEvent("epohi:humans-ui-settled", {
+        detail: { source: "humans-observer", reason: reason || "sync" }
+      }));
+    } catch (error) {
+      // CustomEvent is only an optimization signal; gameplay must not depend on it.
+    }
+  }
+
   function sync() {
     scheduled = false;
+    runtimeStats.syncs += 1;
+    const reason = lastReason;
     injectNewGameControl();
     const gs = state();
     if (gs) {
@@ -108,35 +130,61 @@
         if (value && typeof value.render === "function") value.render();
       }
     }
+    announceSettled(reason);
   }
 
-  function schedule() {
+  function schedule(reason) {
+    lastReason = reason || lastReason || "explicit";
+    runtimeStats.schedules += 1;
     if (scheduled) return;
     scheduled = true;
     window.setTimeout(sync, 0);
   }
 
   function install() {
-    const screen = document.getElementById("screenRoot");
-    const map = document.getElementById("map");
     const turn = document.getElementById("turnValue");
     const menu = document.getElementById("menuModal");
-    const menuContent = document.getElementById("menuContent");
 
-    if (screen) new MutationObserver(schedule).observe(screen, { childList: true, subtree: true });
-    if (map) new MutationObserver(schedule).observe(map, { childList: true });
-    if (turn) new MutationObserver(schedule).observe(turn, { childList: true, subtree: true, characterData: true });
-    if (menu) new MutationObserver(schedule).observe(menu, { attributes: true, attributeFilter: ["class"] });
-    if (menuContent) new MutationObserver(schedule).observe(menuContent, { childList: true });
-    document.addEventListener("click", function () { window.setTimeout(schedule, 30); }, true);
-    schedule();
+    // Deliberately no screenRoot/map/body/menuContent subtree observers here.
+    // A turn text change is a bounded semantic signal that async turn processing settled.
+    if (turn) {
+      new MutationObserver(function () {
+        runtimeStats.turnSignals += 1;
+        schedule("turn-changed");
+      }).observe(turn, { childList: true, subtree: true, characterData: true });
+      runtimeStats.narrowObservers += 1;
+    }
+
+    // The menu's own show/hide class is the only DOM state needed to inject its control.
+    if (menu) {
+      new MutationObserver(function () {
+        runtimeStats.menuSignals += 1;
+        schedule("menu-visibility");
+      }).observe(menu, { attributes: true, attributeFilter: ["class"] });
+      runtimeStats.narrowObservers += 1;
+    }
+
+    // Core user actions are explicit invalidation points. The callback is coalesced, so a
+    // click that causes several synchronous renders still creates only one observer sync.
+    document.addEventListener("click", function () {
+      runtimeStats.clickSignals += 1;
+      schedule("user-action");
+    }, true);
+
+    window.addEventListener("pageshow", function () { schedule("pageshow"); });
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) schedule("visibility-return");
+    });
+    schedule("startup");
   }
 
   window.EpohiHumansObserver = {
-    version: 1,
+    version: 2,
     revealAll: revealAll,
     apply: apply,
-    sync: sync
+    sync: sync,
+    requestSync: schedule,
+    stats: function () { return Object.assign({}, runtimeStats, { scheduled: scheduled, lastReason: lastReason }); }
   };
 
   if (document.readyState === "loading") {
