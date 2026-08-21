@@ -1,5 +1,7 @@
 # PROJECT HANDOFF — «Эпохи»
 
+> **Current continuation entry point:** read `AUTONOMY_START_HERE.md`, `AUTONOMY_STATUS.md`, `QUALITY_GATES.md`, and `CODEX_NEXT_TASK.md` first. Those files describe the current autonomous stabilization loop for Draft PR #84. Repository code/Git history remains the ultimate source of truth.
+
 This file is the durable handoff for continuing development in a new ChatGPT/Codex session. The repository and its latest Git history remain the source of truth if this document and code ever differ.
 
 ## 1. Project identity
@@ -194,14 +196,14 @@ After the player-feedback/treasury package is stable:
 
 Use this prompt in a new chat inside the «Эпохи» project:
 
-> Продолжаем разработку игры «Эпохи». Репозиторий: `Mikayilzade/Epohi`. Сначала прочитай `PROJECT_HANDOFF.md`, затем проверь текущий Draft PR #69 и последний head ветки `prototype/humans-v1`. Не трогай и не сливай `main` без моего прямого разрешения. Работай крупными законченными пакетами, не спамь GitHub Actions, сохраняй совместимость сохранений и подтверждай результат полным Playwright-прогоном.
+> Продолжаем разработку игры «Эпохи». Репозиторий: `Mikayilzade/Epohi`. Сначала прочитай `AUTONOMY_START_HERE.md`, `AUTONOMY_STATUS.md`, `QUALITY_GATES.md` и `CODEX_NEXT_TASK.md`, затем проверь текущий Draft PR #84 и последний head ветки `codex/coherence-capture-learning-v1`. Не трогай и не сливай `main`. Работай по единственному `NEXT ACTION`, обновляй `AUTONOMY_STATUS.md` и не проси ручной тест до статуса `READY_FOR_FINAL_DEVICE_TEST`.
 
 ## 12. Trust rule
 
 When chat memory, this document and repository code disagree, use this order:
 
 1. latest repository code and Git history;
-2. latest comments/description in PR #69;
+2. `AUTONOMY_STATUS.md` and active PR #84;
 3. this handoff document;
 4. remembered chat context.
 
@@ -218,29 +220,3 @@ Player administration defaults to at least four cities (or the number already pr
 Local checks on 2026-08-02: all JavaScript syntax checks and `git diff --check` passed. The complete 121-test Playwright suite was invoked, but Chromium failed before test 1 because the image lacks `libatk-1.0.so.0`; installing browser dependencies also failed because the environment package proxy returned HTTP 403. Therefore the honest browser result is **0 passed, 0 skipped, 1 failed at browser launch, 120 did not run**, not a green run. Physical iPhone testing was not performed.
 
 ### PR #74 review stabilization
-
-The review follow-up connects the earlier APIs to live game flows. Enemy inspection now owns visible unit/city attack controls and unavailable explanations. Both player and AI capital captures call the same collapse resolver. Territory formerly owned by a collapsed rival is reassigned to transferred city IDs for player yield/accounting compatibility, rather than merely being cleared.
-
-The existing `EpohiHumansJourney` event queue is wrapped into the urgent-decision lifecycle. A real turn-created Saga event opens immediately, retains the capital/source city, resolves through the original Journey reward implementation, and expires out of both urgent UI and the Saga queue. World-event reopening now calls `EpohiPlayerFeedback.reopenWorldEvents`, which clears the feed's internal close signature.
-
-Permanent Treasury units now cost at least twice comparable ten-turn contingents; contracts display remaining turns, threatened allies keep their sole defender, and cooldown-based availability remains intact. Rival turns may spend actual rival gold on one emergency heal and threatened-city production acceleration, and the last local warrior is reserved as a defender. Diplomacy shows defeated status and known demographic/military/Trade information without actionable controls, while invalid or repeated joint-war proposals are suppressed at creation.
-
-Stabilization validation: syntax checks for every changed JavaScript/test file, `git diff --check`, and a headless Node weighted-route assertion passed. Playwright discovered **122 tests** but Chromium could not load `libatk-1.0.so.0`; with `--max-failures=1`, the exact result was **0 passed, 0 skipped, 1 failed at browser launch, 121 did not run**. Physical-device testing was not performed.
-
-### Final PR #74 blocker pass (2026-08-03)
-
-Manual adjacent moves and travel orders now consume `EpohiData.TERRAIN[*].movementCost` through the same route semantics. Expensive manual destinations wait through a travel order, and `movementBank` is credited only for a currently usable route and capped at the maximum defined terrain cost. Terrain defense is no longer divided into an unexplained flat bonus: the displayed percentage multiplies base defense consistently across core, route, barbarian, AI and autonomy combat.
-
-Stack selection is ID-first even when every unit has the same type/name. Clicking an occupied adjacent stack selects that stack rather than treating it as the prior unit's destination, and route controls are rebuilt from the current selected ID. Administration status and purchase price update live in already-mounted city/Treasury DOM. Treasury funding has explicit non-capital coverage.
-
-World-event migration assigns missing stable IDs before once-only modal tracking. AI reserves its last city defender before distant actions. Rivals also compete for finite POIs they actually know: they path to the nearest known site, consume it globally through the same `used`/feature removal state, receive the reward once, and create a public event only when the tile is player-revealed.
-
-Final validation: syntax checks for all changed JavaScript and tests, `git diff --check`, and headless Node assertions for a longer five-cost weighted route plus zero credit over four blocked-route attempts passed. Playwright discovered **129 tests** but Chromium still could not load `libatk-1.0.so.0`; exact `--max-failures=1` result: **0 passed, 0 skipped, 1 browser-launch failure, 128 did not run**. Physical-device testing was not performed.
-
-### Final three-item PR #74 closure
-
-Joint-war requests describe a war that has not started for either participant: creation rejects a target already at war with the player or proposer, and acceptance remains the single point that joins both sides. A new End Turn regression covers valid generation and rejection after the proposer is marked at war.
-
-Scout target ordering now puts a known finite POI before an unrelated global barbarian; other unit types retain threat-first behavior. Diplomacy relation cards render active trade-route state and remaining turns directly from persisted `tradeRoutes`, while the existing feedback hook may enrich the same node without duplication.
-
-Static validation passed. The latest available browser result remains the prior **129 discovered, 0 passed, 0 skipped, 1 launch failure, 128 not run** because Chromium cannot load `libatk-1.0.so.0`; the two newly added browser scenarios were not executable in this image. Physical-device testing was not performed.
