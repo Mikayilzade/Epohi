@@ -39,8 +39,8 @@
       const input = Object.assign({}, options || {});
       const id = target && target.id || "";
 
-      // Broad render listeners are transitional debt. They are suppressed while their
-      // useful work is driven by explicit action / ui-settled invalidation instead.
+      // Broad render listeners are transitional debt. Their useful work is driven by
+      // explicit action/UI invalidation, so do not let descendant churn wake them.
       if (target === document.body && input.childList && input.subtree) {
         stats.suppressedHeavy += 1;
         return null;
@@ -49,11 +49,15 @@
         stats.suppressedHeavy += 1;
         return null;
       }
-      if (id === "screenRoot" && input.childList && input.subtree) {
+      if (id === "screenRoot" && input.childList) {
         stats.suppressedHeavy += 1;
         return null;
       }
       if (id === "contextPanel" && input.childList && input.subtree) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+      if ((id === "menuContent" || id === "wikiContent" || id === "victoryContent") && input.childList) {
         stats.suppressedHeavy += 1;
         return null;
       }
@@ -195,7 +199,7 @@
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
     window.EpohiObserverSafety = {
-      version: 5,
+      version: 6,
       stats: stats,
       runProtected: function (callback) {
         if (typeof callback !== "function") return undefined;
@@ -216,7 +220,7 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 6,
+    version: 7,
     mode: "explicit-invalidation-bridge",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
