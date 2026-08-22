@@ -9,21 +9,28 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
 
   const architecture = await page.evaluate(async () => {
-    const [contextSource, observerSource] = await Promise.all([
+    const [contextSource, observerSource, visualSource] = await Promise.all([
       fetch("/src/humans-context-review-cleanup.js").then(r => r.text()),
-      fetch("/src/humans-observer.js").then(r => r.text())
+      fetch("/src/humans-observer.js").then(r => r.text()),
+      fetch("/src/humans-visuals.js").then(r => r.text())
     ]);
     return {
       hasBroadContextObserver: contextSource.includes("new MutationObserver") || contextSource.includes("observer.observe(document.body"),
       contextVersion: window.EpohiContextReviewCleanup && window.EpohiContextReviewCleanup.version,
       hasGlobalObserverClickPolling: observerSource.includes('document.addEventListener("click"'),
-      observerVersion: window.EpohiHumansObserver && window.EpohiHumansObserver.version
+      observerVersion: window.EpohiHumansObserver && window.EpohiHumansObserver.version,
+      hasBroadVisualObserver: visualSource.includes("new MutationObserver"),
+      hasVisualClickPolling: visualSource.includes('document.addEventListener("click"') || visualSource.includes("setTimeout(schedule") || visualSource.includes("requestAnimationFrame(decorate)"),
+      visualVersion: window.EpohiHumansVisuals && window.EpohiHumansVisuals.version
     };
   });
   expect(architecture.hasBroadContextObserver).toBe(false);
   expect(architecture.contextVersion).toBeGreaterThanOrEqual(3);
   expect(architecture.hasGlobalObserverClickPolling).toBe(false);
   expect(architecture.observerVersion).toBeGreaterThanOrEqual(3);
+  expect(architecture.hasBroadVisualObserver).toBe(false);
+  expect(architecture.hasVisualClickPolling).toBe(false);
+  expect(architecture.visualVersion).toBeGreaterThanOrEqual(2);
 
   const initial = await page.evaluate(() => ({
     safety: window.EpohiPerformance.snapshot(),
@@ -35,7 +42,6 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   }));
 
   expect(initial.invalidation.broadObservers).toBe(0);
-  expect(initial.safety.observerSuppressedHeavy).toBeGreaterThanOrEqual(2);
   expect(initial.observer && initial.observer.broadObservers).toBe(0);
   expect(initial.observer && initial.observer.clickSignals).toBe(0);
   expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
@@ -60,6 +66,8 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
 
   expect(settled.invalidation.requests).toBeGreaterThanOrEqual(40);
   expect(settled.invalidation.flushes).toBeLessThan(15);
+  expect(settled.invalidation.visualSyncs).toBeGreaterThan(0);
+  expect(settled.invalidation.visualSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
   expect(settled.invalidation.feedbackSyncs).toBeGreaterThan(0);
   expect(settled.invalidation.feedbackSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
   expect(settled.invalidation.protectedFlushes).toBeGreaterThan(0);
@@ -96,6 +104,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(clickAfter.observer.clickSignals - clickBefore.observer.clickSignals).toBe(0);
   expect(clickAfter.invalidation.actionSignals - clickBefore.invalidation.actionSignals).toBe(1);
   expect(clickAfter.invalidation.flushes - clickBefore.invalidation.flushes).toBeLessThanOrEqual(2);
+  expect(clickAfter.invalidation.visualSyncs - clickBefore.invalidation.visualSyncs).toBeLessThanOrEqual(2);
   await page.locator('[data-close="menuModal"]').click();
 
   const feedbackBefore = clickAfter.invalidation.feedbackSyncs;
@@ -157,9 +166,19 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(outcomeState.callbacks - observerBeforeOutcomeChurn).toBeLessThanOrEqual(3);
   expect(outcomeState.scheduled).toBe(false);
 
-  const beforeIdle = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats().flushes);
+  const idleBefore = await page.evaluate(() => ({
+    flushes: window.EpohiRuntimeInvalidation.stats().flushes,
+    visualSyncs: window.EpohiRuntimeInvalidation.stats().visualSyncs,
+    callbacks: window.EpohiPerformance.snapshot().observerCallbacks
+  }));
   await page.waitForTimeout(1200);
-  const afterIdle = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats().flushes);
-  expect(afterIdle - beforeIdle).toBeLessThanOrEqual(1);
+  const idleAfter = await page.evaluate(() => ({
+    flushes: window.EpohiRuntimeInvalidation.stats().flushes,
+    visualSyncs: window.EpohiRuntimeInvalidation.stats().visualSyncs,
+    callbacks: window.EpohiPerformance.snapshot().observerCallbacks
+  }));
+  expect(idleAfter.flushes - idleBefore.flushes).toBeLessThanOrEqual(1);
+  expect(idleAfter.visualSyncs - idleBefore.visualSyncs).toBeLessThanOrEqual(1);
+  expect(idleAfter.callbacks - idleBefore.callbacks).toBeLessThanOrEqual(3);
   expect(errors).toEqual([]);
 });

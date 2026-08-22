@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-13-context-observers-removed-v1";
+  "epohi-v1-8-13-visual-observers-removed-v1";
 const APP_FILES = [
   "./",
   "./index.html",

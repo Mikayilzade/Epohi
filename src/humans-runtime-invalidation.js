@@ -9,6 +9,7 @@
     settledSignals: 0,
     actionSignals: 0,
     broadObservers: 0,
+    visualSyncs: 0,
     feedbackSyncs: 0,
     protectedFlushes: 0
   };
@@ -29,6 +30,7 @@
     stats.flushes += 1;
     if (window.EpohiHumansVisuals && typeof window.EpohiHumansVisuals.decorate === "function") {
       window.EpohiHumansVisuals.decorate();
+      stats.visualSyncs += 1;
     }
     if (window.EpohiContextReviewCleanup && typeof window.EpohiContextReviewCleanup.sync === "function") {
       window.EpohiContextReviewCleanup.sync();
@@ -69,7 +71,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 4,
+    version: 5,
     request: request,
     flush: flush,
     stats: function () {
