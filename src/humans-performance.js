@@ -194,7 +194,14 @@
     Object.setPrototypeOf(CoalescedMutationObserver, NativeObserver);
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
-    window.EpohiObserverSafety = { version: 4, stats: stats };
+    window.EpohiObserverSafety = {
+      version: 5,
+      stats: stats,
+      runProtected: function (callback) {
+        if (typeof callback !== "function") return undefined;
+        return runProtectedTask(callback, window, []);
+      }
+    };
   }
 
   function installMobileGpuGuard() {
@@ -209,7 +216,7 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 5,
+    version: 6,
     mode: "explicit-invalidation-bridge",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};

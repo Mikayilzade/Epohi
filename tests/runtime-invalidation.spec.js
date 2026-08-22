@@ -13,7 +13,8 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
     invalidation: window.EpohiRuntimeInvalidation.stats(),
     observer: window.EpohiHumansObserver && window.EpohiHumansObserver.stats(),
     feedbackVersion: window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.version,
-    hasStackSync: !!(window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.addStackSelectionAcknowledgement)
+    hasStackSync: !!(window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.addStackSelectionAcknowledgement),
+    hasProtectedBridge: !!(window.EpohiObserverSafety && typeof window.EpohiObserverSafety.runProtected === "function")
   }));
 
   expect(initial.invalidation.broadObservers).toBe(0);
@@ -21,6 +22,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(initial.observer && initial.observer.broadObservers).toBe(0);
   expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
   expect(initial.hasStackSync).toBe(true);
+  expect(initial.hasProtectedBridge).toBe(true);
 
   for (let i = 0; i < 40; i += 1) {
     await page.evaluate(() => {
@@ -42,7 +44,26 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(settled.invalidation.flushes).toBeLessThan(15);
   expect(settled.invalidation.feedbackSyncs).toBeGreaterThan(0);
   expect(settled.invalidation.feedbackSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
+  expect(settled.invalidation.protectedFlushes).toBeGreaterThan(0);
+  expect(settled.invalidation.protectedFlushes).toBeLessThanOrEqual(settled.invalidation.flushes);
   expect(settled.invalidation.scheduled).toBe(false);
+
+  const bridgeBefore = await page.evaluate(() => ({
+    callbacks: window.EpohiPerformance.snapshot().observerCallbacks,
+    protectedFlushes: window.EpohiRuntimeInvalidation.stats().protectedFlushes
+  }));
+  await page.evaluate(() => {
+    for (let i = 0; i < 30; i += 1) window.EpohiRuntimeInvalidation.request("protected-render-churn");
+  });
+  await page.waitForTimeout(200);
+  const bridgeAfter = await page.evaluate(() => ({
+    callbacks: window.EpohiPerformance.snapshot().observerCallbacks,
+    protectedFlushes: window.EpohiRuntimeInvalidation.stats().protectedFlushes,
+    scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
+  }));
+  expect(bridgeAfter.protectedFlushes).toBeGreaterThan(bridgeBefore.protectedFlushes);
+  expect(bridgeAfter.callbacks - bridgeBefore.callbacks).toBeLessThanOrEqual(3);
+  expect(bridgeAfter.scheduled).toBe(false);
 
   const feedbackBefore = settled.invalidation.feedbackSyncs;
   await page.evaluate(() => {
