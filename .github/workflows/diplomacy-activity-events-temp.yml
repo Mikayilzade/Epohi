@@ -61,6 +61,7 @@ jobs:
           set +e
           tests=(
             tests/runtime-invalidation.spec.js
+            tests/legacy-observer-containment.spec.js
             tests/mobile-performance-stability.spec.js
             tests/coherence-capture-learning.spec.js
             tests/diplomacy-activity-events.spec.js
