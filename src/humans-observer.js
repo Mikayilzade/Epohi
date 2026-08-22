@@ -164,12 +164,10 @@
       runtimeStats.narrowObservers += 1;
     }
 
-    // Core user actions are explicit invalidation points. The callback is coalesced, so a
-    // click that causes several synchronous renders still creates only one observer sync.
-    document.addEventListener("click", function () {
-      runtimeStats.clickSignals += 1;
-      schedule("user-action");
-    }, true);
+    // Generic document-click invalidation used to duplicate the bounded runtime owner:
+    // click -> observer timeout/sync -> ui-settled -> runtime RAF, while the runtime also
+    // scheduled its own RAF for the same click. Keep only semantic observer signals here.
+    // New-game/open-map controls retain their explicit local listeners above.
 
     window.addEventListener("pageshow", function () { schedule("pageshow"); });
     document.addEventListener("visibilitychange", function () {
@@ -179,7 +177,7 @@
   }
 
   window.EpohiHumansObserver = {
-    version: 2,
+    version: 3,
     revealAll: revealAll,
     apply: apply,
     sync: sync,

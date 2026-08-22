@@ -9,14 +9,21 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
 
   const architecture = await page.evaluate(async () => {
-    const source = await fetch("/src/humans-context-review-cleanup.js").then(r => r.text());
+    const [contextSource, observerSource] = await Promise.all([
+      fetch("/src/humans-context-review-cleanup.js").then(r => r.text()),
+      fetch("/src/humans-observer.js").then(r => r.text())
+    ]);
     return {
-      hasBroadContextObserver: source.includes("new MutationObserver") || source.includes("observer.observe(document.body"),
-      contextVersion: window.EpohiContextReviewCleanup && window.EpohiContextReviewCleanup.version
+      hasBroadContextObserver: contextSource.includes("new MutationObserver") || contextSource.includes("observer.observe(document.body"),
+      contextVersion: window.EpohiContextReviewCleanup && window.EpohiContextReviewCleanup.version,
+      hasGlobalObserverClickPolling: observerSource.includes('document.addEventListener("click"'),
+      observerVersion: window.EpohiHumansObserver && window.EpohiHumansObserver.version
     };
   });
   expect(architecture.hasBroadContextObserver).toBe(false);
   expect(architecture.contextVersion).toBeGreaterThanOrEqual(3);
+  expect(architecture.hasGlobalObserverClickPolling).toBe(false);
+  expect(architecture.observerVersion).toBeGreaterThanOrEqual(3);
 
   const initial = await page.evaluate(() => ({
     safety: window.EpohiPerformance.snapshot(),
@@ -30,6 +37,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(initial.invalidation.broadObservers).toBe(0);
   expect(initial.safety.observerSuppressedHeavy).toBeGreaterThanOrEqual(2);
   expect(initial.observer && initial.observer.broadObservers).toBe(0);
+  expect(initial.observer && initial.observer.clickSignals).toBe(0);
   expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
   expect(initial.hasStackSync).toBe(true);
   expect(initial.hasProtectedBridge).toBe(true);
@@ -75,7 +83,22 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(bridgeAfter.callbacks - bridgeBefore.callbacks).toBeLessThanOrEqual(3);
   expect(bridgeAfter.scheduled).toBe(false);
 
-  const feedbackBefore = settled.invalidation.feedbackSyncs;
+  const clickBefore = await page.evaluate(() => ({
+    observer: window.EpohiHumansObserver.stats(),
+    invalidation: window.EpohiRuntimeInvalidation.stats()
+  }));
+  await page.locator("#menuBtn").click();
+  await page.waitForTimeout(120);
+  const clickAfter = await page.evaluate(() => ({
+    observer: window.EpohiHumansObserver.stats(),
+    invalidation: window.EpohiRuntimeInvalidation.stats()
+  }));
+  expect(clickAfter.observer.clickSignals - clickBefore.observer.clickSignals).toBe(0);
+  expect(clickAfter.invalidation.actionSignals - clickBefore.invalidation.actionSignals).toBe(1);
+  expect(clickAfter.invalidation.flushes - clickBefore.invalidation.flushes).toBeLessThanOrEqual(2);
+  await page.locator('[data-close="menuModal"]').click();
+
+  const feedbackBefore = clickAfter.invalidation.feedbackSyncs;
   await page.evaluate(() => {
     const title = document.getElementById("contextTitle");
     const text = document.getElementById("contextText");
