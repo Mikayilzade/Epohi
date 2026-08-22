@@ -39,22 +39,25 @@
       const input = Object.assign({}, options || {});
       const id = target && target.id || "";
 
-      // These two prototype observers were effectively global render listeners. A full map
-      // render rebuilds hundreds of nodes, so observing the whole map subtree or document
-      // body multiplies each player action into several decorator passes. All useful work
-      // they performed is also triggered by clicks, turn changes or narrower observers.
+      // Broad render listeners are transitional debt. They are suppressed while their
+      // useful work is driven by explicit action / ui-settled invalidation instead.
       if (target === document.body && input.childList && input.subtree) {
         stats.suppressedHeavy += 1;
         return null;
       }
-      if (id === "map" && input.childList && input.subtree) {
+      if (id === "map" && input.childList) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+      if (id === "screenRoot" && input.childList && input.subtree) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+      if (id === "contextPanel" && input.childList && input.subtree) {
         stats.suppressedHeavy += 1;
         return null;
       }
 
-      // Modal decorators only need to know when a modal opens/closes. Watching every card
-      // inserted into the modal makes note/label decorators observe their own rewrites and
-      // was the main cause of the city sheet flashing on iPhone.
       const modalIds = new Set([
         "cityModal", "feedbackTreasuryModal", "strategyDiplomacyModal",
         "stabilityDecisionModal", "stabilityMajorModal", "captureChoiceModal",
@@ -191,7 +194,7 @@
     Object.setPrototypeOf(CoalescedMutationObserver, NativeObserver);
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
-    window.EpohiObserverSafety = { version: 3, stats: stats };
+    window.EpohiObserverSafety = { version: 4, stats: stats };
   }
 
   function installMobileGpuGuard() {
@@ -206,12 +209,12 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 4,
-    mode: "mobile-observer-quarantine",
+    version: 5,
+    mode: "explicit-invalidation-bridge",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
       return {
-        mode: "mobile-observer-quarantine",
+        mode: "explicit-invalidation-bridge",
         uptimeMs: Date.now() - startedAt,
         waterTiles: document.querySelectorAll("#map .tile.water").length,
         routeBadges: document.querySelectorAll("#map .route-badge").length,

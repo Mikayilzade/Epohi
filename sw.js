@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-11-mobile-stability-v1";
+  "epohi-v1-8-12-explicit-invalidation-v1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -41,6 +41,7 @@ const APP_FILES = [
   "./src/humans-combat-world-stability.js",
   "./src/humans-population-workforce.js",
   "./src/humans-context-review-cleanup.js",
+  "./src/humans-runtime-invalidation.js",
   "./src/humans-diplomacy-event-flow.js",
   "./src/humans-event-overlay-policy.js",
   "./src/humans-chronicle-ui.js",

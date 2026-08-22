@@ -5,6 +5,7 @@ on:
     branches:
       - codex/coherence-capture-learning-v1
     paths:
+      - .github/workflows/diplomacy-activity-events-temp.yml
       - playwright.config.js
       - package.json
       - package-lock.json
@@ -57,6 +58,7 @@ jobs:
         run: |
           set +e
           tests=(
+            tests/runtime-invalidation.spec.js
             tests/mobile-performance-stability.spec.js
             tests/coherence-capture-learning.spec.js
             tests/diplomacy-activity-events.spec.js
