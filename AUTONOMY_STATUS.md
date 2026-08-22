@@ -11,7 +11,7 @@
 - `main`: DO NOT TOUCH
 
 ## Current branch checkpoint
-Latest implementation head: `c9db8113528c2f6ee678125cf6dc55b2c595ca12` (`Remove broad player feedback observers`).
+Latest implementation head: `67526a2d224d89b1b2ff54c6c611921fed227308` (`Protect explicit runtime invalidation flushes`).
 
 This status update is documentation-only and does not trigger the branch CI path filter; always fetch PR #84 head before the next implementation write.
 
@@ -31,21 +31,24 @@ Latest physical iPhone/Safari smoke failed with rapid heat, UI freeze/flicker an
 - `RUNTIME_OBSERVER_MAP.md` records confirmed ownership/cycle inventory and explicit debt.
 - `src/humans-observer.js` no longer performs broad DOM polling; it emits `epohi:humans-ui-settled`.
 - `src/humans-runtime-invalidation.js` owns one coalesced RAF invalidation path for visuals, context cleanup and player-feedback synchronization.
-- `src/humans-player-feedback-stabilization.js` no longer creates the broad `#victoryContent` subtree observer or the broad `#contextPanel` subtree/character-data observer. Outcome-button cleanup, movement explanation and stack-selection acknowledgement are now reached through explicit invalidation; stack acknowledgement is exported for the scheduler.
-- Narrow semantic observers remain for journey-modal class, victory-modal class and turn-value changes; these are not whole-subtree polling substitutes.
-- `tests/runtime-invalidation.spec.js` now verifies the feedback API is wired through the scheduler, churns outcome content 40 times, proves duplicate recreated outcome buttons are cleaned by explicit invalidation, bounds observer callback growth, and re-checks idle quiescence/no console errors.
+- `src/humans-player-feedback-stabilization.js` no longer creates the broad `#victoryContent` subtree observer or the broad `#contextPanel` subtree/character-data observer.
+- Implementation `67526a2d...` exposes the observer-safety protected transaction and executes every explicit invalidation flush inside it. This pauses narrow observers while the scheduler performs its own visual/context/feedback DOM writes, preventing those writes from recursively waking observer callbacks.
+- `tests/runtime-invalidation.spec.js` now requires the protected bridge, verifies protected flush accounting, drives 30 coalesced render requests and bounds observer callback growth across that transaction.
+- `sw.js` cache key was bumped so the protected runtime pair cannot be masked by a stale service-worker cache.
 
 ## Current blocker
-The global `humans-performance.js` MutationObserver wrapper remains temporary scaffolding because `humans-visuals.js` still creates broad observers on `#map` and `#screenRoot`, while `humans-context-review-cleanup.js` still creates broad observers on `#contextPanel` and `document.body`. These constructors are currently quarantined by the wrapper and must be removed directly before the wrapper itself can be retired.
+The exact cross-browser result for implementation `67526a2d224d89b1b2ff54c6c611921fed227308` is pending. Separately, broad observer constructors in `humans-visuals.js` (`#map`, `#screenRoot`) and `humans-context-review-cleanup.js` (`#contextPanel`, `document.body`) remain quarantined transitional debt and still need direct removal after concrete regressions are green.
 
 ## Latest CI / validation
-- PR #84 was verified open, Draft, mergeable, base `prototype/humans-v1`; verified head before this implementation package was `6fa4e96498651e7c1529690b33b60d50f83c62d9`.
-- The repaired push-run for `6fa4e964...` was not exposed by the available commit workflow/status endpoints at inspection time, so no green result is inferred.
-- Latest fully diagnosed prior run remained the `6ba7e0c0...` cross-browser run whose only known failure was shallow checkout at `git diff --check HEAD^ HEAD`; that infrastructure defect was fixed by `6fa4e964...` using `fetch-depth: 2`.
-- New coherent implementation+regression checkpoint is `c9db8113528c2f6ee678125cf6dc55b2c595ca12`. Its Chromium/WebKit result is pending and must be inspected exactly before further source changes.
+- PR #84 verified open, Draft, mergeable, base `prototype/humans-v1`; source checkpoint before this package was `c9db8113528c2f6ee678125cf6dc55b2c595ca12`.
+- Exact push workflow for `c9db811...`: run `32549595554`, conclusion `failure`; static integrity completed, focused cross-browser tests ran, full regression was skipped because focused tests failed.
+- Chromium focused result: **46/49 passed, 3 failed**. Failures were: activity-switcher second military selection stuck because the button became disabled; rival-identity test saw only one rival instead of two; city-context `open-city` physical click did not become stable within 1 second.
+- WebKit focused result: **42/49 passed, 7 failed**. The strongest runtime signal was selected-worker idle observer growth **20 callbacks vs allowed ≤6**; city open and repeated city close physical clicks also failed to become stable within 1 second. Additional failures were capture-choice modal not opening, missing administration card after treasury action, stacked-unit interaction timeout, plus one harness-specific incompatibility because Playwright mobile WebKit does not support `mouse.wheel`.
+- The new package targets the shared runtime symptom rather than weakening click/observer thresholds: explicit scheduler flushes are now observer-protected render transactions. New implementation SHA: `67526a2d224d89b1b2ff54c6c611921fed227308`.
+- No green result is inferred for `67526a2d...`; inspect its exact Chromium/WebKit artifact before another source change.
 
 ## NEXT ACTION
-Inspect the exact cross-browser workflow result/logs for implementation SHA `c9db8113528c2f6ee678125cf6dc55b2c595ca12`; fix any concrete Chromium/WebKit regression first, otherwise if green remove the broad observer constructors from `humans-visuals.js` and `humans-context-review-cleanup.js` while preserving the explicit invalidation scheduler and strengthening regression coverage accordingly.
+Inspect the exact cross-browser workflow result and artifacts for implementation SHA `67526a2d224d89b1b2ff54c6c611921fed227308`. If any focused Chromium/WebKit regression remains, fix the first concrete shared runtime/game regression without weakening responsiveness thresholds; if focused gates are green, proceed to remove the quarantined broad observer constructors from `humans-visuals.js` and `humans-context-review-cleanup.js` and strengthen regression coverage.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
