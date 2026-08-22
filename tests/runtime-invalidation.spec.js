@@ -36,9 +36,25 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
 
   expect(settled.invalidation.requests).toBeGreaterThanOrEqual(40);
   expect(settled.invalidation.flushes).toBeLessThan(15);
+  expect(settled.invalidation.feedbackSyncs).toBeGreaterThan(0);
+  expect(settled.invalidation.feedbackSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
   expect(settled.invalidation.scheduled).toBe(false);
 
-  const beforeIdle = settled.invalidation.flushes;
+  const feedbackBefore = settled.invalidation.feedbackSyncs;
+  await page.evaluate(() => {
+    const title = document.getElementById("contextTitle");
+    const text = document.getElementById("contextText");
+    if (title && text) {
+      title.textContent = "Клетка тест";
+      text.textContent = "Описание · Стоимость движения: 99";
+    }
+    window.EpohiRuntimeInvalidation.request("feedback-regression");
+  });
+  await page.waitForTimeout(100);
+  const feedbackAfter = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats());
+  expect(feedbackAfter.feedbackSyncs).toBeGreaterThan(feedbackBefore);
+
+  const beforeIdle = feedbackAfter.flushes;
   await page.waitForTimeout(1200);
   const afterIdle = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats().flushes);
   expect(afterIdle - beforeIdle).toBeLessThanOrEqual(1);

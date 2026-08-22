@@ -8,8 +8,19 @@
     flushes: 0,
     settledSignals: 0,
     actionSignals: 0,
-    broadObservers: 0
+    broadObservers: 0,
+    feedbackSyncs: 0
   };
+
+  function syncPlayerFeedback() {
+    const feedback = window.EpohiPlayerFeedbackStabilization;
+    if (!feedback) return;
+    if (typeof feedback.ensureStableControls === "function") feedback.ensureStableControls();
+    if (typeof feedback.preserveFreePlay === "function") feedback.preserveFreePlay();
+    if (typeof feedback.stabilizeMovementExplanation === "function") feedback.stabilizeMovementExplanation();
+    if (typeof feedback.expireSkippedJourneyEvents === "function") feedback.expireSkippedJourneyEvents();
+    stats.feedbackSyncs += 1;
+  }
 
   function flush() {
     frame = 0;
@@ -20,6 +31,7 @@
     if (window.EpohiContextReviewCleanup && typeof window.EpohiContextReviewCleanup.sync === "function") {
       window.EpohiContextReviewCleanup.sync();
     }
+    syncPlayerFeedback();
   }
 
   function request(reason) {
@@ -45,7 +57,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 1,
+    version: 2,
     request: request,
     flush: flush,
     stats: function () {
