@@ -2,7 +2,6 @@
   "use strict";
 
   let controls = null;
-  let contentObserver = null;
   let contextGuard = false;
   let stackSelectionPending = null;
 
@@ -38,12 +37,6 @@
       sheet.appendChild(controls);
     }
 
-    if (!contentObserver) {
-      contentObserver = new MutationObserver(function () {
-        removeRecreatedButtons(content);
-      });
-      contentObserver.observe(content, { childList: true, subtree: true });
-    }
     removeRecreatedButtons(content);
   }
 
@@ -283,14 +276,14 @@
     preserveFreePlay();
     stabilizeMovementExplanation();
 
-    const context = document.getElementById("contextPanel");
-    if (context) new MutationObserver(function () {
-      stabilizeMovementExplanation();
-      addStackSelectionAcknowledgement();
-    }).observe(context, { childList: true, subtree: true, characterData: true });
-
     document.addEventListener("pointerdown", rememberStackSelection, true);
-    document.addEventListener("click", function () { setTimeout(addStackSelectionAcknowledgement, 0); }, true);
+    document.addEventListener("click", function () {
+      if (window.EpohiRuntimeInvalidation && typeof window.EpohiRuntimeInvalidation.request === "function") {
+        window.EpohiRuntimeInvalidation.request("player-feedback-click");
+      } else {
+        setTimeout(addStackSelectionAcknowledgement, 0);
+      }
+    }, true);
 
     const journeyModal = document.getElementById("humansJourneyModal");
     if (journeyModal) new MutationObserver(closeUrgentDecisionForJourney).observe(journeyModal, { attributes: true, attributeFilter: ["class"] });
@@ -313,11 +306,12 @@
   }
 
   window.EpohiPlayerFeedbackStabilization = {
-    version: 4,
+    version: 5,
     ensureStableControls: ensureStableControls,
     preserveFreePlay: preserveFreePlay,
     stabilizeMovementExplanation: stabilizeMovementExplanation,
-    expireSkippedJourneyEvents: expireSkippedJourneyEvents
+    expireSkippedJourneyEvents: expireSkippedJourneyEvents,
+    addStackSelectionAcknowledgement: addStackSelectionAcknowledgement
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });

@@ -19,6 +19,7 @@
     if (typeof feedback.preserveFreePlay === "function") feedback.preserveFreePlay();
     if (typeof feedback.stabilizeMovementExplanation === "function") feedback.stabilizeMovementExplanation();
     if (typeof feedback.expireSkippedJourneyEvents === "function") feedback.expireSkippedJourneyEvents();
+    if (typeof feedback.addStackSelectionAcknowledgement === "function") feedback.addStackSelectionAcknowledgement();
     stats.feedbackSyncs += 1;
   }
 
@@ -57,7 +58,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 2,
+    version: 3,
     request: request,
     flush: flush,
     stats: function () {

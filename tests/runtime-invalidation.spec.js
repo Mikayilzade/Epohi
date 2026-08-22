@@ -11,12 +11,16 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   const initial = await page.evaluate(() => ({
     safety: window.EpohiPerformance.snapshot(),
     invalidation: window.EpohiRuntimeInvalidation.stats(),
-    observer: window.EpohiHumansObserver && window.EpohiHumansObserver.stats()
+    observer: window.EpohiHumansObserver && window.EpohiHumansObserver.stats(),
+    feedbackVersion: window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.version,
+    hasStackSync: !!(window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.addStackSelectionAcknowledgement)
   }));
 
   expect(initial.invalidation.broadObservers).toBe(0);
   expect(initial.safety.observerSuppressedHeavy).toBeGreaterThanOrEqual(4);
   expect(initial.observer && initial.observer.broadObservers).toBe(0);
+  expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
+  expect(initial.hasStackSync).toBe(true);
 
   for (let i = 0; i < 40; i += 1) {
     await page.evaluate(() => {
@@ -54,7 +58,29 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   const feedbackAfter = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats());
   expect(feedbackAfter.feedbackSyncs).toBeGreaterThan(feedbackBefore);
 
-  const beforeIdle = feedbackAfter.flushes;
+  const observerBeforeOutcomeChurn = await page.evaluate(() => window.EpohiPerformance.snapshot().observerCallbacks);
+  await page.evaluate(() => {
+    const content = document.getElementById("victoryContent");
+    if (!content) return;
+    for (let i = 0; i < 40; i += 1) {
+      const button = document.createElement("button");
+      button.id = i % 2 ? "outcomeGoalsBtn" : "outcomeMapBtn";
+      button.textContent = "transient";
+      content.appendChild(button);
+    }
+    window.EpohiRuntimeInvalidation.request("outcome-content-churn");
+  });
+  await page.waitForTimeout(250);
+  const outcomeState = await page.evaluate(() => ({
+    callbacks: window.EpohiPerformance.snapshot().observerCallbacks,
+    duplicateOutcomeButtons: document.querySelectorAll("#victoryContent #outcomeGoalsBtn, #victoryContent #outcomeMapBtn").length,
+    scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
+  }));
+  expect(outcomeState.duplicateOutcomeButtons).toBe(0);
+  expect(outcomeState.callbacks - observerBeforeOutcomeChurn).toBeLessThanOrEqual(3);
+  expect(outcomeState.scheduled).toBe(false);
+
+  const beforeIdle = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats().flushes);
   await page.waitForTimeout(1200);
   const afterIdle = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats().flushes);
   expect(afterIdle - beforeIdle).toBeLessThanOrEqual(1);
