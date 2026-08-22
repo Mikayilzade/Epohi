@@ -395,12 +395,8 @@
     handleActivity(kind);
   }, true);
 
-  const observer = new MutationObserver(queueSync);
-  observer.observe(contextPanel, { childList: true, subtree: true, characterData: true });
-  observer.observe(document.body, { childList: true, subtree: true });
-
   window.EpohiContextReviewCleanup = {
-    version: 2,
+    version: 3,
     semanticLayer: semanticLayer,
     sync: syncUi,
     selectStackUnit: selectStackUnit,

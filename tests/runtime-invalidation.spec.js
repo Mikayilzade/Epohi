@@ -8,6 +8,16 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   await page.goto("/");
   await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
 
+  const architecture = await page.evaluate(async () => {
+    const source = await fetch("/src/humans-context-review-cleanup.js").then(r => r.text());
+    return {
+      hasBroadContextObserver: source.includes("new MutationObserver") || source.includes("observer.observe(document.body"),
+      contextVersion: window.EpohiContextReviewCleanup && window.EpohiContextReviewCleanup.version
+    };
+  });
+  expect(architecture.hasBroadContextObserver).toBe(false);
+  expect(architecture.contextVersion).toBeGreaterThanOrEqual(3);
+
   const initial = await page.evaluate(() => ({
     safety: window.EpohiPerformance.snapshot(),
     invalidation: window.EpohiRuntimeInvalidation.stats(),
@@ -18,7 +28,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   }));
 
   expect(initial.invalidation.broadObservers).toBe(0);
-  expect(initial.safety.observerSuppressedHeavy).toBeGreaterThanOrEqual(4);
+  expect(initial.safety.observerSuppressedHeavy).toBeGreaterThanOrEqual(2);
   expect(initial.observer && initial.observer.broadObservers).toBe(0);
   expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
   expect(initial.hasStackSync).toBe(true);
@@ -78,6 +88,29 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   await page.waitForTimeout(100);
   const feedbackAfter = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats());
   expect(feedbackAfter.feedbackSyncs).toBeGreaterThan(feedbackBefore);
+
+  const contextBefore = await page.evaluate(() => ({
+    count: document.getElementById("contextActions").dataset.actionCount || "",
+    requests: window.EpohiRuntimeInvalidation.stats().requests
+  }));
+  await page.evaluate(() => {
+    const actions = document.getElementById("contextActions");
+    const button = document.createElement("button");
+    button.className = "context-btn";
+    button.dataset.contextAction = "test-explicit-sync";
+    button.textContent = "Test";
+    actions.appendChild(button);
+    window.EpohiRuntimeInvalidation.request("context-explicit-sync");
+  });
+  await page.waitForTimeout(120);
+  const contextAfter = await page.evaluate(() => ({
+    count: document.getElementById("contextActions").dataset.actionCount,
+    requests: window.EpohiRuntimeInvalidation.stats().requests,
+    scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
+  }));
+  expect(Number(contextAfter.count)).toBeGreaterThan(Number(contextBefore.count || 0));
+  expect(contextAfter.requests).toBeGreaterThan(contextBefore.requests);
+  expect(contextAfter.scheduled).toBe(false);
 
   const observerBeforeOutcomeChurn = await page.evaluate(() => window.EpohiPerformance.snapshot().observerCallbacks);
   await page.evaluate(() => {
