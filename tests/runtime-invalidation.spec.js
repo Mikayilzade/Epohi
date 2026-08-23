@@ -6,8 +6,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   page.on("console", msg => { if (msg.type() === "error") errors.push(msg.text()); });
   page.on("pageerror", err => errors.push(String(err)));
 
-  await clearStorage(page);
-  await createGame(page, 0, "small");
+  await page.goto("/");
   await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
 
   const architecture = await page.evaluate(async () => {
@@ -92,6 +91,14 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(bridgeAfter.protectedFlushes).toBeGreaterThan(bridgeBefore.protectedFlushes);
   expect(bridgeAfter.callbacks - bridgeBefore.callbacks).toBeLessThanOrEqual(3);
   expect(bridgeAfter.scheduled).toBe(false);
+
+  // The bounded synthetic invalidation assertions above intentionally run on the quiet
+  // main menu. Enter gameplay only for the interaction checks so their target controls
+  // are visible without contaminating the strict coalescing thresholds with startup work.
+  await clearStorage(page);
+  await createGame(page, 0, "small");
+  await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
+  await page.waitForTimeout(100);
 
   const clickBefore = await page.evaluate(() => ({
     observer: window.EpohiHumansObserver.stats(),
