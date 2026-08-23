@@ -11,9 +11,9 @@
 - `main`: DO NOT TOUCH
 
 ## Current branch checkpoint
-Latest implementation head: `faecc620468ea174f921ea1338cc96d5384ffe28` (`Run legacy observer containment in focused gate`), with implementation parent `58242489248d244447ba8d7a05d8f685b81538c` (`Contain remaining legacy observer roots`).
+Latest source-triggering implementation checkpoint: `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` (`Bump cache for explicit legacy refresh bridge`). The package also includes runtime bridge `6d2ce75ecc1683142f92adef9e2d0c981ae26998`, focused regression `1dbfe0b2dee535b3c1d2a45480fb0d17ce03568f`, and workflow inclusion `491a25909df0b33a03a2d18f833be7947310bf10`.
 
-This status update is documentation-only and does not match workflow trigger paths. Always fetch PR #84 head before the next implementation write.
+Subsequent observer-map/status commits are documentation-only. Always fetch PR #84 head before the next implementation write.
 
 ## Why manual QA is suspended
 Intermediate physical-device QA remains suspended until Release Candidate. Automated Chromium/WebKit gates own the stabilization loop.
@@ -29,26 +29,26 @@ Intermediate physical-device QA remains suspended until Release Candidate. Autom
 
 ## Phase 1 progress
 - Broad observers have been removed natively from `humans-observer`, `humans-visuals`, context cleanup and broad stabilization content polling.
-- Exact run `32575460633` exposed two loaded legacy decorator owners omitted from the prior observer map: `src/humans-strategy-ux.js` still registers broad map/context observers plus screen/menu observers and its own click→timeout→RAF refresh; `src/humans-player-feedback.js` still registers broad map/context/content observers and its own post-click timeout refresh.
-- `src/humans-performance.js` v7 now temporarily quarantines the exact remaining legacy child-list roots (`screenRoot`, `menuContent`, `wikiContent`, `victoryContent` in addition to body/map/context roots already contained). This is containment, not the final native refactor.
-- `tests/legacy-observer-containment.spec.js` exercises descendant churn on those legacy roots and requires callback activity to remain bounded; the focused workflow now includes this regression on Chromium and WebKit.
-- `RUNTIME_OBSERVER_MAP.md` now records the two legacy owners explicitly and names their native click/observer schedulers as the next architectural debt.
-- Service-worker cache was bumped for the runtime bridge change.
+- `src/humans-performance.js` v7 temporarily quarantines remaining legacy broad roots while native registrations are migrated.
+- Exact run `32577245212` for containment checkpoint `faecc620468ea174f921ea1338cc96d5384ffe28` completed failure: static integrity passed; focused Chromium **45/50**, WebKit **42/50**; full regression skipped.
+- The containment run restored callback isolation but exposed the missing replacement path: useful strategy/player-feedback decorator work had still depended on their suppressed observer wake-ups. Chromium faction-marker failure is direct evidence of that gap; city/runtime failures remained on both engines.
+- `src/humans-runtime-invalidation.js` v6 now explicitly invokes `EpohiStrategyUX.refresh()` and `EpohiPlayerFeedback.refresh()` inside the same protected coalesced RAF as visual/context/stabilization work.
+- `tests/explicit-legacy-refresh-bridge.spec.js` drives 30 invalidation requests and requires both legacy refreshes to execute through bounded central flushes; the focused workflow now runs it on Chromium and WebKit.
+- `RUNTIME_OBSERVER_MAP.md` records this replacement path. No click/callback threshold was weakened.
 
 ## Current blocker
-The exact Chromium/WebKit result for implementation head `faecc620468ea174f921ea1338cc96d5384ffe28` is pending. Do not make another source push until that workflow and artifact are inspected.
+The exact Chromium/WebKit workflow for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` is now the only unresolved validation item. Do not make another source push until its exact run/artifact is inspected.
 
 ## Latest CI / validation
-- PR #84 verified immediately before this package: open, Draft, mergeable, base `prototype/humans-v1`, branch head `a0791020d0865d95057c911e7b39861b79061316`.
-- Exact workflow for implementation `4ea00a8c311d1bcccdb0ba9d145f57286f53a3cc`: run `32575460633`, completed **failure**; focused gate failed, so full mobile regression did not run.
-- Chromium focused: **45/49 passed, 4 failed**. Runtime failures included `runtime-invalidation` at **15 flushes vs required <15** and physical `open-city` unable to become stable for a 1-second click. The other two focused failures were outside this immediate containment target.
-- WebKit focused: **41/49 passed, 8 failed**. Runtime failures included selected-worker idle at **18 observer callbacks vs allowed <=6**, physical `open-city` unable to become stable, 30-cycle physical city close timing out, and runtime-invalidation timing out at the menu click. Additional focused failures included the known unsupported mobile-WebKit `mouse.wheel` path and functional scenarios outside this immediate containment target.
-- Artifact/video inspection confirmed the city context can visibly alternate while the action control is expected to be stable, matching an independent decorator-refresh problem rather than a too-short click timeout.
-- Source inspection after this exact run identified `humans-strategy-ux` and base `humans-player-feedback` as the remaining broad/native decorator owners. The containment implementation does **not** weaken callback or click thresholds.
-- CI result for `faecc620468ea174f921ea1338cc96d5384ffe28`: **pending**.
+- PR #84 was re-verified before this implementation package: open, Draft, mergeable, base `prototype/humans-v1`, head at that point `3e916f502c668d694ba7a67243d680373476b2a0`.
+- Exact containment run `32577245212` (`faecc620…`): static integrity **success**; focused gate **failure**; full suite **skipped**.
+- Chromium focused: **45/50 passed, 5 failed** — capture choice did not open, faction marker scenario failed, city open and 30-cycle city stress remained unstable, runtime invalidation failed.
+- WebKit focused: **42/50 passed, 8 failed** — capture choice, treasury non-capital selection, stacked units, unsupported `mouse.wheel`, selected-worker callback churn, city open/close stress, runtime invalidation.
+- This package moves the useful strategy/base-feedback refresh behavior to central invalidation before attempting deletion of their anonymous legacy observer/click registrations.
+- CI result for `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`: **pending at this status checkpoint**.
 
 ## NEXT ACTION
-Inspect the exact Chromium/WebKit workflow and artifact for `faecc620468ea174f921ea1338cc96d5384ffe28`; if observer/city instability remains, migrate the native observer/click schedulers in `humans-strategy-ux.js` and `humans-player-feedback.js` into explicit invalidation rather than extending the safety wrapper or click timeouts.
+Inspect the exact Chromium/WebKit workflow and artifact for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`. If the explicit bridge regression passes and useful UI scenarios recover, remove the now-redundant native broad MutationObserver/global-click schedulers from `humans-strategy-ux.js` and `humans-player-feedback.js` in the next bounded package; if not, fix the first exact bridge failure without restoring polling or weakening thresholds.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
