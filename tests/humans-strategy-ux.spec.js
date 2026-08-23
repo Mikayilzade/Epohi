@@ -84,6 +84,9 @@ test.describe('Стратегический UX', () => {
 
   test('государства получают разные имена, цвета и маркеры', async ({ page }) => {
     const problems = watchConsole(page);
+    await page.addInitScript(() => {
+      Math.random = () => 0.5;
+    });
     await clearStorage(page);
     await createGame(page, 2, 'normal');
     await waitStrategy(page);
