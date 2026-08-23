@@ -11,8 +11,24 @@
     broadObservers: 0,
     visualSyncs: 0,
     feedbackSyncs: 0,
+    strategySyncs: 0,
+    playerFeedbackSyncs: 0,
     protectedFlushes: 0
   };
+
+  function syncStrategyUx() {
+    const strategy = window.EpohiStrategyUX;
+    if (!strategy || typeof strategy.refresh !== "function") return;
+    strategy.refresh();
+    stats.strategySyncs += 1;
+  }
+
+  function syncBasePlayerFeedback() {
+    const feedback = window.EpohiPlayerFeedback;
+    if (!feedback || typeof feedback.refresh !== "function") return;
+    feedback.refresh();
+    stats.playerFeedbackSyncs += 1;
+  }
 
   function syncPlayerFeedback() {
     const feedback = window.EpohiPlayerFeedbackStabilization;
@@ -28,6 +44,8 @@
   function flush() {
     frame = 0;
     stats.flushes += 1;
+    syncStrategyUx();
+    syncBasePlayerFeedback();
     if (window.EpohiHumansVisuals && typeof window.EpohiHumansVisuals.decorate === "function") {
       window.EpohiHumansVisuals.decorate();
       stats.visualSyncs += 1;
@@ -71,7 +89,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 5,
+    version: 6,
     request: request,
     flush: flush,
     stats: function () {
