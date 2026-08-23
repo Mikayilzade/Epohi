@@ -2,6 +2,7 @@
   "use strict";
 
   const MIN_FLUSH_INTERVAL_MS = 24;
+  const inheritedSetTimeout = window.setTimeout.bind(window);
   let frame = 0;
   let timer = 0;
   let lastFlushAt = 0;
@@ -18,7 +19,8 @@
     strategySyncs: 0,
     playerFeedbackSyncs: 0,
     protectedFlushes: 0,
-    throttledSchedules: 0
+    throttledSchedules: 0,
+    legacyFeedbackTimersSuppressed: 0
   };
 
   function syncStrategyUx() {
@@ -95,6 +97,18 @@
     scheduleFrame();
   }
 
+  // PlayerFeedback still has one transitional document-click -> setTimeout(refresh, 0)
+  // bridge. Every click is already owned below by request("user-action"), whose flush calls
+  // the same refresh exactly once. Suppress only that exact legacy timer instead of turning
+  // it into a second invalidation request (the broader reroute regressed runtime stability).
+  window.setTimeout = function (callback, delay) {
+    if (Number(delay || 0) === 0 && window.EpohiPlayerFeedback && callback === window.EpohiPlayerFeedback.refresh) {
+      stats.legacyFeedbackTimersSuppressed += 1;
+      return 0;
+    }
+    return inheritedSetTimeout.apply(window, arguments);
+  };
+
   document.addEventListener("epohi:humans-ui-settled", function () {
     stats.settledSignals += 1;
     request("humans-ui-settled");
@@ -122,7 +136,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 8,
+    version: 9,
     request: request,
     flush: flush,
     stats: function () {
