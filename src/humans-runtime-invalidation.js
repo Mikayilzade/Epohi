@@ -1,7 +1,10 @@
 (function () {
   "use strict";
 
+  const MIN_FLUSH_INTERVAL_MS = 24;
   let frame = 0;
+  let timer = 0;
+  let lastFlushAt = 0;
   let lastReason = "startup";
   const stats = {
     requests: 0,
@@ -14,7 +17,8 @@
     feedbackSyncs: 0,
     strategySyncs: 0,
     playerFeedbackSyncs: 0,
-    protectedFlushes: 0
+    protectedFlushes: 0,
+    throttledSchedules: 0
   };
 
   function syncStrategyUx() {
@@ -44,6 +48,8 @@
 
   function flush() {
     frame = 0;
+    timer = 0;
+    lastFlushAt = window.performance && typeof window.performance.now === "function" ? window.performance.now() : Date.now();
     stats.flushes += 1;
     syncStrategyUx();
     syncBasePlayerFeedback();
@@ -67,11 +73,26 @@
     flush();
   }
 
+  function scheduleFrame() {
+    timer = 0;
+    if (frame) return;
+    frame = window.requestAnimationFrame(runFlushProtected);
+  }
+
   function request(reason) {
     lastReason = reason || lastReason || "explicit";
     stats.requests += 1;
-    if (frame) return;
-    frame = window.requestAnimationFrame(runFlushProtected);
+    if (frame || timer) return;
+
+    const now = window.performance && typeof window.performance.now === "function" ? window.performance.now() : Date.now();
+    const elapsed = lastFlushAt ? now - lastFlushAt : MIN_FLUSH_INTERVAL_MS;
+    const remaining = Math.max(0, MIN_FLUSH_INTERVAL_MS - elapsed);
+    if (remaining > 0) {
+      stats.throttledSchedules += 1;
+      timer = window.setTimeout(scheduleFrame, remaining);
+      return;
+    }
+    scheduleFrame();
   }
 
   document.addEventListener("epohi:humans-ui-settled", function () {
@@ -101,12 +122,12 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 7,
+    version: 8,
     request: request,
     flush: flush,
     stats: function () {
       return Object.assign({}, stats, {
-        scheduled: !!frame,
+        scheduled: !!(frame || timer),
         lastReason: lastReason
       });
     }
