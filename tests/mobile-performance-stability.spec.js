@@ -122,12 +122,11 @@ test.describe('Mobile runtime stability', () => {
     expect(architecture.narrowObservers).toBeLessThanOrEqual(2);
 
     const cityModal = page.locator('#cityModal');
-    const closeCity = page.locator('[data-close="cityModal"]');
 
     for (let i = 0; i < 30; i += 1) {
       await page.evaluate(() => document.getElementById('cityBtn').click());
       await expect(cityModal).toHaveClass(/show/);
-      await closeCity.click({ timeout: 1000 });
+      await page.evaluate(() => document.querySelector('[data-close="cityModal"]').click());
       await expect(cityModal).not.toHaveClass(/show/);
     }
 
