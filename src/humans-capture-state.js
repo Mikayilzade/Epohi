@@ -197,9 +197,9 @@
   function showCapture(gs,civ,city){
     const modal=ensureModal(),content=document.getElementById("captureChoiceContent"),capacity=Number(gs.cityCapacity||4),after=playerCities(gs).length+1;
     const former=city.formerCivilizationId&&civById(gs,city.formerCivilizationId);
-    content.innerHTML='<article class="capture-card"><h3>'+esc(city.name)+'</h3><p>'+esc(civ.name)+(city.capital?' · столица':'')+' · население '+Number(city.population||1)+'</p>'+ 
-      '<button type="button" class="wide-btn" data-capture-choice="annex" data-civ-id="'+esc(civ.civilizationId)+'" data-city-id="'+esc(city.id)+'">Присоединить<small>Население −1 · здания и специализация сохранятся · города '+after+'/'+capacity+(after>capacity?' ⚠ сверх лимита':'')+'</small></button>'+ 
-      '<button type="button" class="wide-btn secondary" data-capture-choice="plunder" data-civ-id="'+esc(civ.civilizationId)+'" data-city-id="'+esc(city.id)+'">Разграбить и отойти<small>Добыча · +5% знания по каждому увиденному здесь типу здания · 20% чужой неизвестной технологии</small></button>'+ 
+    content.innerHTML='<article class="capture-card"><h3>'+esc(city.name)+'</h3><p>'+esc(civ.name)+(city.capital?' · столица':'')+' · население '+Number(city.population||1)+'</p>'+
+      '<button type="button" class="wide-btn" data-capture-choice="annex" data-civ-id="'+esc(civ.civilizationId)+'" data-city-id="'+esc(city.id)+'">Присоединить<small>Население −1 · здания и специализация сохранятся · города '+after+'/'+capacity+(after>capacity?' ⚠ сверх лимита':'')+'</small></button>'+
+      '<button type="button" class="wide-btn secondary" data-capture-choice="plunder" data-civ-id="'+esc(civ.civilizationId)+'" data-city-id="'+esc(city.id)+'">Разграбить и отойти<small>Добыча · +5% знания по каждому увиденному здесь типу здания · 20% чужой неизвестной технологии</small></button>'+
       (former&&former!==civ?'<button type="button" class="wide-btn secondary" data-capture-choice="liberate" data-civ-id="'+esc(civ.civilizationId)+'" data-city-id="'+esc(city.id)+'">Освободить<small>Вернуть прежнему владельцу: '+esc(former.name)+'</small></button>':'')+'</article>';
     if(window.EpohiDiplomacyEventFlow&&typeof window.EpohiDiplomacyEventFlow.dismissToast==="function")window.EpohiDiplomacyEventFlow.dismissToast();
     modal.classList.add("show");
