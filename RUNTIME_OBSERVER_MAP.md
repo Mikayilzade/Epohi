@@ -4,32 +4,38 @@ Phase 1 ownership inventory for the loaded Humans runtime. This file tracks conf
 
 | Owner | Observed / scheduled surface | Writes / effect | Current disposition |
 | --- | --- | --- | --- |
-| `src/humans-performance.js` v7 | monkey-patches global `MutationObserver`, wraps callbacks through RAF, wraps `requestAnimationFrame`/`setTimeout` while protected | disconnects/reconnects observers, coalesces records, and temporarily suppresses legacy broad render roots including body/map/screen/context/menu/wiki/victory content | **TEMPORARY BRIDGE.** Keep until the legacy modules below lose their native broad registrations and the focused gates stay green without suppression. |
-| `src/humans-observer.js` v3 | `#turnValue` text only; `#menuModal` class only; semantic new-game/open-map/pageshow/visibility signals | open-map state, menu control injection, optional reveal/render; emits `epohi:humans-ui-settled` | **REFACTORED.** `broadObservers = 0`; no global document-click loop. |
-| `src/humans-runtime-invalidation.js` v6 | explicit `epohi:humans-ui-settled`, click, pageshow and visibility signals -> one coalesced protected RAF | calls strategy refresh + base player-feedback refresh + visual decorate + context cleanup + stabilization | **CENTRAL BRIDGE EXTENDED THIS PACKAGE.** The useful work of the two quarantined legacy decorators is now reachable from one bounded invalidation owner instead of depending on their broad observer roots. |
-| `src/humans-visuals.js` v2 | no DOM observers, no document click listener, no timeout/RAF polling loop | decorates map tiles/pieces and tracks positions when explicitly invoked | **REFACTORED.** Startup performs one direct decorate; subsequent refreshes come from runtime invalidation. |
-| `src/humans-context-review-cleanup.js` v3 | no `#contextPanel` or body observer | rebuilds stack picker/readiness/action layout and writes context DOM | **REFACTORED.** Explicit invalidation and module-local action calls drive sync. |
-| `src/humans-player-feedback-stabilization.js` v5+ | bounded journey/victory modal class, `#turnValue`, `ResizeObserver(#mapViewport)` -> RAF; no broad victory/context subtree observers | outcome/context guards and camera reapply | **NARROW/BONDED**, but its extra global player-feedback click invalidation remains debt to consolidate. |
-| `src/humans-camera-layout-guard.js` v2 | direct `#screenRoot` child-list; `#gameApp` class; pageshow/visibility -> one RAF | restores persisted camera only while game app hidden | **NATIVE OBSERVER NARROWED**, but its direct screen child observer is temporarily suppressed by v7 bridge while legacy whole-screen decorators are being isolated. |
-| `src/humans-strategy-ux.js` v2 | broad `#map`, `#contextPanel`; direct `#screenRoot`, `#menuContent`; turn/menu observers; global click -> timeout -> RAF; `ResizeObserver(#mapViewport)` | readiness, faction/context decoration, diplomacy/POI UI, camera stabilization | **LEGACY REGISTRATIONS STILL PRESENT, USEFUL WORK NOW BRIDGED.** v6 central invalidation calls `refresh()` explicitly; next native package can remove the observers/click scheduler without losing behavior. |
-| `src/humans-player-feedback.js` v1 | broad `#contextPanel` and `#map`; `#menuContent`, `#wikiContent`; modal class observers; global click -> timeout refresh | context commands, treasury/diplomacy/world-event/outcome decoration | **LEGACY REGISTRATIONS STILL PRESENT, USEFUL WORK NOW BRIDGED.** v6 central invalidation calls `refresh()` explicitly; next native package can remove the observers/click scheduler without losing behavior. |
+| `src/humans-performance.js` v7 | temporary global `MutationObserver` safety wrapper; protected RAF/timeouts | coalesces callbacks and suppresses legacy broad roots | **TEMPORARY BRIDGE.** Keep until the remaining legacy player-feedback observers are removed and focused gates remain stable. |
+| `src/humans-observer.js` v3 | narrow `#turnValue` / `#menuModal` plus semantic lifecycle signals | open-map/menu sync; emits `epohi:humans-ui-settled` | **REFACTORED.** No broad observer or global click loop. |
+| `src/humans-runtime-invalidation.js` v7 | explicit settled/click/pageshow/visibility signals -> one coalesced protected RAF | synchronizes StrategyUX, base PlayerFeedback, visuals, context cleanup and stabilization | **CENTRAL OWNER.** Normal DOM decoration refresh belongs here. |
+| `src/humans-visuals.js` v2 | no DOM observer/polling | map decoration | **REFACTORED.** Explicit invalidation only. |
+| `src/humans-context-review-cleanup.js` v3 | no broad observer; module-local RAF queue only | stack picker/readiness/action layout | **REFACTORED.** Does not recreate ordinary context action buttons. |
+| `src/humans-player-feedback-stabilization.js` v7 | `ResizeObserver(#mapViewport)` only for real layout changes; pointer/action hooks | outcome/context guards, stack acknowledgement, camera reapply | **REFACTORED FURTHER.** Duplicate global click invalidation and journey/victory/turn `MutationObserver`s were removed in `1e33e117…` and `7b0dd7d9…`; stabilization work is invoked explicitly by RuntimeInvalidation. |
+| `src/humans-camera-layout-guard.js` v2 | narrow screen/app visibility/layout signals | camera persistence/restore | **NARROW/BONDED.** Revisit after legacy feedback removal. |
+| `src/humans-strategy-ux.js` v3 | viewport resize + module-local explicit schedule only | readiness, faction/context decoration, diplomacy/POI UI, camera stabilization | **REFACTORED.** Legacy broad map/context/screen/menu observers and click scheduler are gone. |
+| `src/humans-player-feedback.js` v1 | broad `#contextPanel`/`#map`; content/modal observers; global click -> `setTimeout(refresh, 0)` | context command cleanup, treasury/diplomacy/world-event/outcome decoration | **LAST MAJOR LEGACY FEEDBACK OWNER.** RuntimeInvalidation already calls `EpohiPlayerFeedback.refresh()` explicitly, so its refresh scheduler/observer registrations are redundant and are the next removal target. |
 
-## Confirmed feedback cycles
+## Confirmed feedback-cycle status
 
-1. **Context/visual cycles in refactored owners — removed:** visual/context cleanup modules no longer self-observe broad render roots.
-2. **Legacy strategy cycle — quarantined with replacement path:** the broad roots are suppressed by the temporary bridge, while `EpohiRuntimeInvalidation` v6 now invokes the useful strategy refresh explicitly. The anonymous click/observer registrations remain source debt, not functional ownership.
-3. **Legacy base-feedback cycle — quarantined with replacement path:** broad/content roots are suppressed, while `EpohiRuntimeInvalidation` v6 invokes the useful player-feedback refresh explicitly. The anonymous click/observer registrations remain source debt.
-4. **Camera-layout cycle — narrowed natively:** subtree watching/double RAF were removed in v2; the remaining direct screen child observer is temporarily quarantined together with legacy whole-screen churn.
-5. **Player-feedback stabilization broad content cycle — removed:** only narrow modal/turn/resize observers remain, though duplicate click invalidation is still consolidation debt.
+1. Visual/context cleanup self-observation — removed.
+2. StrategyUX broad observer/click cycle — removed; explicit central invalidation owns refresh.
+3. Player-feedback stabilization duplicate click invalidation — removed in `1e33e1178f2634794314238a1074abcc46d2fa49`.
+4. Player-feedback stabilization journey/victory/turn MutationObservers — removed in `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8`.
+5. Base `humans-player-feedback.js` observer/global-click refresh cycle — **still present and now the primary native cleanup target**.
 
-## Exact signal from run 32577245212 (`faecc620…`)
+## Latest exact signal
 
-Static integrity passed. Focused Chromium finished **45/50**, WebKit **42/50**; full regression was skipped. Chromium failures included capture-choice not opening, strategy faction markers missing, physical city open/close instability, and runtime invalidation. WebKit additionally retained selected-worker callback churn, treasury/stack scenarios and the known unsupported mobile-WebKit `mouse.wheel` path. The marker regression is direct evidence that containment removed a broad observer wake-up that still carried useful strategy refresh work; runtime/city failures show the useful work must move to explicit invalidation rather than restoring polling.
+Exact run `32662639793` for implementation checkpoint `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8`:
+- static integrity: success;
+- Chromium focused: **47/51 passed, 4 failed**;
+- WebKit focused: **47/51 passed, 4 failed**;
+- full regression skipped because focused gate remained red.
+
+Chromium selected-worker idle callback stability is now green. The first factual Chromium failure is city-sheet opening: the visible `open-city` context button is detached/replaced while Playwright attempts the click. The 30-cycle city test is also still narrowly red at 9 observer callbacks versus the unchanged <=8 threshold. These symptoms are consistent with the remaining asynchronous base PlayerFeedback refresh path, not with `ContextReviewCleanup.syncActionLayout()`, which only decorates/layouts existing action buttons.
 
 ## Explicit invalidation direction
 
-`EpohiRuntimeInvalidation` is the target single decorator bridge. Version 6 explicitly synchronizes `EpohiStrategyUX.refresh()` and `EpohiPlayerFeedback.refresh()` in the same protected RAF as visuals/context/stabilization. `tests/explicit-legacy-refresh-bridge.spec.js` requires those syncs to occur and remain coalesced under 30 requests. The performance wrapper remains containment only.
+`EpohiRuntimeInvalidation` is the single decorator bridge. It explicitly synchronizes `EpohiStrategyUX.refresh()` and `EpohiPlayerFeedback.refresh()` in the same protected RAF as visuals/context/stabilization. Do not restore broad observer polling and do not weaken callback/click thresholds.
 
-## Remaining audit before safety-wrapper removal
+## NEXT NATIVE CLEANUP
 
-Validate the v6 explicit bridge on Chromium/WebKit first. If useful behavior returns and callback/city stability improves, the next native package is to delete the now-redundant MutationObserver/global-click schedulers from `humans-strategy-ux.js` and `humans-player-feedback.js`, then reduce the matching safety suppressions. Do not weaken click or callback thresholds.
+In `src/humans-player-feedback.js`, keep the delegated document click handler only for its actual business actions, but remove the trailing `setTimeout(refresh, 0)` and redundant DOM `MutationObserver` registrations. Let RuntimeInvalidation own refresh. Validate that exact implementation SHA on Chromium + WebKit before any further source push.
