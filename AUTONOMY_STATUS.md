@@ -11,9 +11,11 @@
 - `main`: DO NOT TOUCH
 
 ## Current branch checkpoint
-Latest source-triggering implementation checkpoint: `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` (`Bump cache for explicit legacy refresh bridge`). The package also includes runtime bridge `6d2ce75ecc1683142f92adef9e2d0c981ae26998`, focused regression `1dbfe0b2dee535b3c1d2a45480fb0d17ce03568f`, and workflow inclusion `491a25909df0b33a03a2d18f833be7947310bf10`.
+Latest source-triggering implementation checkpoint: `12379c31435d8375fa40f20d970a69e88284ab69` (`Remove legacy strategy UI observer schedulers`).
 
-Subsequent observer-map/status commits are documentation-only. Always fetch PR #84 head before the next implementation write.
+The preceding exact source checkpoint `229c20c8cd2d0b5d77f86d05dca4bd8a1cf3f3e6` only fixed static-integrity trailing whitespace in `src/humans-capture-state.js`; its exact cross-browser run is recorded below.
+
+Documentation-only status commits after `12379c31…` are not new implementation checkpoints. Always fetch PR #84 head and inspect the exact CI for `12379c31…` before the next source write.
 
 ## Why manual QA is suspended
 Intermediate physical-device QA remains suspended until Release Candidate. Automated Chromium/WebKit gates own the stabilization loop.
@@ -30,25 +32,26 @@ Intermediate physical-device QA remains suspended until Release Candidate. Autom
 ## Phase 1 progress
 - Broad observers have been removed natively from `humans-observer`, `humans-visuals`, context cleanup and broad stabilization content polling.
 - `src/humans-performance.js` v7 temporarily quarantines remaining legacy broad roots while native registrations are migrated.
-- Exact run `32577245212` for containment checkpoint `faecc620468ea174f921ea1338cc96d5384ffe28` completed failure: static integrity passed; focused Chromium **45/50**, WebKit **42/50**; full regression skipped.
-- The containment run restored callback isolation but exposed the missing replacement path: useful strategy/player-feedback decorator work had still depended on their suppressed observer wake-ups. Chromium faction-marker failure is direct evidence of that gap; city/runtime failures remained on both engines.
-- `src/humans-runtime-invalidation.js` v6 now explicitly invokes `EpohiStrategyUX.refresh()` and `EpohiPlayerFeedback.refresh()` inside the same protected coalesced RAF as visual/context/stabilization work.
-- `tests/explicit-legacy-refresh-bridge.spec.js` drives 30 invalidation requests and requires both legacy refreshes to execute through bounded central flushes; the focused workflow now runs it on Chromium and WebKit.
-- `RUNTIME_OBSERVER_MAP.md` records this replacement path. No click/callback threshold was weakened.
-
-## Current blocker
-The exact Chromium/WebKit workflow for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` is still the only unresolved validation item. During the 2026-08-23 autonomous pass, PR #84 was re-verified at documentation head `81c90fa6c751535554f83c813f41b302cb781d04` (open, Draft, mergeable, correct base), but the available GitHub connector exposes no push-triggered workflow run or commit status/check entry for `8fb8b7dd…`. Per project policy, no further source push is allowed until the exact run/log/artifact is accessible and inspected.
+- `src/humans-runtime-invalidation.js` v6 explicitly invokes `EpohiStrategyUX.refresh()` and `EpohiPlayerFeedback.refresh()` inside one protected coalesced RAF with visual/context/stabilization work.
+- GitHub Actions visibility blocker is resolved: the temporary autonomy workflow now also exposes a PR-triggered run for PR #84. The connector can therefore inspect exact head runs even though the original branch workflow is push-triggered.
+- Exact run `32655693257` for `229c20c8…`: static integrity **success**; focused Chromium **47/51 passed, 4 failed**; focused WebKit **43/51 passed, 8 failed**; full regression skipped. Failures showed capture-choice instability, context/city click instability, WebKit selected-worker callback churn, runtime invalidation and related UI races.
+- `src/humans-strategy-ux.js` v3 now removes its persistent map/context/turn/screen/menu/menu-content MutationObservers and generic document click→timeout scheduler. Module-local explicit scheduling and bounded viewport resize remain; central RuntimeInvalidation owns normal DOM/action refresh.
+- Exact run `32656385874` for `12379c31…`: static integrity **success**; focused Chromium **46/51 passed, 5 failed**; focused WebKit **44/51 passed, 7 failed**; full regression skipped.
+- WebKit improved by one failure after StrategyUX scheduler removal, but callback churn remains (`selected worker`: 17 callbacks vs required <=6) and city open/close stability still fails. Chromium still has capture-choice failure and city instability; two StrategyUX scenarios additionally exposed a missing explicit refresh after the asynchronous main-menu → new-game-screen transition.
+- The new-game screen is rendered asynchronously after `nextDefaultCampaignName()` resolves, so the central click RAF can occur before `#rivalCount` exists. The old persistent screen observer had accidentally supplied that wake-up. The replacement must be a bounded semantic/post-transition invalidation signal, not restored broad observation or polling.
+- The runtime-invalidation test still reaches `#menuBtn` while the main menu is active and the game toolbar is hidden; this existing test/setup mismatch remains factual and must not be masked by threshold changes.
+- WebKit still reports the known Playwright limitation `mouse.wheel: Mouse wheel is not supported in mobile WebKit`; do not weaken the mobile gate to hide it.
+- No click/callback threshold has been weakened. No physical-device QA was initiated.
 
 ## Latest CI / validation
-- PR #84 re-verified on 2026-08-23: open, Draft, mergeable, base `prototype/humans-v1`, head `81c90fa6c751535554f83c813f41b302cb781d04`; the head is documentation-only and its source checkpoint remains `8fb8b7dd…`.
-- Exact containment run `32577245212` (`faecc620…`): static integrity **success**; focused gate **failure**; full suite **skipped**.
-- Chromium focused: **45/50 passed, 5 failed** — capture choice did not open, faction marker scenario failed, city open and 30-cycle city stress remained unstable, runtime invalidation failed.
-- WebKit focused: **42/50 passed, 8 failed** — capture choice, treasury non-capital selection, stacked units, unsupported `mouse.wheel`, selected-worker callback churn, city open/close stress, runtime invalidation.
-- This package moves the useful strategy/base-feedback refresh behavior to central invalidation before attempting deletion of their anonymous legacy observer/click registrations.
-- CI result for `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`: **not yet inspectable through the current GitHub connector**; commit workflow/status queries returned no entries in this autonomous pass. This is a validation-visibility blocker, not evidence of pass/fail.
+- PR #84 remains open, Draft, mergeable, base `prototype/humans-v1`; implementation head validated in this pass: `12379c31435d8375fa40f20d970a69e88284ab69`.
+- Exact run `32656385874`, job `97235705682`, artifact `9497607085` (`epohi-autonomous-cross-browser-results`) is the authoritative latest implementation validation.
+- Chromium focused: **46/51 passed, 5 failed** — capture-choice modal did not open; two StrategyUX initialization/campaign scenarios failed; city-open click was unstable; runtime-invalidation menu click occurred while toolbar hidden.
+- WebKit focused: **44/51 passed, 7 failed** — treasury selected-city refresh, stacked-unit interaction, unsupported mobile-WebKit mouse wheel, worker callback churn, city open/close stability, and runtime-invalidation toolbar visibility.
+- Full Chromium/WebKit regression was correctly skipped because the focused gate failed.
 
 ## NEXT ACTION
-Retry exact CI discovery for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` and inspect its Chromium/WebKit logs/artifact before any source change. If the explicit bridge regression passes and useful UI scenarios recover, remove the now-redundant native broad MutationObserver/global-click schedulers from `humans-strategy-ux.js` and `humans-player-feedback.js`; if not, fix the first exact bridge failure without restoring polling or weakening thresholds.
+Add a bounded explicit post-transition invalidation for the asynchronous main-menu → new-game-screen render (without restoring MutationObserver/global polling), then run and inspect exact Chromium/WebKit CI for that new implementation checkpoint before any further source change.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
