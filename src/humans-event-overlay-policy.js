@@ -321,7 +321,9 @@
       new MutationObserver(handleTurnChange).observe(turn, { childList: true, characterData: true, subtree: true });
     }
     document.addEventListener("click", protectMandatoryDecision, true);
-    document.addEventListener("click", function () {
+    document.addEventListener("click", function (event) {
+      const target = event.target && event.target.closest ? event.target : null;
+      if (target && target.closest("#cityBtn, [data-close=\"cityModal\"]")) return;
       window.setTimeout(function () {
         normalize();
         bindPriorityObservers();
@@ -338,7 +340,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 10,
+    version: 11,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
