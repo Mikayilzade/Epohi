@@ -140,7 +140,8 @@
       const choice = event.target.closest && event.target.closest("[data-decision-id]"); if (choice) { const gs=state(), item=(gs.urgentDecisions||[]).find(function(entry){return entry.id===choice.dataset.decisionId;}); if(item&&item.journeyEventId&&window.EpohiHumansJourney)window.EpohiHumansJourney.resolveEvent(item.journeyEventId,choice.dataset.optionId);else resolveUrgentDecision(gs,choice.dataset.decisionId,choice.dataset.optionId); }
       const expand = event.target.closest && event.target.closest("[data-expand-administration]"); if (expand) expandAdministration(state());
       if (event.target.closest && event.target.closest("[data-world-events-open]")) { if(window.EpohiPlayerFeedback&&window.EpohiPlayerFeedback.reopenWorldEvents)window.EpohiPlayerFeedback.reopenWorldEvents(state()); }
-      window.setTimeout(render, 0);
+      const treasuryAction = event.target.closest && event.target.closest("[data-treasury-action]");
+      if (treasuryAction) render(); else window.setTimeout(render, 0);
     });
     const end = document.getElementById("endTurnBtn"); if (end) end.addEventListener("click", function (event) { const gs=state(), pending=gs && (gs.urgentDecisions || []).some(function (item) { return item.status === "pending" && item.expiresTurn === gs.turn; }); if (pending && !window.confirm("Есть нерешённое срочное событие. Завершить ход без награды?")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
     const turn = document.getElementById("turnValue"); if (turn) new MutationObserver(function () { const gs=state(); if (gs) { expireUrgentDecisions(gs); render(); } }).observe(turn, { childList:true, subtree:true });
