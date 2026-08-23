@@ -277,13 +277,6 @@
     stabilizeMovementExplanation();
 
     document.addEventListener("pointerdown", rememberStackSelection, true);
-    document.addEventListener("click", function () {
-      if (window.EpohiRuntimeInvalidation && typeof window.EpohiRuntimeInvalidation.request === "function") {
-        window.EpohiRuntimeInvalidation.request("player-feedback-click");
-      } else {
-        setTimeout(addStackSelectionAcknowledgement, 0);
-      }
-    }, true);
 
     const journeyModal = document.getElementById("humansJourneyModal");
     if (journeyModal) new MutationObserver(closeUrgentDecisionForJourney).observe(journeyModal, { attributes: true, attributeFilter: ["class"] });
@@ -306,7 +299,7 @@
   }
 
   window.EpohiPlayerFeedbackStabilization = {
-    version: 5,
+    version: 6,
     ensureStableControls: ensureStableControls,
     preserveFreePlay: preserveFreePlay,
     stabilizeMovementExplanation: stabilizeMovementExplanation,
