@@ -179,13 +179,13 @@
   function knownHostiles(state) {
     const result = [];
     (state.barbarians || []).forEach(function (unit) {
-      const tile = state.map && state.map[unit.y] && state.map[unit.y][unit.x];
+      const tile = state.map && state.map[unit.y] && state.map[unit.x];
       if (unit.hp > 0 && tile && tile.revealed) result.push({ x: unit.x, y: unit.y, kind: "barbarian" });
     });
     (state.rivals || []).forEach(function (civ) {
       if (civ.defeated || civ.relation !== "war") return;
       (civ.units || []).forEach(function (unit) {
-        const tile = state.map && state.map[unit.y] && state.map[unit.y][unit.x];
+        const tile = state.map && state.map[unit.y] && state.map[unit.x];
         if (unit.hp > 0 && tile && tile.revealed) {
           result.push({ x: unit.x, y: unit.y, kind: "rival", civilizationId: civ.civilizationId });
         }
@@ -264,14 +264,13 @@
 
   function rivalIsDefeated(civ) {
     if (!civ) return true;
+    if ((civ.cities || []).some(function (city) { return !!city.capturePending; })) return false;
     if (civ.defeated) return true;
-    const livingCapital = (civ.cities || []).some(function (city) {
-      return city.capital && cityIsAlive(city);
-    });
+    const livingCity = (civ.cities || []).some(cityIsAlive);
     const settler = (civ.units || []).some(function (unit) {
       return unit.type === "settler" && (typeof unit.hp !== "number" || unit.hp > 0);
     });
-    return !livingCapital && !settler;
+    return !livingCity && !settler;
   }
 
   function militaryProgress(state) {
