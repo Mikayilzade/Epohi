@@ -3,14 +3,12 @@
 
   let frame = 0;
   let lastReason = "startup";
-  const inheritedSetTimeout = window.setTimeout.bind(window);
   const stats = {
     requests: 0,
     flushes: 0,
     settledSignals: 0,
     actionSignals: 0,
     transitionSignals: 0,
-    legacyFeedbackReroutes: 0,
     broadObservers: 0,
     visualSyncs: 0,
     feedbackSyncs: 0,
@@ -76,19 +74,6 @@
     frame = window.requestAnimationFrame(runFlushProtected);
   }
 
-  // PlayerFeedback still contains one transitional generic click -> setTimeout(refresh, 0)
-  // scheduler. Route only that exact callback through the central coalesced owner so a
-  // context button is not recreated while the same user action is trying to activate it.
-  // Other timers retain the observer-safety wrapper installed earlier in script order.
-  window.setTimeout = function (callback, delay) {
-    if (Number(delay || 0) === 0 && window.EpohiPlayerFeedback && callback === window.EpohiPlayerFeedback.refresh) {
-      stats.legacyFeedbackReroutes += 1;
-      request("legacy-player-feedback-refresh");
-      return 0;
-    }
-    return inheritedSetTimeout.apply(window, arguments);
-  };
-
   document.addEventListener("epohi:humans-ui-settled", function () {
     stats.settledSignals += 1;
     request("humans-ui-settled");
@@ -116,7 +101,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 8,
+    version: 7,
     request: request,
     flush: flush,
     stats: function () {
