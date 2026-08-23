@@ -27,7 +27,7 @@
   function state() { const value = debug(); return value && value.state ? value.state : null; }
   function playerCities(gs) { return Array.isArray(gs.cities) && gs.cities.length ? gs.cities : (gs.city ? [gs.city] : []); }
   function mapSize(gs) { return Number(gs.mapSize) || (Array.isArray(gs.map) ? gs.map.length : 0); }
-  function safeText(value) { return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+  function safeText(value) { return String(value == null ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;"); }
 
   function ensureDiplomacy(civ, profile) {
     if (!civ.diplomacy || typeof civ.diplomacy !== "object") civ.diplomacy = { score: profile.score, temperament: profile.temperament, history: [] };
@@ -379,10 +379,12 @@
 
   function install() {
     ensureReadinessBar(); ensureDiplomacyModal(); ensureThreeRivalsOption(); installWheelZoom(); installCameraResizeClamp(); PATHING.setPoiArrivalHandler(openPoiChoice);
-    const map = document.getElementById("map"), context = document.getElementById("contextPanel"), turn = document.getElementById("turnValue"), screen = document.getElementById("screenRoot"), menu = document.getElementById("menuModal"), menuContent = document.getElementById("menuContent");
-    if (map) new MutationObserver(schedule).observe(map, { childList: true }); if (context) new MutationObserver(schedule).observe(context, { childList: true, subtree: true }); if (turn) new MutationObserver(schedule).observe(turn, { childList: true, characterData: true, subtree: true }); if (screen) new MutationObserver(schedule).observe(screen, { childList: true }); if (menu) new MutationObserver(schedule).observe(menu, { attributes: true, attributeFilter: ["class"] }); if (menuContent) new MutationObserver(schedule).observe(menuContent, { childList: true }); document.addEventListener("click", function () { window.setTimeout(schedule, 0); }, true); window.addEventListener("resize", schedule); schedule();
+    // RuntimeInvalidation owns DOM-change and click refresh. Keep only the bounded
+    // viewport resize signal and module-local explicit schedule() calls here.
+    window.addEventListener("resize", schedule);
+    schedule();
   }
 
-  window.EpohiStrategyUX = { version: 2, player: PLAYER, cultures: CULTURES, ensureIdentity: ensureIdentity, readiness: readiness, decorateFactions: decorateFactions, relationLabel: relationLabel, openDiplomacy: openDiplomacy, openPoiChoice: openPoiChoice, refresh: refresh };
+  window.EpohiStrategyUX = { version: 3, player: PLAYER, cultures: CULTURES, ensureIdentity: ensureIdentity, readiness: readiness, decorateFactions: decorateFactions, relationLabel: relationLabel, openDiplomacy: openDiplomacy, openPoiChoice: openPoiChoice, refresh: refresh };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true }); else install();
 })();
