@@ -112,6 +112,9 @@ test.describe('Стратегический UX', () => {
 
   test('три соперника создают политическую кампанию с союзником', async ({ page }) => {
     const problems = watchConsole(page);
+    await page.addInitScript(() => {
+      Math.random = () => 0.5;
+    });
     await clearStorage(page);
     await page.goto('/');
     await page.getByRole('button', { name: 'Новая игра' }).click();
