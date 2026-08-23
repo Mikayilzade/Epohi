@@ -284,6 +284,9 @@
 
   function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);const turn=document.getElementById("turnValue");if(turn)new MutationObserver(onTurn).observe(turn,{childList:true,characterData:true,subtree:true});schedule();}
 
-  window.EpohiCaptureState={version:1,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations};
+  window.EpohiCaptureState={version:2,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations};
+  // Combat/pathing/living modules are already exported by script order. Own those
+  // hooks immediately so capture semantics never depend on DOMContentLoaded order.
+  wrapFactionDefeat(); wrapPathing(); wrapLiving();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
 })();
