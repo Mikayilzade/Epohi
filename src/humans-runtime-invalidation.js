@@ -102,12 +102,14 @@
 
   document.addEventListener("click", function (event) {
     stats.actionSignals += 1;
-    request("user-action");
+    const target = event.target && event.target.closest ? event.target : null;
+    const cityModalToggle = target && target.closest("#cityBtn, [data-close=\"cityModal\"]");
+    if (!cityModalToggle) request("user-action");
 
     // The new-game screen is rendered only after an async campaign-name lookup.
     // The immediate click RAF can therefore run before #rivalCount exists. Keep a
     // single bounded post-transition wake-up instead of restoring screenRoot polling.
-    const newGame = event.target && event.target.closest ? event.target.closest("#newGameScreenBtn") : null;
+    const newGame = target ? target.closest("#newGameScreenBtn") : null;
     if (newGame) {
       stats.transitionSignals += 1;
       window.setTimeout(function () {
@@ -119,7 +121,7 @@
     // creates the base state in the same click. Always issue one semantic wake-up
     // after that event so requested rivals are materialized against the new state,
     // independent of any older coalesced frame from form interaction.
-    const createParty = event.target && event.target.closest ? event.target.closest("#createParty") : null;
+    const createParty = target ? target.closest("#createParty") : null;
     if (createParty) {
       stats.transitionSignals += 1;
       window.setTimeout(function () {
@@ -134,7 +136,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 9,
+    version: 10,
     request: request,
     flush: flush,
     stats: function () {
