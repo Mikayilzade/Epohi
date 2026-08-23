@@ -107,12 +107,24 @@
     // The new-game screen is rendered only after an async campaign-name lookup.
     // The immediate click RAF can therefore run before #rivalCount exists. Keep a
     // single bounded post-transition wake-up instead of restoring screenRoot polling.
-    const target = event.target && event.target.closest ? event.target.closest("#newGameScreenBtn") : null;
-    if (target) {
+    const newGame = event.target && event.target.closest ? event.target.closest("#newGameScreenBtn") : null;
+    if (newGame) {
       stats.transitionSignals += 1;
       window.setTimeout(function () {
         request("new-game-screen-post-transition");
       }, 100);
+    }
+
+    // StrategyUX captures the requested rival count on #createParty, while app.js
+    // creates the base state in the same click. Always issue one semantic wake-up
+    // after that event so requested rivals are materialized against the new state,
+    // independent of any older coalesced frame from form interaction.
+    const createParty = event.target && event.target.closest ? event.target.closest("#createParty") : null;
+    if (createParty) {
+      stats.transitionSignals += 1;
+      window.setTimeout(function () {
+        request("new-game-created-post-transition");
+      }, 0);
     }
   }, true);
 
@@ -122,7 +134,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 8,
+    version: 9,
     request: request,
     flush: flush,
     stats: function () {
