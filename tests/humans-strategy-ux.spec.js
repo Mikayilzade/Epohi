@@ -15,6 +15,16 @@ async function waitStrategy(page) {
   ));
 }
 
+async function installDeterministicRandom(page, seed = 0x5eed1234) {
+  await page.addInitScript((initialSeed) => {
+    let value = initialSeed >>> 0;
+    Math.random = () => {
+      value = (1664525 * value + 1013904223) >>> 0;
+      return value / 0x100000000;
+    };
+  }, seed);
+}
+
 test.describe('Стратегический UX', () => {
   test('колесо мыши масштабирует карту к курсору', async ({ page }) => {
     const problems = watchConsole(page);
@@ -84,9 +94,7 @@ test.describe('Стратегический UX', () => {
 
   test('государства получают разные имена, цвета и маркеры', async ({ page }) => {
     const problems = watchConsole(page);
-    await page.addInitScript(() => {
-      Math.random = () => 0.5;
-    });
+    await installDeterministicRandom(page, 0x2a11c0de);
     await clearStorage(page);
     await createGame(page, 2, 'normal');
     await waitStrategy(page);
@@ -112,9 +120,7 @@ test.describe('Стратегический UX', () => {
 
   test('три соперника создают политическую кампанию с союзником', async ({ page }) => {
     const problems = watchConsole(page);
-    await page.addInitScript(() => {
-      Math.random = () => 0.5;
-    });
+    await installDeterministicRandom(page, 0x3a11c0de);
     await clearStorage(page);
     await page.goto('/');
     await page.getByRole('button', { name: 'Новая игра' }).click();
