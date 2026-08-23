@@ -1,11 +1,13 @@
 const { test, expect } = require("@playwright/test");
+const { clearStorage, createGame } = require("./helpers");
 
 test("runtime invalidation replaces broad visual/context polling with bounded flushes", async ({ page }) => {
   const errors = [];
   page.on("console", msg => { if (msg.type() === "error") errors.push(msg.text()); });
   page.on("pageerror", err => errors.push(String(err)));
 
-  await page.goto("/");
+  await clearStorage(page);
+  await createGame(page, 0, "small");
   await page.waitForFunction(() => window.EpohiRuntimeInvalidation && window.EpohiPerformance);
 
   const architecture = await page.evaluate(async () => {
