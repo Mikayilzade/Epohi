@@ -37,18 +37,18 @@ Intermediate physical-device QA remains suspended until Release Candidate. Autom
 - `RUNTIME_OBSERVER_MAP.md` records this replacement path. No click/callback threshold was weakened.
 
 ## Current blocker
-The exact Chromium/WebKit workflow for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` is now the only unresolved validation item. Do not make another source push until its exact run/artifact is inspected.
+The exact Chromium/WebKit workflow for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` is still the only unresolved validation item. During the 2026-08-23 autonomous pass, PR #84 was re-verified at documentation head `81c90fa6c751535554f83c813f41b302cb781d04` (open, Draft, mergeable, correct base), but the available GitHub connector exposes no push-triggered workflow run or commit status/check entry for `8fb8b7dd…`. Per project policy, no further source push is allowed until the exact run/log/artifact is accessible and inspected.
 
 ## Latest CI / validation
-- PR #84 was re-verified before this implementation package: open, Draft, mergeable, base `prototype/humans-v1`, head at that point `3e916f502c668d694ba7a67243d680373476b2a0`.
+- PR #84 re-verified on 2026-08-23: open, Draft, mergeable, base `prototype/humans-v1`, head `81c90fa6c751535554f83c813f41b302cb781d04`; the head is documentation-only and its source checkpoint remains `8fb8b7dd…`.
 - Exact containment run `32577245212` (`faecc620…`): static integrity **success**; focused gate **failure**; full suite **skipped**.
 - Chromium focused: **45/50 passed, 5 failed** — capture choice did not open, faction marker scenario failed, city open and 30-cycle city stress remained unstable, runtime invalidation failed.
 - WebKit focused: **42/50 passed, 8 failed** — capture choice, treasury non-capital selection, stacked units, unsupported `mouse.wheel`, selected-worker callback churn, city open/close stress, runtime invalidation.
 - This package moves the useful strategy/base-feedback refresh behavior to central invalidation before attempting deletion of their anonymous legacy observer/click registrations.
-- CI result for `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`: **pending at this status checkpoint**.
+- CI result for `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`: **not yet inspectable through the current GitHub connector**; commit workflow/status queries returned no entries in this autonomous pass. This is a validation-visibility blocker, not evidence of pass/fail.
 
 ## NEXT ACTION
-Inspect the exact Chromium/WebKit workflow and artifact for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede`. If the explicit bridge regression passes and useful UI scenarios recover, remove the now-redundant native broad MutationObserver/global-click schedulers from `humans-strategy-ux.js` and `humans-player-feedback.js` in the next bounded package; if not, fix the first exact bridge failure without restoring polling or weakening thresholds.
+Retry exact CI discovery for source checkpoint `8fb8b7dd0fbd64214ac2953a3f7c9156869a9ede` and inspect its Chromium/WebKit logs/artifact before any source change. If the explicit bridge regression passes and useful UI scenarios recover, remove the now-redundant native broad MutationObserver/global-click schedulers from `humans-strategy-ux.js` and `humans-player-feedback.js`; if not, fix the first exact bridge failure without restoring polling or weakening thresholds.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
