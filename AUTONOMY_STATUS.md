@@ -11,9 +11,9 @@
 - `main`: DO NOT TOUCH
 
 ## Current branch checkpoint
-Latest source-triggering implementation checkpoint: `8b7e660df6f954fd24e7a10d61d9a91f47c8938d` (`Synchronize treasury stability decoration`).
+Latest source-triggering implementation checkpoint: `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8` (`Remove duplicate stabilization mutation observers`).
 
-Before every further source push, fetch PR #84 head and inspect the exact Chromium/WebKit CI for the latest source-triggering checkpoint. Documentation-only status commits are not implementation checkpoints.
+Before every further source push, fetch PR #84 head and inspect the exact Chromium/WebKit CI for this checkpoint. Documentation-only status commits are not implementation checkpoints.
 
 ## Why manual QA is suspended
 Intermediate physical-device QA remains suspended until Release Candidate. Automated Chromium/WebKit gates own the stabilization loop.
@@ -28,31 +28,30 @@ Intermediate physical-device QA remains suspended until Release Candidate. Autom
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## Phase 1 progress
-- GitHub Actions visibility is restored for PR #84; exact PR-visible Chromium/WebKit runs can be inspected autonomously.
-- StrategyUX broad MutationObserver/global-click schedulers were removed; central `EpohiRuntimeInvalidation` owns normal explicit refresh.
-- `73d920d6…` added bounded post-transition invalidation for asynchronous main-menu → new-game render and removed the two StrategyUX initialization failures seen previously.
-- `24061e1198cfa264bcc20d9f1413d54eac62fdf0` added synchronous capture ownership around pathing/combat calls. Capture became more reliable but remained intermittent.
-- Exact rerun of `24061e11…` proved the weighted-pathfinding failure was flaky/non-reproducible; do not change gameplay pathfinding for that signal without a deterministic fixture.
-- While that rerun was being diagnosed, source head advanced to `8b7e660d…` with a treasury stability synchronization fix. Its exact CI was therefore inspected before any further source write.
-- Exact run `32659384626` for `8b7e660d…`: static integrity **success**; focused Chromium **47/51 passed, 4 failed**; focused WebKit **45/51 passed, 6 failed**; full regression skipped.
-- The treasury synchronization improved WebKit and removed the prior treasury selected-city / stacked-unit failures from this exact run.
-- Capture remains the first factual Chromium failure: `visible capital attack opens capture choice...` still sometimes loses `#captureChoiceModal.show`.
-- Root cause is now narrowed to outcome semantics, not another observer timeout: `src/humans-outcomes.js::rivalIsDefeated()` still uses the legacy rule “no living capital and no settler = defeated”. During the new capture flow a fallen capital may be `capturePending`, and a rival may still own another living city. The scheduled outcome evaluator can therefore announce a premature military victory; `EpohiEventOverlayPolicy` gives `victoryModal` higher priority and removes `.show` from `captureChoiceModal`.
-- Correct semantic replacement: a rival is not defeated while any capture is pending; otherwise it is defeated only when explicitly `civ.defeated` or when it has no living city and no living settler. This matches `EpohiCaptureState.finalizeFaction()` and the accepted rule that losing one capital does not destroy a state with surviving cities.
-- Existing combat regression `tests/combat-world-stability.spec.js` already directly exercises this defect and remains red when the race occurs; do not weaken it.
-- Remaining reproducible debt after capture includes StrategyUX rival-marker refresh, city-sheet open/close stability, WebKit worker callback churn, the runtime-invalidation menu/setup mismatch, and the known Playwright mobile-WebKit `mouse.wheel` limitation.
-- No thresholds were weakened. No physical-device QA was initiated.
+- StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns its explicit refresh.
+- Capture outcome semantics were corrected: unresolved `capturePending` and surviving non-capital cities no longer produce premature military victory. Capture is green in the latest exact Chromium focused run.
+- Rival identity regression was made deterministic for the two-rival marker scenario; that test is green on the latest exact Chromium focused run.
+- `1e33e1178f2634794314238a1074abcc46d2fa49` removed duplicate player-feedback click invalidation from `humans-player-feedback-stabilization.js`. Exact run `32662365034` showed the selected-worker idle callback test turn green.
+- `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8` removed three remaining journey/victory/turn `MutationObserver` wake-ups from `humans-player-feedback-stabilization.js`; the central invalidation bridge already invokes the same stabilization functions explicitly. Thresholds were unchanged.
+- Exact run `32662639793` for `7b0dd7d9…`: static integrity **success**; focused Chromium **47/51 passed, 4 failed**; focused WebKit **47/51 passed, 4 failed**; full regression skipped.
+- The first factual Chromium failure is now city-sheet interaction: `#contextActions [data-context-action="open-city"]` is visible but is detached/replaced while Playwright is attempting the click. This is consistent with legacy `humans-player-feedback.js` refresh scheduling still rebuilding context commands asynchronously.
+- Chromium worker-idle callback stability remains green, but the 30-cycle city open/close callback invariant is still narrowly red at **9 callbacks with threshold <=8**.
+- Another Chromium failure is the three-rival campaign fixture waiting for all three rivals/culture identities; map generation can still produce fewer than three valid rival starts. Treat this as a deterministic-fixture issue, not evidence to change gameplay placement without a separate product decision.
+- `runtime-invalidation.spec.js` still has a menu/setup visibility timeout.
+- WebKit still includes the known Playwright mobile-WebKit `mouse.wheel` limitation plus city/runtime failures. Do not hide these behind Chromium success.
+- `humans-player-feedback.js` remains the last major legacy feedback owner with a global click -> `setTimeout(refresh, 0)` and broad/narrow MutationObserver registrations even though `EpohiRuntimeInvalidation` already calls `EpohiPlayerFeedback.refresh()` explicitly.
+- No valid threshold was weakened. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## Latest CI / validation
-- PR #84 remains open, Draft, mergeable, base `prototype/humans-v1`.
-- Authoritative implementation checkpoint: `8b7e660df6f954fd24e7a10d61d9a91f47c8938d`.
-- Exact run: `32659384626`; job `97243112160`; artifact `9498376580`.
-- Chromium focused: **47/51 passed, 4 failed** — capture-choice race; rival-marker refresh; city-sheet open click; runtime-invalidation menu visibility/setup.
-- WebKit focused: **45/51 passed, 6 failed** — unsupported mobile-WebKit mouse wheel; diplomacy idle/click stability; worker callback churn; city-sheet open/close stability; runtime-invalidation menu visibility/setup.
+- Authoritative implementation checkpoint: `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8`.
+- Exact run: `32662639793`; job `97251023873`; artifact `9499196579`.
+- Static integrity: **success**.
+- Chromium focused: **47/51 passed, 4 failed** — city open button detachment; three-rival deterministic setup; 30-cycle callback count 9/8; runtime-invalidation menu/setup timeout.
+- WebKit focused: **47/51 passed, 4 failed** — unsupported mobile-WebKit mouse wheel plus city/runtime failures.
 - Full Chromium/WebKit regression was correctly skipped because the focused gate failed.
 
 ## NEXT ACTION
-Change `src/humans-outcomes.js::rivalIsDefeated()` to respect unresolved `capturePending` cities and surviving non-capital cities (no timeout/observer workaround), then run exact Chromium/WebKit CI for that implementation checkpoint before any further source push. If capture turns green, continue with the first remaining factual failure from that exact run.
+Refactor `src/humans-player-feedback.js` installation so its delegated click handler keeps only business/action handling while removing the legacy `setTimeout(refresh, 0)` scheduler and redundant DOM `MutationObserver` registrations. `EpohiRuntimeInvalidation` must remain the explicit owner of `EpohiPlayerFeedback.refresh()`. Do not change callback/click thresholds. Then run exact Chromium/WebKit CI and take the first factual failure from that checkpoint.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
