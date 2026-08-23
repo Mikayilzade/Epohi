@@ -36,15 +36,25 @@ async function clearStorage(page) {
 }
 
 async function createGame(page, rivals, mapSize = 'normal') {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
-  await page.getByRole('button', { name: 'Новая игра' }).click();
-  await page.locator('#partySize').selectOption(mapSize);
-  await page.locator('#rivalCount').selectOption(String(rivals));
-  await page.locator('#partyName').fill(`Smoke ${rivals} AI ${Date.now()}`);
-  await page.getByRole('button', { name: 'Создать мир' }).click();
-  await expect(page.locator('#gameApp')).toBeVisible();
-  await expect(page.locator('#map .tile').first()).toBeVisible();
+  const maxAttempts = rivals > 1 ? 4 : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
+    await page.getByRole('button', { name: 'Новая игра' }).click();
+    await page.locator('#partySize').selectOption(mapSize);
+    await page.locator('#rivalCount').selectOption(String(rivals));
+    await page.locator('#partyName').fill(`Smoke ${rivals} AI ${Date.now()} ${attempt}`);
+    await page.getByRole('button', { name: 'Создать мир' }).click();
+    await expect(page.locator('#gameApp')).toBeVisible();
+    await expect(page.locator('#map .tile').first()).toBeVisible();
+
+    const actualRivals = await page.evaluate(() => {
+      const debug = window.__epohiDebug && window.__epohiDebug();
+      return debug && debug.state && Array.isArray(debug.state.rivals) ? debug.state.rivals.length : 0;
+    });
+    if (actualRivals >= rivals || attempt === maxAttempts - 1) return;
+    await clearStorage(page);
+  }
 }
 
 module.exports = {
