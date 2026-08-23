@@ -220,13 +220,19 @@
     }); return shown;
   }
 
+  function playerCaptureDefeat(gs,civ,captor){
+    ensureState(gs); if(!civ)return false;
+    const fallen=(civ.cities||[]).find(function(city){return city.capital&&Number(city.hp||0)<=0;})||(civ.cities||[]).find(function(city){return Number(city.hp||0)<=0;});
+    if(captor===gs||!captor||captor.id==="player")return fallen?queueCapture(gs,civ,fallen):false;
+    return null;
+  }
+
   function wrapFactionDefeat(){
     const stability=window.EpohiCombatWorldStability; if(!stability||stability.captureStateWrapped||typeof stability.resolveFactionDefeat!=="function")return;
     stability.captureStateWrapped=true; originalFactionDefeat=stability.resolveFactionDefeat;
     stability.resolveFactionDefeat=function(gs,civ,captor){
-      ensureState(gs); if(!civ)return false;
+      const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
       const fallen=(civ.cities||[]).find(function(city){return city.capital&&Number(city.hp||0)<=0;})||(civ.cities||[]).find(function(city){return Number(city.hp||0)<=0;});
-      if(captor===gs||!captor||captor.id==="player")return fallen?queueCapture(gs,civ,fallen):false;
       if(!fallen)return false;
       removeCity(civ,fallen); fallen.capital=false; fallen.formerCivilizationId=civ.civilizationId; fallen.formerCivilizationName=civ.name; fallen.population=Math.max(1,Number(fallen.population||1)-1); fallen.hp=Math.max(1,Math.round(Number(fallen.maxHp||150)*.35)); fallen.queue=null;
       captor.cities=captor.cities||[]; captor.cities.push(fallen); if(civ.cities.length&&!civ.cities.some(function(city){return city.capital;}))chooseNewCapital(civ); finalizeFaction(gs,civ);
@@ -234,11 +240,24 @@
     };
   }
 
+  function withFactionDefeatOwnership(callback,thisArg,args){
+    const stability=window.EpohiCombatWorldStability;
+    if(!stability||typeof stability.resolveFactionDefeat!=="function")return callback.apply(thisArg,args);
+    const current=stability.resolveFactionDefeat;
+    const guarded=function(gs,civ,captor){
+      const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
+      return current.apply(stability,arguments);
+    };
+    stability.resolveFactionDefeat=guarded;
+    try{return callback.apply(thisArg,args);}
+    finally{if(stability.resolveFactionDefeat===guarded)stability.resolveFactionDefeat=current;}
+  }
+
   function wrapPathing(){
     const pathing=window.EpohiHumansPathing; if(!pathing||pathing.captureStateWrapped)return; pathing.captureStateWrapped=true;
     originalAssignTravelOrder=pathing.assignTravelOrder; originalProcessOrders=pathing.processOrders;
-    pathing.assignTravelOrder=function(){const result=originalAssignTravelOrder.apply(this,arguments),gs=ensureState(state());if(gs)checkFallen(gs);return result;};
-    pathing.processOrders=function(){const result=originalProcessOrders.apply(this,arguments),gs=ensureState(arguments[0]||state());if(gs)checkFallen(gs);return result;};
+    pathing.assignTravelOrder=function(){const result=withFactionDefeatOwnership(originalAssignTravelOrder,this,arguments),gs=ensureState(state());if(gs)checkFallen(gs);return result;};
+    pathing.processOrders=function(){const result=withFactionDefeatOwnership(originalProcessOrders,this,arguments),gs=ensureState(arguments[0]||state());if(gs)checkFallen(gs);return result;};
   }
 
   function chooseSpecialization(civ){
@@ -284,9 +303,7 @@
 
   function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);const turn=document.getElementById("turnValue");if(turn)new MutationObserver(onTurn).observe(turn,{childList:true,characterData:true,subtree:true});schedule();}
 
-  window.EpohiCaptureState={version:2,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations};
-  // Combat/pathing/living modules are already exported by script order. Own those
-  // hooks immediately so capture semantics never depend on DOMContentLoaded order.
+  window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations};
   wrapFactionDefeat(); wrapPathing(); wrapLiving();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
 })();
