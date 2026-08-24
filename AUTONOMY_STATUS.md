@@ -13,7 +13,7 @@
 ## Current implementation checkpoint
 `a342ecad0575951a5fce9aa43031bf963438fa1e` — the three-rival strategy regression uses a deterministic seeded PRNG instead of replacing `Math.random` with the constant `0.5`. The runtime three-rival path (`pendingRivalCount` → `strategyRequestedRivals` → `ensureRequestedRivals`) and culture assignment are now validated by exact CI. No gameplay assertion or runtime threshold was weakened.
 
-Before reading this result, current PR head was re-verified as `85f731b55d68aad7e5688297ac76a5d4c419a79e`; that newer commit is docs/status-only (`AUTONOMY_STATUS.md`), so `a342ecad…` remains the latest implementation checkpoint and exact run `32703476861` is a valid gameplay baseline.
+Before this docs-only status update, current PR head was re-verified as `25513d15644e778baeedd7f96091a64f9cc00bf7`; no newer implementation exists, so `a342ecad…` remains the latest implementation checkpoint and exact run `32703476861` remains the factual gameplay baseline.
 
 ## Exact current validation
 Exact automatically-triggered PR CI run `32703476861` for source checkpoint `a342ecad0575951a5fce9aa43031bf963438fa1e`, artifact `9512707778`:
@@ -29,6 +29,14 @@ Current factual WebKit failures in CI order:
 3. `observer sync is bounded and city sheet survives 30 explicit open-close cycles` — all 30 explicit DOM open/close cycles complete, but the post-cycle idle window records **13 observer callbacks** against the unchanged limit **<=8**. This is the first remaining reproducible runtime-churn signal.
 
 `src/humans-performance.js` currently exposes only aggregate `__epohiObserverSafetyStats.callbacks`; it does not attribute delivered callbacks to an observer owner or target. Heavy `cityModal` descendant observers are already suppressed, while semantic root-class observers remain allowed. Therefore the +13 callback owner cannot be named from the current aggregate counter alone.
+
+Static inventory against the current implementation confirms that no live module directly observes `#cityModal` anymore:
+- `EpohiHumansObserver` observes only `#turnValue` and `#menuModal`.
+- `EpohiCameraLayoutGuard` observes only direct `#screenRoot` child changes and `#gameApp` class changes.
+- `EpohiEventOverlayPolicy` observes priority-overlay classes, `#stabilityMajorModal`, and `#turnValue`; city open/close clicks are explicitly excluded from its document-click scheduling.
+- `EpohiCoherenceFinalize` no longer observes `#cityModal`; its remaining observers cover `#turnValue`, capture/decision/proposal/diplomacy modals and the base toast.
+
+Because none of these static registrations uniquely explains the post-cycle idle +13, ownership is now genuinely ambiguous. The next step must be diagnostic attribution by observer/target in the failing WebKit test rather than deleting another observer by guesswork.
 
 No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
@@ -63,7 +71,7 @@ No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 ## NEXT ACTION
 Treat `a342ecad0575951a5fce9aa43031bf963438fa1e` and exact run `32703476861` / artifact `9512707778` as the latest factual gameplay baseline. Before any source/test push, re-verify the current PR head and ensure any newer commits are docs/status-only or otherwise inspect their exact CI first.
 
-First address the reproducible WebKit city runtime signal without changing thresholds: statically enumerate the remaining live `MutationObserver` registrations that can receive mutations after `#cityModal` open/close and identify which semantic root observer(s) can account for the post-cycle callbacks. If static ownership is still ambiguous, add the smallest temporary test/diagnostic attribution needed to identify observer target/owner; do not add polling, broad observers, or relax the `<=8` callback threshold. Remove or replace only the redundant owner once proven, then validate the new implementation SHA once on Chromium + WebKit before another source change.
+Add the smallest **test-only** diagnostic attribution to the 30-cycle city stability regression so a failing WebKit run reports which underlying MutationObserver instance/target receives callbacks during the 900 ms post-cycle idle window. Keep the existing `<=8` aggregate callback threshold unchanged, do not add runtime polling or a new production observer, and do not remove any observer until the diagnostic proves ownership. Validate that single test change once on Chromium + WebKit and use its exact artifact to choose the redundant owner.
 
 For the separate `opening city sheet stays open...` actionability failure, verify the existing context action handler is synchronous and stable. If so, change only the WebKit-sensitive test interaction to deterministic DOM `click()` while preserving the modal-open assertion and all observer-safety thresholds. Do not treat `mouse.wheel` on mobile WebKit as a gameplay failure; handle that automation/API incompatibility separately without weakening Chromium coverage.
 
