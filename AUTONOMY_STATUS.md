@@ -11,22 +11,26 @@
 - `main`: DO NOT TOUCH
 
 ## Current implementation checkpoint
-`6c9d4029a69b9d7313a068f9760332338b40fedf` — the temporary observer-safety bridge now suppresses legacy heavy `cityModal` child/subtree observation entirely instead of narrowing it to a class observer. Semantic root-class observers remain allowed. No threshold or gameplay assertion was weakened.
+`f7fd3b9225b845d748a81f0c68c0d811882b22bf` — CoherenceFinalize no longer enqueues its full decorator after every document click. Its click path is now limited to the local capture-administration action and one post-render pass when `#cityBtn` opens the city sheet; closing the city and unrelated clicks no longer wake this decorator. No callback threshold or gameplay assertion was weakened.
 
-PR head was re-verified as `7dca064880a6d1147e10b05ca408ca9c79ce229d` immediately before this source push.
+Before that source push, PR head was re-verified as `58aff8d5ff815b59e1d46662d671584da10fb5c6`. The authoritative previous-source validation was run `32688175766` for the source-equivalent head containing implementation checkpoint `6c9d4029a69b9d7313a068f9760332338b40fedf`: Chromium **49/51**, WebKit **49/51**. The 30-cycle city-sheet invariant still failed at **18** Chromium / **13** WebKit callbacks versus unchanged `<=8`; Chromium also hit the known stochastic third-rival initialization timeout, while WebKit's other failure was unsupported mobile `mouse.wheel`.
 
-## Exact previous validation
-Authoritative rerun of implementation checkpoint `7dca064880a6d1147e10b05ca408ca9c79ce229d`: workflow run `32680817099`, latest artifact `9505153758`.
+## Exact current validation
+Exact implementation run `32691163962` for `f7fd3b9225b845d748a81f0c68c0d811882b22bf`, artifact `9507360860`:
 
-- Chromium focused: **48/51 passed, 3 failed**.
+- Static integrity: **success**.
+- Chromium focused: **51/51 passed**.
 - WebKit focused: **46/51 passed, 5 failed**.
-- Full regression: skipped because focused remained red.
+- Full regression: skipped because focused WebKit remained red.
 
-Reproduced factual failures from that exact rerun:
-- Chromium: runtime invalidation flushes **15** vs required `<15`; 30-cycle city-sheet idle callbacks **20** vs `<=8`; third-rival initialization timed out (previously non-reproducible generation flake).
-- WebKit: stacked-unit move button stayed unstable until timeout; unsupported mobile `mouse.wheel`; selected-worker idle callbacks **16** vs `<=6`; opening-city actionability timeout; 30-cycle city-sheet idle callbacks **14** vs `<=8`.
+Factual WebKit failures in CI order:
+1. `three same-type stacked units keep distinct selection and orders` — Playwright WebKit actionability waited for a map tile to become stable until the 20 s test timeout. The failure screenshot shows the game/map rendered and the stacked scouts visible; this must be classified as runtime instability vs WebKit actionability artifact before changing source/test behavior.
+2. Mouse-wheel zoom — `mouse.wheel` is unsupported by mobile WebKit; known automation limitation, not the next source target.
+3. Selected-worker idle callback delta **16** vs unchanged `<=6`.
+4. Opening-city actionability timeout on a visible `open-city` context button.
+5. 30-cycle city-sheet idle callback delta **13** vs unchanged `<=8`.
 
-The prior one-off WebKit stacked-unit timeout therefore reproduced. More importantly, both engines still reproduce observer/city idle churn, so the next fix remains architectural rather than a test relaxation.
+The CoherenceFinalize click-scheduler change made Chromium fully green, but WebKit still exposes actionability and idle callback instability. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## Runtime hardening progress
 - StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns explicit refresh.
@@ -34,9 +38,9 @@ The prior one-off WebKit stacked-unit timeout therefore reproduced. More importa
 - Legacy base `humans-player-feedback.js` observer/global refresh scheduling has been removed; RuntimeInvalidation owns its refresh.
 - Event overlay policy no longer schedules normalization for city-modal open/close clicks.
 - `src/humans-coherence-finalize.js` no longer registers its broad `cityModal` subtree observer.
-- Exact rerun after that removal still showed city-sheet callback churn in both engines, proving at least one legacy heavy city observer path remains elsewhere.
-- Checkpoint `6c9d4029…` suppresses heavy `cityModal` descendant registrations at the temporary safety bridge while preserving semantic root-class observation, to isolate/remove that remaining polling path without changing thresholds.
-- No physical-device QA was initiated. PR #84 remains Draft and unmerged.
+- Temporary observer safety suppresses heavy `cityModal` descendant registrations while semantic root signals remain allowed.
+- CoherenceFinalize no longer schedules its decorator for every document click; city closing is now quiescent on that path.
+- Chromium focused runtime/coherence/capture/diplomacy gate is now fully green at exact checkpoint `f7fd3b92…`.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -48,7 +52,9 @@ The prior one-off WebKit stacked-unit timeout therefore reproduced. More importa
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Treat the next branch head containing `6c9d4029a69b9d7313a068f9760332338b40fedf` as the new implementation checkpoint and run/inspect its exact Chromium + WebKit focused CI before any further source push. If the 30-cycle city-sheet callback invariant is still red, inspect the first remaining MutationObserver registration that targets `cityModal` or a parent surface and remove/narrow that native owner rather than changing the `<=8` threshold. If city churn is green, take the first reproduced factual failure in CI order, with priority to the reproduced stacked-unit/context action instability over known unsupported WebKit `mouse.wheel` automation behavior.
+Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest implementation checkpoint. Before another source push, re-verify the current PR head and use exact run `32691163962` / artifact `9507360860` as the factual baseline.
+
+Investigate the first WebKit failure in CI order: `three same-type stacked units keep distinct selection and orders`. Inspect the WebKit video/error context together with map/context invalidation ownership and determine whether the tile never becomes stable because the DOM is continuously rerendered or because Playwright actionability is incompatible with the transformed mobile map. If runtime DOM churn is present, remove/narrow its native owner without weakening any thresholds. If the rendered tile is stable and only Playwright's native actionability is blocking, change only the automation interaction to an equivalent deterministic DOM/pointer action while preserving all selection/order assertions. Then validate the exact new SHA on Chromium + WebKit before any further source push. Do not prioritize the known unsupported WebKit `mouse.wheel` over this reproduced stacked-unit failure.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
