@@ -33,10 +33,12 @@ Factual WebKit failures in CI order:
 The CoherenceFinalize click-scheduler change made Chromium fully green, but WebKit still exposes actionability and idle callback instability. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## CI / notification containment
-- PR head was re-verified at `28616e4b2ae7dc2839de34ff2c961f401b4336fe` before the CI-policy change; the factual implementation baseline remains exact run `32691163962` above.
-- Infrastructure checkpoint `2319d6b74113647a67c64dbf7ae7ce97e5f8fc52` removes the redundant branch `push` trigger from the temporary cross-browser workflow. A meaningful source/test/runtime update now has one automatic `pull_request` CI path instead of parallel `push` + `pull_request` runs.
-- `workflow_dispatch` remains available only for a genuinely needed explicit diagnostic run. The autonomous task is instructed not to rerun the same SHA merely to classify a possible flake; an identical-SHA rerun is allowed only for a clear infrastructure/no-result failure.
-- Status/doc-only changes remain excluded from CI. Gmail and automation email notifications remain disabled.
+- PR head was re-verified at `28616e4b2ae7dc2839de34ff2c961f401b4336fe` before the CI-policy repair; the factual implementation baseline remains exact run `32691163962` above.
+- CI-policy checkpoint `83eda3fee1793c88361eef82e262e7fb2c7f8c00` removes the redundant branch `push` trigger, limits the PR event to `synchronize`, and adds a latest-commit detector before any Node/browser setup.
+- Meaningful changes in the workflow/config/package/source/tests/index/service-worker paths execute exactly one Chromium/WebKit PR gate. A status/docs-only commit may still create the lightweight GitHub PR run required by pull-request event semantics, but it exits green after checkout + change detection and does **not** install browsers or run Playwright.
+- This avoids the previous double `push` + `pull_request` browser runs and avoids expensive/failing browser CI for status-only checkpoints while preserving connector-visible PR runs for exact implementation validation.
+- `workflow_dispatch` remains only for a genuinely necessary explicit diagnostic run. The autonomous task is instructed not to rerun the same SHA merely to classify a possible flake; an identical-SHA rerun is allowed only for a clear infrastructure/no-result failure.
+- Gmail is not used by the automation; its email/push notification channels are disabled.
 
 ## Runtime hardening progress
 - StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns explicit refresh.
@@ -58,7 +60,7 @@ The CoherenceFinalize click-scheduler change made Chromium fully green, but WebK
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest implementation checkpoint. The current PR head includes CI-policy checkpoint `2319d6b74113647a67c64dbf7ae7ce97e5f8fc52`; before another source push, re-verify the then-current PR head and continue using exact run `32691163962` / artifact `9507360860` as the factual implementation baseline unless a newer implementation checkpoint has completed its single PR CI.
+Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest gameplay implementation checkpoint. CI-policy checkpoint `83eda3fee1793c88361eef82e262e7fb2c7f8c00` changes only CI triggering/containment. Before another source push, re-verify the then-current PR head and continue using exact run `32691163962` / artifact `9507360860` as the factual implementation baseline unless a newer gameplay implementation checkpoint has completed its single PR browser gate.
 
 Investigate the first WebKit failure in CI order: `three same-type stacked units keep distinct selection and orders`. Inspect the WebKit video/error context together with map/context invalidation ownership and determine whether the tile never becomes stable because the DOM is continuously rerendered or because Playwright actionability is incompatible with the transformed mobile map. If runtime DOM churn is present, remove/narrow its native owner without weakening any thresholds. If the rendered tile is stable and only Playwright's native actionability is blocking, change only the automation interaction to an equivalent deterministic DOM/pointer action while preserving all selection/order assertions. Then validate the exact new SHA on Chromium + WebKit before any further source push. Do not prioritize the known unsupported WebKit `mouse.wheel` over this reproduced stacked-unit failure. Do not rerun the same SHA merely to see whether the failure disappears.
 
