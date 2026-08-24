@@ -6,6 +6,7 @@ async function installObserverAttribution(page) {
     if (window.__epohiStartupObserverAttributionInstalled || typeof window.MutationObserver !== 'function') return;
     const NativeObserver = window.MutationObserver;
     const nativeObserve = NativeObserver.prototype.observe;
+    const nativeTakeRecords = NativeObserver.prototype.takeRecords;
     let nextId = 1;
     const entries = [];
 
@@ -31,18 +32,46 @@ async function installObserverAttribution(page) {
       };
     }
 
+    function accountRecords(entry, records, source) {
+      const batch = Array.from(records || []);
+      if (!batch.length) return batch;
+      entry.records += batch.length;
+      if (source === 'takeRecords') {
+        entry.drainedBatches += 1;
+        entry.drainedRecords += batch.length;
+      }
+      batch.forEach(record => {
+        const label = targetLabel(record && record.target);
+        entry.mutationTargets[label] = (entry.mutationTargets[label] || 0) + 1;
+        const typed = String(record && record.type || 'unknown') + ':' + label;
+        entry.mutationTypes[typed] = (entry.mutationTypes[typed] || 0) + 1;
+      });
+      return batch;
+    }
+
+    function entryFor(observer) {
+      const id = observer && observer.__epohiStartupObserverAttributionId;
+      return entries.find(item => item.id === id) || null;
+    }
+
     function TrackingMutationObserver(callback) {
       const id = nextId++;
-      const entry = { id, nativeCallbacks: 0, records: 0, registrations: [], mutationTargets: {}, constructStack: String(new Error().stack || '').split('\n').slice(1, 9).join('\n'), observeStack: '' };
+      const entry = {
+        id,
+        nativeCallbacks: 0,
+        records: 0,
+        drainedBatches: 0,
+        drainedRecords: 0,
+        registrations: [],
+        mutationTargets: {},
+        mutationTypes: {},
+        constructStack: String(new Error().stack || '').split('\n').slice(1, 9).join('\n'),
+        observeStack: ''
+      };
       entries.push(entry);
       const observer = new NativeObserver((records) => {
-        const batch = Array.from(records || []);
         entry.nativeCallbacks += 1;
-        entry.records += batch.length;
-        batch.forEach(record => {
-          const label = targetLabel(record && record.target);
-          entry.mutationTargets[label] = (entry.mutationTargets[label] || 0) + 1;
-        });
+        accountRecords(entry, records, 'callback');
         callback(records, observer);
       });
       Object.defineProperty(observer, '__epohiStartupObserverAttributionId', { value: id });
@@ -52,17 +81,34 @@ async function installObserverAttribution(page) {
     TrackingMutationObserver.prototype = Object.create(NativeObserver.prototype);
     TrackingMutationObserver.prototype.constructor = TrackingMutationObserver;
     TrackingMutationObserver.prototype.observe = function (target, options) {
-      const entry = entries.find(item => item.id === this.__epohiStartupObserverAttributionId);
+      const entry = entryFor(this);
       if (entry) {
-        entry.registrations.push({ target: targetLabel(target), options: cleanOptions(options) });
+        const label = targetLabel(target);
+        const existing = entry.registrations.find(item => item.target === label);
+        const registration = { target: label, options: cleanOptions(options) };
+        if (existing) Object.assign(existing, registration);
+        else entry.registrations.push(registration);
         if (!entry.observeStack) entry.observeStack = String(new Error().stack || '').split('\n').slice(1, 9).join('\n');
       }
       return nativeObserve.call(this, target, options);
     };
+    TrackingMutationObserver.prototype.takeRecords = function () {
+      const records = nativeTakeRecords.call(this);
+      const entry = entryFor(this);
+      if (entry) accountRecords(entry, records, 'takeRecords');
+      return records;
+    };
     Object.setPrototypeOf(TrackingMutationObserver, NativeObserver);
     window.MutationObserver = TrackingMutationObserver;
     window.__epohiStartupObserverAttributionInstalled = true;
-    window.__epohiStartupObserverAttribution = { snapshot: () => entries.map(item => ({ ...item, registrations: item.registrations.map(reg => ({ target: reg.target, options: { ...reg.options } })), mutationTargets: { ...item.mutationTargets } })) };
+    window.__epohiStartupObserverAttribution = {
+      snapshot: () => entries.map(item => ({
+        ...item,
+        registrations: item.registrations.map(reg => ({ target: reg.target, options: { ...reg.options } })),
+        mutationTargets: { ...item.mutationTargets },
+        mutationTypes: { ...item.mutationTypes }
+      }))
+    };
   });
 }
 
@@ -81,24 +127,38 @@ async function snapshot(page) {
   return page.evaluate(() => window.__epohiStartupObserverAttribution ? window.__epohiStartupObserverAttribution.snapshot() : []);
 }
 
+function objectDelta(current, previous) {
+  const output = {};
+  Object.keys(current || {}).forEach(key => {
+    const value = Number(current[key] || 0) - Number(previous && previous[key] || 0);
+    if (value) output[key] = value;
+  });
+  return output;
+}
+
 function delta(after, before) {
   return after.map(item => {
-    const previous = before.find(entry => entry.id === item.id) || { nativeCallbacks: 0, records: 0, mutationTargets: {} };
-    const mutationTargets = {};
-    Object.keys(item.mutationTargets || {}).forEach(key => {
-      const value = Number(item.mutationTargets[key] || 0) - Number(previous.mutationTargets && previous.mutationTargets[key] || 0);
-      if (value) mutationTargets[key] = value;
-    });
+    const previous = before.find(entry => entry.id === item.id) || {
+      nativeCallbacks: 0,
+      records: 0,
+      drainedBatches: 0,
+      drainedRecords: 0,
+      mutationTargets: {},
+      mutationTypes: {}
+    };
     return {
       id: item.id,
       nativeCallbacks: Number(item.nativeCallbacks || 0) - Number(previous.nativeCallbacks || 0),
       records: Number(item.records || 0) - Number(previous.records || 0),
+      drainedBatches: Number(item.drainedBatches || 0) - Number(previous.drainedBatches || 0),
+      drainedRecords: Number(item.drainedRecords || 0) - Number(previous.drainedRecords || 0),
       registrations: item.registrations,
-      mutationTargets,
+      mutationTargets: objectDelta(item.mutationTargets, previous.mutationTargets),
+      mutationTypes: objectDelta(item.mutationTypes, previous.mutationTypes),
       constructStack: item.constructStack,
       observeStack: item.observeStack
     };
-  }).filter(item => item.nativeCallbacks || item.records);
+  }).filter(item => item.nativeCallbacks || item.records || item.drainedBatches || item.drainedRecords);
 }
 
 async function attachDelta(page, name, callbackBefore, before, waitMs) {
