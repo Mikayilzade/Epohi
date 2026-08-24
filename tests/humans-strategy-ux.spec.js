@@ -113,7 +113,11 @@ test.describe('Стратегический UX', () => {
   test('три соперника создают политическую кампанию с союзником', async ({ page }) => {
     const problems = watchConsole(page);
     await page.addInitScript(() => {
-      Math.random = () => 0.5;
+      let seed = 0x1a2b3c4d;
+      Math.random = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed / 0x100000000;
+      };
     });
     await clearStorage(page);
     await page.goto('/');
