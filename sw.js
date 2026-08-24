@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-13-explicit-legacy-refresh-bridge-v1";
+  "epohi-v1-8-13-population-observer-narrowed-v1";
 const APP_FILES = [
   "./",
   "./index.html",
