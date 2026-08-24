@@ -62,8 +62,17 @@
         return null;
       }
 
+      // The city sheet is now owned by explicit app/runtime invalidation. A legacy
+      // descendant observer on this surface is pure decorator polling and is the
+      // remaining source of repeated open/close callback churn. Suppress only heavy
+      // city-sheet registrations; semantic root-class observers are still allowed.
+      if (id === "cityModal" && input.childList && input.subtree) {
+        stats.suppressedHeavy += 1;
+        return null;
+      }
+
       const modalIds = new Set([
-        "cityModal", "feedbackTreasuryModal", "strategyDiplomacyModal",
+        "feedbackTreasuryModal", "strategyDiplomacyModal",
         "stabilityDecisionModal", "stabilityMajorModal", "captureChoiceModal",
         "coherenceProposalModal", "victoryModal", "wikiModal", "menuModal"
       ]);
@@ -199,7 +208,7 @@
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
     window.EpohiObserverSafety = {
-      version: 6,
+      version: 7,
       stats: stats,
       runProtected: function (callback) {
         if (typeof callback !== "function") return undefined;
@@ -220,7 +229,7 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 7,
+    version: 8,
     mode: "explicit-invalidation-bridge",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
