@@ -7,6 +7,14 @@ async function ready(page, rivals = 1) {
   await page.waitForFunction(() => window.EpohiCombatWorldStability && window.__epohiDebug().state);
 }
 
+async function clickMapTileDom(page, x, y) {
+  await page.evaluate(({ x, y }) => {
+    const tile = document.querySelector(`#map .tile[data-x="${x}"][data-y="${y}"]`);
+    if (!tile) throw new Error(`Map tile ${x},${y} not found`);
+    tile.click();
+  }, { x, y });
+}
+
 test.describe('Combat, AI and world stability', () => {
   test('weighted route prefers a longer cheap route and reports its cost', async ({ page }) => {
     await ready(page, 0);
@@ -143,7 +151,11 @@ test.describe('Combat, AI and world stability', () => {
   test('three same-type stacked units keep distinct selection and orders', async ({ page }) => {
     await ready(page,0);
     const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,base=gs.units[0],def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
-    for(const [x,y] of [[6,5],[5,6],[4,5]]){await page.locator('#map .tile[data-x="5"][data-y="5"]').click();await page.locator(`#map .tile[data-x="${x}"][data-y="${y}"]`).click();await page.locator('[data-context-action="move"]').click();}
+    // The map uses a short camera transform transition. Mobile WebKit can keep a
+    // locator in Playwright's "stable" wait while that transform is moving even
+    // though the tile is already rendered and receives normal DOM clicks. Exercise
+    // the same tile click handlers deterministically; keep every gameplay assertion.
+    for(const [x,y] of [[6,5],[5,6],[4,5]]){await clickMapTileDom(page,5,5);await clickMapTileDom(page,x,y);await page.locator('[data-context-action="move"]').click();}
     const positions=await page.evaluate(ids=>ids.map(id=>{const u=window.__epohiDebug().state.units.find(item=>item.id===id);return[u.x,u.y];}),ids);
     expect(new Set(positions.map(String)).size).toBe(3);
     await expect(page.locator('#contextActions [data-path-action="cancel"]')).toHaveCount(0);
