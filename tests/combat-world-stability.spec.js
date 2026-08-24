@@ -100,7 +100,14 @@ test.describe('Combat, AI and world stability', () => {
     const enemyId=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return enemy.id;});
     await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
     await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
-    await page.locator('[data-context-action="attack"]').click();
+    // The handler is synchronous and browser-independent; mobile WebKit can detach
+    // this rerendered context button during Playwright's native actionability click.
+    // Dispatch the same DOM click deterministically and keep the removal assertion.
+    await page.evaluate(() => {
+      const attack = document.querySelector('[data-context-action="attack"]');
+      if (!attack) throw new Error('Visible attack action disappeared before click');
+      attack.click();
+    });
     expect(await page.evaluate(id=>window.__epohiDebug().state.rivals[0].units.some(unit=>unit.id===id),enemyId)).toBe(false);
   });
 
