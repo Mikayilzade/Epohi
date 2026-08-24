@@ -13,18 +13,6 @@ on:
       - tests/**
       - index.html
       - sw.js
-  push:
-    branches:
-      - codex/coherence-capture-learning-v1
-    paths:
-      - .github/workflows/diplomacy-activity-events-temp.yml
-      - playwright.config.js
-      - package.json
-      - package-lock.json
-      - src/**
-      - tests/**
-      - index.html
-      - sw.js
   workflow_dispatch:
 
 concurrency:
@@ -127,6 +115,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-# Branch-only autonomy gate for PR #84. Pushes that only update autonomy/status docs do not trigger CI.
-# The PR trigger mirrors the branch gate so connector-visible pull_request runs can be inspected autonomously.
+# Temporary PR-only autonomy gate for PR #84.
+# A meaningful source/test/runtime change triggers exactly one pull_request run; status/doc-only updates do not trigger CI.
+# workflow_dispatch remains available for an explicit diagnostic run when genuinely needed.
 # Remove this temporary workflow before final merge into prototype/humans-v1.
