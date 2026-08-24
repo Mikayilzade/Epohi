@@ -10,19 +10,37 @@
 - Base: `prototype/humans-v1`
 - `main`: DO NOT TOUCH
 
-## Current branch checkpoint
-The exact validated parent checkpoint before this implementation package is `a5cf39e1de60399d697da4ff13810e28aaff778f` (`Stabilize WebKit city modal stress fixture`).
+## Current implementation checkpoint
+`61bed59005207b05f3f3c44dbeaf8345ff2385ad` — overlay-policy invalidation skips `#cityBtn` / `[data-close="cityModal"]` toggles.
 
-Exact run `32670902813` for that SHA:
-- static integrity: **success**;
-- Chromium focused: **50/51 passed, 1 failed**;
-- WebKit focused: **49/51 passed, 2 failed**;
-- full regression skipped because focused gate remained red.
+The PR head was verified at this exact SHA before inspection. No further source push has been made after it.
 
-The shared factual Chromium/WebKit runtime failure is the 30-cycle city open/close idle invariant: observer callback delta remains above the unchanged `<=8` threshold. WebKit also has the known Playwright mobile-WebKit `mouse.wheel` limitation.
+## Exact validation
+Authoritative rerun of the same implementation SHA: workflow run `32671505187`, latest artifact `9502328774`.
 
-## Why manual QA is suspended
-Intermediate physical-device QA remains suspended until Release Candidate. Automated Chromium/WebKit gates own the stabilization loop.
+- Static integrity: **success**.
+- Chromium focused: **50/51 passed, 1 failed**.
+- WebKit focused: **46/51 passed, 5 failed**.
+- Full regression: skipped because the focused gate remained red.
+
+The earlier one-off Chromium failure around creating a third rival did **not** reproduce and is treated as a generation/CI flake rather than the next source target.
+
+The first reproduced factual Chromium failure is still the 30-cycle city open/close idle invariant in `tests/mobile-performance-stability.spec.js`: observer callback delta was **21** against the unchanged `<=8` threshold. WebKit reproduces the same invariant at **15** callbacks. Thresholds remain unchanged.
+
+Other WebKit failures in the rerun:
+- mobile WebKit does not support Playwright `mouse.wheel`;
+- stacked-unit locator click actionability timeout;
+- selected-worker idle callback delta `16` vs `<=6`;
+- opening-city locator click actionability timeout.
+
+## Runtime hardening progress
+- StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns explicit refresh.
+- Duplicate player-feedback invalidation and journey/victory/turn observers were removed from stabilization.
+- Legacy base `humans-player-feedback.js` observer/global refresh scheduling has been removed; RuntimeInvalidation owns its refresh.
+- Event overlay policy no longer schedules normalization for city-modal open/close clicks.
+- Reinspection after the exact `61bed590…` rerun found a remaining broad observer cycle in `src/humans-coherence-finalize.js`: it observes `cityModal` (and several other modals) with `{attributes:true, childList:true, subtree:true}` and schedules a RAF decorator. This directly watches the city sheet whose repeated mutation is the reproduced callback-invariant failure.
+- `humans-coherence-finalize.js` also has a turn observer and toast observer; these are not yet changed.
+- No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -33,27 +51,8 @@ Intermediate physical-device QA remains suspended until Release Candidate. Autom
 - [ ] Phase 4 — automated balance/UX/layout pass from soak telemetry and screenshots.
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
-## Phase 1 progress
-- StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns its explicit refresh.
-- Capture outcome semantics and deterministic two-rival marker coverage are stable in focused Chromium runs.
-- `1e33e1178f2634794314238a1074abcc46d2fa49` removed duplicate player-feedback click invalidation from `humans-player-feedback-stabilization.js`.
-- `7b0dd7d996d0d3d7a20813a4f28333bd90b809a8` removed the remaining journey/victory/turn MutationObserver wake-ups from `humans-player-feedback-stabilization.js`.
-- Subsequent implementation removed the legacy base `humans-player-feedback.js` refresh scheduler/MutationObservers; `EpohiRuntimeInvalidation` is now the explicit base PlayerFeedback refresh owner.
-- `a5cf39e1…` exact CI reduced the focused failures to one Chromium runtime invariant plus the same WebKit runtime invariant and the WebKit wheel limitation.
-- Root-cause inspection found `humans-event-overlay-policy.js` still scheduling overlay normalization after **every document click**, including `#cityBtn` and `[data-close="cityModal"]`. Thirty city open/close cycles therefore enqueue overlay-policy work unrelated to city UI and keep observer callbacks alive after the stress sequence.
-- This package makes the overlay-policy delegated click scheduler ignore city-modal open/close toggles. Mandatory-decision protection and overlay class observers remain intact; gameplay thresholds are unchanged.
-- No physical-device QA was initiated. PR #84 remains Draft and unmerged.
-
-## Latest CI / validation
-- Authoritative completed implementation checkpoint before this package: `a5cf39e1de60399d697da4ff13810e28aaff778f`.
-- Exact run: `32670902813`; job `97271488760`; artifact `9501391413`.
-- Static integrity: **success**.
-- Chromium focused: **50/51 passed, 1 failed** — 30-cycle city callback invariant.
-- WebKit focused: **49/51 passed, 2 failed** — the same city callback invariant plus unsupported mobile-WebKit mouse wheel behavior.
-- Full Chromium/WebKit regression was correctly skipped because the focused gate failed.
-
 ## NEXT ACTION
-Run the exact Chromium/WebKit gate for the implementation commit that skips overlay-policy invalidation on city-modal toggles. Do not push further source until that exact result is inspected. If the city 30-cycle invariant is green, take the first remaining factual failure; do not weaken callback/click thresholds and do not treat the WebKit `mouse.wheel` automation limitation as a gameplay fix target without separate evidence.
+Before any source push, re-check the current PR head and retain `61bed59005207b05f3f3c44dbeaf8345ff2385ad` run `32671505187` as the exact previous implementation evidence. Then make one narrow native fix in `src/humans-coherence-finalize.js`: remove the broad `cityModal` subtree observer as a polling/decorator trigger (prefer explicit RuntimeInvalidation ownership; at minimum narrow the city observer to the modal root semantic class transition without observing child/subtree mutations). Preserve the 30-cycle `<=8` callback threshold and all gameplay assertions. Run exact Chromium/WebKit focused CI for that implementation SHA before any additional source push, and take the first reproduced factual failure.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
