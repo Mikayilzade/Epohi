@@ -32,6 +32,12 @@ Factual WebKit failures in CI order:
 
 The CoherenceFinalize click-scheduler change made Chromium fully green, but WebKit still exposes actionability and idle callback instability. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
+## CI / notification containment
+- PR head was re-verified at `28616e4b2ae7dc2839de34ff2c961f401b4336fe` before the CI-policy change; the factual implementation baseline remains exact run `32691163962` above.
+- Infrastructure checkpoint `2319d6b74113647a67c64dbf7ae7ce97e5f8fc52` removes the redundant branch `push` trigger from the temporary cross-browser workflow. A meaningful source/test/runtime update now has one automatic `pull_request` CI path instead of parallel `push` + `pull_request` runs.
+- `workflow_dispatch` remains available only for a genuinely needed explicit diagnostic run. The autonomous task is instructed not to rerun the same SHA merely to classify a possible flake; an identical-SHA rerun is allowed only for a clear infrastructure/no-result failure.
+- Status/doc-only changes remain excluded from CI. Gmail and automation email notifications remain disabled.
+
 ## Runtime hardening progress
 - StrategyUX broad DOM observers/global-click scheduling are gone; `EpohiRuntimeInvalidation` owns explicit refresh.
 - Duplicate player-feedback invalidation and journey/victory/turn observers were removed from stabilization.
@@ -52,9 +58,9 @@ The CoherenceFinalize click-scheduler change made Chromium fully green, but WebK
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest implementation checkpoint. Before another source push, re-verify the current PR head and use exact run `32691163962` / artifact `9507360860` as the factual baseline.
+Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest implementation checkpoint. The current PR head includes CI-policy checkpoint `2319d6b74113647a67c64dbf7ae7ce97e5f8fc52`; before another source push, re-verify the then-current PR head and continue using exact run `32691163962` / artifact `9507360860` as the factual implementation baseline unless a newer implementation checkpoint has completed its single PR CI.
 
-Investigate the first WebKit failure in CI order: `three same-type stacked units keep distinct selection and orders`. Inspect the WebKit video/error context together with map/context invalidation ownership and determine whether the tile never becomes stable because the DOM is continuously rerendered or because Playwright actionability is incompatible with the transformed mobile map. If runtime DOM churn is present, remove/narrow its native owner without weakening any thresholds. If the rendered tile is stable and only Playwright's native actionability is blocking, change only the automation interaction to an equivalent deterministic DOM/pointer action while preserving all selection/order assertions. Then validate the exact new SHA on Chromium + WebKit before any further source push. Do not prioritize the known unsupported WebKit `mouse.wheel` over this reproduced stacked-unit failure.
+Investigate the first WebKit failure in CI order: `three same-type stacked units keep distinct selection and orders`. Inspect the WebKit video/error context together with map/context invalidation ownership and determine whether the tile never becomes stable because the DOM is continuously rerendered or because Playwright actionability is incompatible with the transformed mobile map. If runtime DOM churn is present, remove/narrow its native owner without weakening any thresholds. If the rendered tile is stable and only Playwright's native actionability is blocking, change only the automation interaction to an equivalent deterministic DOM/pointer action while preserving all selection/order assertions. Then validate the exact new SHA on Chromium + WebKit before any further source push. Do not prioritize the known unsupported WebKit `mouse.wheel` over this reproduced stacked-unit failure. Do not rerun the same SHA merely to see whether the failure disappears.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
