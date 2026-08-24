@@ -10,35 +10,33 @@
 - Base: `prototype/humans-v1`
 - `main`: DO NOT TOUCH
 
-## Current source checkpoint
-This status is committed together with the narrow population/workforce observer fix. Its parent implementation/diagnostic head is `e04ca1c9fa395fa321b6e03027a73d1cb723e599` (`Trace WebKit observer callback ownership`). On the next run, fetch PR #84 first and treat its exact head SHA as the immutable checkpoint for the CI result.
+## Current checkpoint
+Latest implementation head: `6ef0d6288fb10db741b657bcd5dbb529e1b12c66` (`Narrow workforce observer roots`).
 
-## Exact diagnostic result
-Exact automatically-triggered PR CI run `32712294600` for `e04ca1c9fa395fa321b6e03027a73d1cb723e599` completed **failure**:
+This file update is status/documentation only and follows that implementation checkpoint; it must not trigger branch CI. Always fetch PR #84 head again before the next code/test write.
+
+## Exact CI / validation
+Exact automatically-triggered PR workflow for implementation `6ef0d6288fb10db741b657bcd5dbb529e1b12c66`: run `32713946219` (run #145), job `97391127255`, completed **failure**.
+
 - Static integrity: **success**.
-- Chromium focused: **51/51 passed**.
-- WebKit focused: **46/51 passed, 5 failed**.
-- Full regression: skipped because focused WebKit remained red.
-- Known WebKit `mouse.wheel` failure remains an automation/API incompatibility, not evidence of a gameplay regression.
+- Chromium focused: **50/51 passed, 1 failed**. The remaining failure was `tests/humans-strategy-ux.spec.js:113` (`три соперника создают политическую кампанию с союзником`): the test timed out waiting for three rivals with populated `cultureKey`.
+- WebKit focused: **47/51 passed, 4 failed**.
+  - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`.
+  - `tests/mobile-performance-stability.spec.js:157`: selected-worker idle produced **16 observer callbacks vs required <=6**.
+  - `tests/mobile-performance-stability.spec.js:190`: physical `open-city` Playwright click did not become actionable within the unchanged 1-second timeout.
+  - `tests/mobile-performance-stability.spec.js:219`: 30 explicit city open/close cycles settled at **12 observer callbacks vs required <=8**.
+- Full Chromium/WebKit regression: **skipped** because the focused gate failed.
+- Diagnostics artifact: `9515413269` (`epohi-autonomous-cross-browser-results`).
 
-The diagnostic attribution in the 30-cycle city stability regression identified the first reproducible runtime owner instead of requiring another speculative observer removal:
-- aggregate post-cycle idle callback delta: **13** against unchanged threshold **<=8**;
-- attributed observer: `src/humans-population-workforce.js`, install path around its observer registration;
-- registrations included `#gameApp`, `#cityContent`, `#turnValue`, and `#resourceScope` with subtree/character-data watching;
-- observed idle mutation targets were overwhelmingly journey/decorator descendants under `#gameApp` (`span.journey-emblem`, `small`, `strong`, `span`, `span.journey-alert`) plus `#zoomValue`;
-- attribution for that observer recorded **27 native callbacks / 132 records** over the diagnostic lifetime.
+## What the implementation proved
+The preceding diagnostic run `32712294600` attributed all 13 measured post-cycle callbacks to the broad `#gameApp` registration owned by `src/humans-population-workforce.js`. Implementation `6ef0d6288fb10db741b657bcd5dbb529e1b12c66` removed that descendant registration and kept only `#gameApp` class observation plus narrow local-content signals.
 
-Other WebKit failures in the same run were consistent with the same churn class: selected-worker idle recorded **16 callbacks vs <=6**, and physical Playwright clicks on the diplomacy answer and `open-city` control timed out during actionability despite the controls resolving visible/enabled/stable. These are not being fixed speculatively in this checkpoint; first remove the proven descendant wake-ups and inspect the exact result.
+The exact run #145 proves that this owner was real but not sufficient to close WebKit churn: selected-worker idle is still 16 callbacks and the 30-cycle test is still 12. The retained post-cycle attribution log for run #145 reports `callbackDelta: 12` with an empty `attributionDelta`, so the remaining callbacks are not attributable by the current late-installed diagnostic hook. That means another source removal would currently be speculative.
 
-## Fix in this checkpoint
-`src/humans-population-workforce.js` keeps its existing semantic UI sync but sharply narrows its observer registrations:
-- `#gameApp`: **class attributes only**, no descendant child/text observation;
-- `#cityContent`, `#wikiContent`, `#turnValue`, `#resourceScope`: **direct child-list only**;
-- no `subtree: true` or `characterData: true` registrations remain in this owner.
+No callback threshold, click timeout, or gameplay assertion was weakened. No physical-device QA was requested. PR #84 remains Draft and unmerged.
 
-This preserves population/workforce behavior while preventing journey/map descendant decoration from waking the workforce sync loop. Existing `mobile-performance-stability.spec.js` retains the unchanged callback limits and observer-attribution diagnostic, so this exact defect is already covered by the failing regression that identified it. `sw.js` cache name is bumped so the runtime change cannot be hidden behind an older cached source file.
-
-No gameplay threshold, click timeout, or assertion was weakened. No workflow dispatch/rerun was used. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
+## Current blocker
+The remaining WebKit callback churn is confirmed, but its exact observer owner is not yet named by the current attribution instrumentation because the failing callbacks come from an observer outside the hook's captured set (for example an observer created before the diagnostic hook or delivery through the safety wrapper). The shared `open-city` actionability failure remains secondary until the callback owner is identified.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -50,14 +48,7 @@ No gameplay threshold, click timeout, or assertion was weakened. No workflow dis
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Fetch PR #84 and the exact automatically-triggered Chromium/WebKit CI for the current PR head created by this checkpoint. Do **not** make another source push until that exact run and its artifacts are complete and inspected.
-
-First determine whether the unchanged WebKit runtime thresholds are now green, especially:
-1. selected-worker idle `<=6` callbacks;
-2. 30-cycle city post-idle `<=8` callbacks;
-3. diplomacy-answer and `open-city` Playwright actionability.
-
-If runtime churn is still above threshold, use the retained attribution diagnostic to name the next exact observer owner/target and make only one narrow coherent fix. If the callback gates are green but the physical Playwright clicks still time out, verify the synchronous handler path and then isolate the WebKit actionability test interaction without weakening the modal/state assertions. Handle unsupported mobile-WebKit `mouse.wheel` separately as an automation compatibility issue while preserving Chromium wheel coverage.
+Extend the existing observer-attribution regression so it captures the remaining WebKit callbacks from startup/observer construction through the selected-worker idle and 30-cycle scenarios, then run exactly one test-only diagnostic checkpoint and use its named owner/target for the next bounded source fix; do not weaken the `<=6`, `<=8`, or 1-second actionability thresholds.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
