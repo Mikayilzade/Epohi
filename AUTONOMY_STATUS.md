@@ -11,28 +11,29 @@
 - `main`: DO NOT TOUCH
 
 ## Current implementation checkpoint
-`5bb31217e5093f335eab441ff1c911910c776173` — the stacked-unit regression no longer relies on Playwright native map-tile actionability while the mobile map is under its short CSS camera transform. The test now uses deterministic DOM `click()` on the exact rendered tile nodes and keeps every gameplay assertion unchanged. No callback threshold or gameplay assertion was weakened.
+`a432b45db6e2ff5b9f61a4d7a718cd9c1b6bad1f` — the visible-unit attack regression now dispatches the already-rendered synchronous attack action with deterministic DOM `click()` instead of Playwright native mobile-WebKit actionability. The exact enemy-removal gameplay assertion remains unchanged. No threshold or gameplay assertion was weakened.
 
-Before this source push, PR head was re-verified as `0a33fe5a21090a4fb02de091936d37426180b415`. The factual previous gameplay baseline was exact run `32691163962` / artifact `9507360860` for `f7fd3b9225b845d748a81f0c68c0d811882b22bf`: Chromium **51/51**, WebKit **46/51**. Its first WebKit failure was the stacked-unit map-tile stability wait.
+Before this source push, PR head was re-verified as `6e495158271aa7d889a5a8a933e63e1b5fa12bef`; comparison with the previous implementation checkpoint `5bb31217e5093f335eab441ff1c911910c776173` showed only docs/status/workflow changes, with no competing source implementation.
 
 ## Exact current validation
-Exact implementation run `32694392057` for `5bb31217e5093f335eab441ff1c911910c776173`, artifact `9508405623`:
+Exact implementation run `32699273564` for `a432b45db6e2ff5b9f61a4d7a718cd9c1b6bad1f`, artifact `9510012577`:
 
 - Static integrity: **success**.
-- Chromium focused: **51/51 passed**.
-- WebKit focused: **47/51 passed, 4 failed**.
-- Full regression: skipped because focused WebKit remained red.
+- Chromium focused: **50/51 passed, 1 failed**.
+- WebKit focused: **48/51 passed, 3 failed**.
+- Full regression: skipped because focused cross-browser gate remained red.
+- The prior visible-unit combat failure is **closed**: the unchanged enemy-removal assertion passed in WebKit.
 
-The stacked-unit failure is gone. Current factual WebKit failures in CI order:
-1. `enemy selected from the map exposes and resolves a visible unit attack` — the attack action becomes available and is clicked, but the enemy with `hp=1` still exists afterward. Failure screenshot shows the enemy remains selected at **1/60 HP** and the attack is then unavailable. This is now the first factual blocker and must be diagnosed as stale/detached action handling vs combat-resolution state before another source push.
-2. Mouse-wheel zoom — `mouse.wheel` is unsupported by mobile WebKit; known automation limitation, not the next source target.
-3. `opening city sheet stays open and heavy observers are quarantined` — still red on WebKit.
-4. `observer sync is bounded and city sheet survives 30 explicit open-close cycles` — still red on WebKit.
+Current factual failures in CI order:
+1. Chromium: `три соперника создают политическую кампанию с союзником` timed out waiting for `state.rivals.length === 3 && state.rivals.every(civ => Boolean(civ.cultureKey))`. This is now the first factual blocker. Do not rerun the same SHA merely to classify it as a flake; inspect the 3-rival initialization/culture assignment path and make a source/test change only if a deterministic cause is found.
+2. WebKit: mouse-wheel zoom uses `mouse.wheel`, which mobile WebKit explicitly reports as unsupported; known automation/API limitation.
+3. WebKit: `opening city sheet stays open and heavy observers are quarantined` timed out on native Playwright `openCity.click()` actionability.
+4. WebKit: `observer sync is bounded and city sheet survives 30 explicit open-close cycles` remains above the callback threshold: **13 callbacks** for limit **<=8**; observer-sync threshold itself remains unchanged.
 
 No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## CI / notification containment
-- Final CI-policy checkpoint `5b0832ee9715c5c4f1ca7b831ee0b1f29150d5f1` removes the redundant branch `push` trigger, limits automatic CI to one `pull_request:synchronize` run per branch update, and pins checkout to the exact PR head SHA rather than GitHub's synthetic merge ref.
+- CI policy removes the redundant branch `push` trigger, limits automatic CI to one `pull_request:synchronize` run per branch update, and pins checkout to the exact PR head SHA rather than GitHub's synthetic merge ref.
 - After checkout, `HEAD^..HEAD` is the actual latest branch commit. Only meaningful workflow/config/package/source/tests/index/service-worker changes install browsers and run Chromium/WebKit Playwright. Status/docs-only commits stop after the cheap detector.
 - `workflow_dispatch` is not used by the autonomous loop. Identical-SHA reruns are reserved only for clear infrastructure/no-result failures.
 - Gmail is not used by the automation; its email/push notification channels are disabled.
@@ -45,8 +46,8 @@ No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 - `src/humans-coherence-finalize.js` no longer registers its broad `cityModal` subtree observer.
 - Temporary observer safety suppresses heavy `cityModal` descendant registrations while semantic root signals remain allowed.
 - CoherenceFinalize no longer schedules its decorator for every document click; city closing is quiescent on that path.
-- Chromium focused runtime/coherence/capture/diplomacy gate remains fully green at exact checkpoint `5bb31217…`.
 - The prior stacked-unit WebKit actionability blocker is closed without changing gameplay semantics or thresholds.
+- The prior visible-unit WebKit combat blocker is closed; exact `a432b45…` WebKit passed the unchanged enemy-removal assertion.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -58,9 +59,9 @@ No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Treat `5bb31217e5093f335eab441ff1c911910c776173` as the latest gameplay implementation checkpoint and exact run `32694392057` / artifact `9508405623` as the factual baseline. Before another source push, re-verify the current PR head.
+Treat `a432b45db6e2ff5b9f61a4d7a718cd9c1b6bad1f` and exact run `32699273564` / artifact `9510012577` as the latest factual gameplay baseline. Before another source push, re-verify the current PR head and ensure any newer commits are docs/status-only.
 
-Investigate the first current WebKit failure: `enemy selected from the map exposes and resolves a visible unit attack`. Trace the exact click/action handler and combat resolver from target selection through `[data-context-action="attack"]` to state mutation. Determine whether WebKit is clicking a stale/detached action node, whether a post-click rerender clears/changes the selected attacker before resolution, or whether combat resolution itself can leave a 1-HP target alive despite this fixture. Fix the native owner of the problem or, only if the handler is correct and the failure is purely Playwright actionability/detachment, change the automation interaction to an equivalent deterministic DOM action while preserving the existing enemy-removal assertion. Do not weaken any thresholds/assertions and do not rerun the same SHA merely to see whether it disappears. Then validate the exact new SHA once on Chromium + WebKit before any further source push.
+Investigate the first current failure: Chromium `три соперника создают политическую кампанию с союзником`, which timed out before the campaign assertions because the state never simultaneously exposed three rivals with non-empty `cultureKey`. Trace world creation for rivalCount=3 through rival identity/culture assignment and the initialization readiness boundary used by `waitStrategy`. Determine whether the third rival is genuinely missing/uninitialized, whether culture assignment is deferred behind a race, or whether the test is waiting on a property that is not the correct deterministic readiness signal. Do not rerun the same SHA merely to see whether it disappears. If a deterministic defect is found, make one narrow coherent fix without weakening assertions; otherwise make no source push and move to the next reproducible factual blocker only with evidence. Validate any new source SHA once on Chromium + WebKit before further source changes.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
