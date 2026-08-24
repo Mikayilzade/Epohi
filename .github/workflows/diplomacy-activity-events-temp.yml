@@ -91,6 +91,7 @@ jobs:
             tests/legacy-observer-containment.spec.js
             tests/explicit-legacy-refresh-bridge.spec.js
             tests/mobile-performance-stability.spec.js
+            tests/observer-startup-attribution.spec.js
             tests/coherence-capture-learning.spec.js
             tests/diplomacy-activity-events.spec.js
             tests/context-review-cleanup.spec.js
