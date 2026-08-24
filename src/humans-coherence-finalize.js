@@ -481,7 +481,7 @@
     document.addEventListener("click", handleClick);
     const turn = document.getElementById("turnValue");
     if (turn) new MutationObserver(onTurnChange).observe(turn, {childList:true,characterData:true,subtree:true});
-    ["cityModal", "captureChoiceModal", "stabilityDecisionModal", "coherenceProposalModal", "strategyDiplomacyModal"].forEach(function (id) {
+    ["captureChoiceModal", "stabilityDecisionModal", "coherenceProposalModal", "strategyDiplomacyModal"].forEach(function (id) {
       const node = document.getElementById(id);
       if (node) new MutationObserver(schedule).observe(node, {attributes:true,childList:true,subtree:true,attributeFilter:["class"]});
     });
