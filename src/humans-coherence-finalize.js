@@ -421,7 +421,8 @@
   }
 
   function handleClick(event) {
-    const expand = event.target.closest && event.target.closest("[data-capture-expand]");
+    const target = event.target && event.target.closest ? event.target : null;
+    const expand = target && target.closest("[data-capture-expand]");
     if (expand && !expand.disabled) {
       event.preventDefault();
       event.stopPropagation();
@@ -435,7 +436,12 @@
       }
       return;
     }
-    window.setTimeout(schedule, 0);
+
+    // CoherenceFinalize used to enqueue its full decorator after every document click.
+    // RuntimeInvalidation now owns normal action refreshes, while overlay/turn observers
+    // retain their semantic triggers. City opening still needs one local post-render pass
+    // for the population-requirement copy; closing the city must not wake decorators.
+    if (target && target.closest("#cityBtn")) window.setTimeout(schedule, 0);
   }
 
   function decorate() {
@@ -491,7 +497,7 @@
   }
 
   window.EpohiCoherenceFinalize = {
-    version: 1,
+    version: 2,
     ensureState: ensureState,
     processAiExperience: processAiExperience,
     syncForeignBuildingKnowledge: syncForeignBuildingKnowledge,
