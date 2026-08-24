@@ -4,15 +4,8 @@ on:
   pull_request:
     branches:
       - prototype/humans-v1
-    paths:
-      - .github/workflows/diplomacy-activity-events-temp.yml
-      - playwright.config.js
-      - package.json
-      - package-lock.json
-      - src/**
-      - tests/**
-      - index.html
-      - sw.js
+    types:
+      - synchronize
   workflow_dispatch:
 
 concurrency:
@@ -30,12 +23,42 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Detect meaningful source change
+        id: source_change
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run_browser_gate=true" >> "$GITHUB_OUTPUT"
+            echo "Explicit diagnostic dispatch: browser gate enabled."
+            exit 0
+          fi
+
+          if git diff --quiet HEAD^ HEAD -- \
+            .github/workflows/diplomacy-activity-events-temp.yml \
+            playwright.config.js \
+            package.json \
+            package-lock.json \
+            src \
+            tests \
+            index.html \
+            sw.js; then
+            echo "run_browser_gate=false" >> "$GITHUB_OUTPUT"
+            echo "Latest commit is status/docs-only for this gate; browser CI skipped."
+          else
+            echo "run_browser_gate=true" >> "$GITHUB_OUTPUT"
+            echo "Meaningful source/test/runtime change detected; browser CI enabled."
+          fi
+
       - name: Setup Node.js LTS
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
 
       - name: Install dependencies
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -44,9 +67,11 @@ jobs:
           fi
 
       - name: Install Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         run: npx playwright install --with-deps chromium webkit
 
       - name: Static integrity
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -56,6 +81,7 @@ jobs:
           git diff --check HEAD^ HEAD
 
       - name: Focused mobile runtime — Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         shell: bash
         run: |
           set +e
@@ -84,6 +110,7 @@ jobs:
           fi
 
       - name: Full mobile regression — Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
         shell: bash
         run: |
           set +e
@@ -101,7 +128,7 @@ jobs:
           fi
 
       - name: Upload cross-browser diagnostics
-        if: always()
+        if: always() && steps.source_change.outputs.run_browser_gate == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: epohi-autonomous-cross-browser-results
@@ -116,6 +143,8 @@ jobs:
           retention-days: 7
 
 # Temporary PR-only autonomy gate for PR #84.
-# A meaningful source/test/runtime change triggers exactly one pull_request run; status/doc-only updates do not trigger CI.
-# workflow_dispatch remains available for an explicit diagnostic run when genuinely needed.
+# Every branch update creates at most one pull_request synchronize run.
+# The latest commit is inspected after checkout: source/test/runtime changes execute the browser gate;
+# status/docs-only commits finish green after the cheap detector and do not install browsers or run Playwright.
+# workflow_dispatch remains available only for an explicit diagnostic run when genuinely needed.
 # Remove this temporary workflow before final merge into prototype/humans-v1.
