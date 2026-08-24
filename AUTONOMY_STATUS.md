@@ -11,33 +11,30 @@
 - `main`: DO NOT TOUCH
 
 ## Current implementation checkpoint
-`f7fd3b9225b845d748a81f0c68c0d811882b22bf` — CoherenceFinalize no longer enqueues its full decorator after every document click. Its click path is now limited to the local capture-administration action and one post-render pass when `#cityBtn` opens the city sheet; closing the city and unrelated clicks no longer wake this decorator. No callback threshold or gameplay assertion was weakened.
+`5bb31217e5093f335eab441ff1c911910c776173` — the stacked-unit regression no longer relies on Playwright native map-tile actionability while the mobile map is under its short CSS camera transform. The test now uses deterministic DOM `click()` on the exact rendered tile nodes and keeps every gameplay assertion unchanged. No callback threshold or gameplay assertion was weakened.
 
-Before that source push, PR head was re-verified as `58aff8d5ff815b59e1d46662d671584da10fb5c6`. The authoritative previous-source validation was run `32688175766` for the source-equivalent head containing implementation checkpoint `6c9d4029a69b9d7313a068f9760332338b40fedf`: Chromium **49/51**, WebKit **49/51**. The 30-cycle city-sheet invariant still failed at **18** Chromium / **13** WebKit callbacks versus unchanged `<=8`; Chromium also hit the known stochastic third-rival initialization timeout, while WebKit's other failure was unsupported mobile `mouse.wheel`.
+Before this source push, PR head was re-verified as `0a33fe5a21090a4fb02de091936d37426180b415`. The factual previous gameplay baseline was exact run `32691163962` / artifact `9507360860` for `f7fd3b9225b845d748a81f0c68c0d811882b22bf`: Chromium **51/51**, WebKit **46/51**. Its first WebKit failure was the stacked-unit map-tile stability wait.
 
 ## Exact current validation
-Exact implementation run `32691163962` for `f7fd3b9225b845d748a81f0c68c0d811882b22bf`, artifact `9507360860`:
+Exact implementation run `32694392057` for `5bb31217e5093f335eab441ff1c911910c776173`, artifact `9508405623`:
 
 - Static integrity: **success**.
 - Chromium focused: **51/51 passed**.
-- WebKit focused: **46/51 passed, 5 failed**.
+- WebKit focused: **47/51 passed, 4 failed**.
 - Full regression: skipped because focused WebKit remained red.
 
-Factual WebKit failures in CI order:
-1. `three same-type stacked units keep distinct selection and orders` — Playwright WebKit actionability waited for a map tile to become stable until the 20 s test timeout. The failure screenshot shows the game/map rendered and the stacked scouts visible; this must be classified as runtime instability vs WebKit actionability artifact before changing source/test behavior.
+The stacked-unit failure is gone. Current factual WebKit failures in CI order:
+1. `enemy selected from the map exposes and resolves a visible unit attack` — the attack action becomes available and is clicked, but the enemy with `hp=1` still exists afterward. Failure screenshot shows the enemy remains selected at **1/60 HP** and the attack is then unavailable. This is now the first factual blocker and must be diagnosed as stale/detached action handling vs combat-resolution state before another source push.
 2. Mouse-wheel zoom — `mouse.wheel` is unsupported by mobile WebKit; known automation limitation, not the next source target.
-3. Selected-worker idle callback delta **16** vs unchanged `<=6`.
-4. Opening-city actionability timeout on a visible `open-city` context button.
-5. 30-cycle city-sheet idle callback delta **13** vs unchanged `<=8`.
+3. `opening city sheet stays open and heavy observers are quarantined` — still red on WebKit.
+4. `observer sync is bounded and city sheet survives 30 explicit open-close cycles` — still red on WebKit.
 
-The CoherenceFinalize click-scheduler change made Chromium fully green, but WebKit still exposes actionability and idle callback instability. No physical-device QA was initiated. PR #84 remains Draft and unmerged.
+No physical-device QA was initiated. PR #84 remains Draft and unmerged.
 
 ## CI / notification containment
-- PR head was re-verified at `28616e4b2ae7dc2839de34ff2c961f401b4336fe` before the CI-policy repair; the factual implementation baseline remains exact run `32691163962` above.
 - Final CI-policy checkpoint `5b0832ee9715c5c4f1ca7b831ee0b1f29150d5f1` removes the redundant branch `push` trigger, limits automatic CI to one `pull_request:synchronize` run per branch update, and pins checkout to the exact PR head SHA rather than GitHub's synthetic merge ref.
-- After checkout, `HEAD^..HEAD` is now the actual latest branch commit. Only meaningful changes in the workflow/config/package/source/tests/index/service-worker paths execute Node setup, browser installation and Chromium/WebKit Playwright. Status/docs-only commits finish green after checkout + the cheap detector and skip browser CI.
-- This preserves connector-visible PR runs for exact implementation validation without duplicate browser gates or failing browser reruns caused solely by status checkpoints.
-- `workflow_dispatch` remains only for a genuinely necessary explicit diagnostic run. The autonomous task is instructed not to rerun the same SHA merely to classify a possible flake; an identical-SHA rerun is allowed only for a clear infrastructure/no-result failure.
+- After checkout, `HEAD^..HEAD` is the actual latest branch commit. Only meaningful workflow/config/package/source/tests/index/service-worker changes install browsers and run Chromium/WebKit Playwright. Status/docs-only commits stop after the cheap detector.
+- `workflow_dispatch` is not used by the autonomous loop. Identical-SHA reruns are reserved only for clear infrastructure/no-result failures.
 - Gmail is not used by the automation; its email/push notification channels are disabled.
 
 ## Runtime hardening progress
@@ -47,8 +44,9 @@ The CoherenceFinalize click-scheduler change made Chromium fully green, but WebK
 - Event overlay policy no longer schedules normalization for city-modal open/close clicks.
 - `src/humans-coherence-finalize.js` no longer registers its broad `cityModal` subtree observer.
 - Temporary observer safety suppresses heavy `cityModal` descendant registrations while semantic root signals remain allowed.
-- CoherenceFinalize no longer schedules its decorator for every document click; city closing is now quiescent on that path.
-- Chromium focused runtime/coherence/capture/diplomacy gate is now fully green at exact checkpoint `f7fd3b92…`.
+- CoherenceFinalize no longer schedules its decorator for every document click; city closing is quiescent on that path.
+- Chromium focused runtime/coherence/capture/diplomacy gate remains fully green at exact checkpoint `5bb31217…`.
+- The prior stacked-unit WebKit actionability blocker is closed without changing gameplay semantics or thresholds.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -60,9 +58,9 @@ The CoherenceFinalize click-scheduler change made Chromium fully green, but WebK
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Treat `f7fd3b9225b845d748a81f0c68c0d811882b22bf` as the latest gameplay implementation checkpoint. CI-policy checkpoint `5b0832ee9715c5c4f1ca7b831ee0b1f29150d5f1` changes only CI triggering/containment. Before another gameplay source push, re-verify the then-current PR head and continue using exact run `32691163962` / artifact `9507360860` as the factual implementation baseline unless a newer gameplay implementation checkpoint has completed its single PR browser gate.
+Treat `5bb31217e5093f335eab441ff1c911910c776173` as the latest gameplay implementation checkpoint and exact run `32694392057` / artifact `9508405623` as the factual baseline. Before another source push, re-verify the current PR head.
 
-Investigate the first WebKit failure in CI order: `three same-type stacked units keep distinct selection and orders`. Inspect the WebKit video/error context together with map/context invalidation ownership and determine whether the tile never becomes stable because the DOM is continuously rerendered or because Playwright actionability is incompatible with the transformed mobile map. If runtime DOM churn is present, remove/narrow its native owner without weakening any thresholds. If the rendered tile is stable and only Playwright's native actionability is blocking, change only the automation interaction to an equivalent deterministic DOM/pointer action while preserving all selection/order assertions. Then validate the exact new SHA on Chromium + WebKit before any further source push. Do not prioritize the known unsupported WebKit `mouse.wheel` over this reproduced stacked-unit failure. Do not rerun the same SHA merely to see whether the failure disappears.
+Investigate the first current WebKit failure: `enemy selected from the map exposes and resolves a visible unit attack`. Trace the exact click/action handler and combat resolver from target selection through `[data-context-action="attack"]` to state mutation. Determine whether WebKit is clicking a stale/detached action node, whether a post-click rerender clears/changes the selected attacker before resolution, or whether combat resolution itself can leave a 1-HP target alive despite this fixture. Fix the native owner of the problem or, only if the handler is correct and the failure is purely Playwright actionability/detachment, change the automation interaction to an equivalent deterministic DOM action while preserving the existing enemy-removal assertion. Do not weaken any thresholds/assertions and do not rerun the same SHA merely to see whether it disappears. Then validate the exact new SHA once on Chromium + WebKit before any further source push.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
