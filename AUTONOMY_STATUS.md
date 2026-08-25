@@ -11,26 +11,25 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Latest diagnostic implementation head: `6cd0c229589d3596c1528e65a427382b964a98ff` (`Trace observer records drained by safety wrapper`).
-
-This status commit is documentation-only. Before any source/test write, fetch PR #84 again and inspect the exact CI for `6cd0c229589d3596c1528e65a427382b964a98ff`.
+Run `32781292098` (run #149) for diagnostic checkpoint `6cd0c229589d3596c1528e65a427382b964a98ff` completed **failure**. The current commit extends only diagnostic attribution; no gameplay semantics, callback thresholds, or actionability timeouts are changed.
 
 ## Exact CI / validation
-The prior test-only diagnostic checkpoint `90df33a6b0cdc8f8b048beb82fd913e59ff622a4` completed in run `32780715758` (run #148) with **failure**:
+Run #149 artifact `9575206156` was inspected.
 - Chromium focused: **53/53 passed**.
-- WebKit focused: **47/53 passed, 6 failed**.
-- Existing WebKit blockers remained: unsupported mobile-WebKit `mouse.wheel`, diplomacy-answer actionability, `open-city` actionability, selected-worker idle **16 callbacks vs <=6**, and 30-cycle post-idle **12 callbacks vs <=8**.
-- The new startup attribution reproduced the same 16/12 callback deltas on WebKit, but `attributionDelta` was empty there.
-- On Chromium the attribution did identify a retained observer constructed in `src/humans-coherence-finalize.js` around the `#toast` observer, proving the startup hook itself works.
+- WebKit focused: **46/53 passed, 7 failed**.
+- WebKit runtime failures still reproduce selected-worker idle at **16 callbacks vs <=6** and 30-cycle post-idle at **12 callbacks vs <=8**.
+- The existing unsupported WebKit `mouse.wheel`, diplomacy-answer actionability, and `open-city` actionability failures remain.
+- Both startup attribution tests reproduced the same 16/12 safety-wrapper callback deltas, but both `attributionDelta` arrays were still empty even after recording `takeRecords()` drains.
 
-Inspection of `src/humans-performance.js` explains the WebKit diagnostic blind spot: the safety wrapper calls the captured observer `takeRecords()` while pausing observers inside protected tasks, appends those records to its own pending queue, and later increments `__epohiObserverSafetyStats.callbacks` when it delivers that pending queue. The original startup diagnostic counted only native observer callbacks, so records drained through `takeRecords()` could produce safety-wrapper callback increments with no native attribution delta.
+The empty attribution is now explained more precisely: `src/humans-performance.js` can queue a per-observer delivery on `requestAnimationFrame` before the measured quiet window, then increment `__epohiObserverSafetyStats.callbacks` when that already-scheduled delivery executes inside the quiet window. Native callback / `takeRecords()` counters may therefore remain unchanged during the measured interval.
 
-Checkpoint `6cd0c229589d3596c1528e65a427382b964a98ff` repairs only that diagnostic gap. `tests/observer-startup-attribution.spec.js` now records `takeRecords()` drains (`drainedBatches`, `drainedRecords`) and their mutation target/type per observer while preserving the existing `<=6` and `<=8` thresholds. No gameplay/source behavior, timeout, or threshold changed.
+## Diagnostic change in this checkpoint
+`tests/observer-startup-attribution.spec.js` now instruments `requestAnimationFrame` from page startup before `humans-performance.js` captures it. It associates safety-wrapper delivery RAFs with the originating tracked MutationObserver, records scheduled/executed delivery counts, and emits `pendingBefore` plus per-observer delivery deltas. Drained-record owner IDs are carried forward into restore-time delivery scheduling when possible.
 
-Automatically-triggered exact CI for `6cd0c229589d3596c1528e65a427382b964a98ff`: run `32781292098` (run #149) is currently **in progress**. Do not push another source/test checkpoint until it completes and its artifact is inspected.
+This is a test-only diagnostic checkpoint. The valid `<=6`, `<=8`, and 1-second actionability limits remain unchanged. No physical-device QA, merge, workflow dispatch, or rerun is requested.
 
 ## Current blocker
-The remaining WebKit callback churn is confirmed. The current task is now to use run #149's `drainedRecords` attribution to name the exact observer owner/target responsible for the 16/12 safety-wrapper deliveries. Do not remove another observer speculatively.
+The remaining WebKit callback churn is confirmed, but run #149 still did not name the observer whose already-queued safety delivery executes during the quiet window. The new delivery-level attribution is intended to close exactly that gap without another speculative source removal.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -42,7 +41,7 @@ The remaining WebKit callback churn is confirmed. The current task is now to use
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for exact run `32781292098` for `6cd0c229589d3596c1528e65a427382b964a98ff` to complete, inspect `epohi-autonomous-cross-browser-results`, and use the selected-worker / city-cycle `drainedRecords` attribution to name the first concrete observer owner and mutation target. Then make at most one narrow coherent source fix with regression coverage, without weakening `<=6`, `<=8`, or the 1-second actionability thresholds. Handle unsupported WebKit `mouse.wheel` separately as an automation-compatibility issue only after the runtime callback blocker is resolved.
+Fetch PR #84 and wait for the exact automatically-triggered Chromium/WebKit CI for this test-only diagnostic checkpoint. Inspect `EPOHI_STARTUP_OBSERVER_ATTRIBUTION` / artifact JSON, especially `pendingBefore`, `executedDeliveries`, observer registrations, and construct/observe stacks. Name the first concrete WebKit observer owner whose safety delivery accounts for the 16/12 quiet-window callbacks; only then make one narrow coherent source fix with regression coverage. Do not weaken `<=6`, `<=8`, or the 1-second actionability thresholds. Handle unsupported mobile-WebKit `mouse.wheel` separately only after the callback blocker is resolved.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

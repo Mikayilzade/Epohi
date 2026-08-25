@@ -7,7 +7,10 @@ async function installObserverAttribution(page) {
     const NativeObserver = window.MutationObserver;
     const nativeObserve = NativeObserver.prototype.observe;
     const nativeTakeRecords = NativeObserver.prototype.takeRecords;
+    const nativeRaf = window.requestAnimationFrame.bind(window);
     let nextId = 1;
+    let currentObserverId = 0;
+    const drainedOwnerQueue = [];
     const entries = [];
 
     function targetLabel(target) {
@@ -32,6 +35,14 @@ async function installObserverAttribution(page) {
       };
     }
 
+    function entryForId(id) {
+      return entries.find(item => item.id === id) || null;
+    }
+
+    function entryFor(observer) {
+      return entryForId(observer && observer.__epohiStartupObserverAttributionId);
+    }
+
     function accountRecords(entry, records, source) {
       const batch = Array.from(records || []);
       if (!batch.length) return batch;
@@ -39,6 +50,7 @@ async function installObserverAttribution(page) {
       if (source === 'takeRecords') {
         entry.drainedBatches += 1;
         entry.drainedRecords += batch.length;
+        drainedOwnerQueue.push(entry.id);
       }
       batch.forEach(record => {
         const label = targetLabel(record && record.target);
@@ -49,10 +61,23 @@ async function installObserverAttribution(page) {
       return batch;
     }
 
-    function entryFor(observer) {
-      const id = observer && observer.__epohiStartupObserverAttributionId;
-      return entries.find(item => item.id === id) || null;
-    }
+    window.requestAnimationFrame = function (callback) {
+      if (typeof callback !== 'function') return nativeRaf(callback);
+      const stack = String(new Error().stack || '');
+      let ownerId = currentObserverId;
+      if (!ownerId && drainedOwnerQueue.length && stack.indexOf('humans-performance.js') >= 0) {
+        ownerId = drainedOwnerQueue.shift();
+      }
+      const entry = entryForId(ownerId);
+      if (entry) {
+        entry.scheduledDeliveries += 1;
+        if (!entry.deliveryScheduleStack) entry.deliveryScheduleStack = stack.split('\n').slice(1, 9).join('\n');
+      }
+      return nativeRaf(function (time) {
+        if (entry) entry.executedDeliveries += 1;
+        return callback(time);
+      });
+    };
 
     function TrackingMutationObserver(callback) {
       const id = nextId++;
@@ -62,17 +87,26 @@ async function installObserverAttribution(page) {
         records: 0,
         drainedBatches: 0,
         drainedRecords: 0,
+        scheduledDeliveries: 0,
+        executedDeliveries: 0,
         registrations: [],
         mutationTargets: {},
         mutationTypes: {},
         constructStack: String(new Error().stack || '').split('\n').slice(1, 9).join('\n'),
-        observeStack: ''
+        observeStack: '',
+        deliveryScheduleStack: ''
       };
       entries.push(entry);
       const observer = new NativeObserver((records) => {
         entry.nativeCallbacks += 1;
         accountRecords(entry, records, 'callback');
-        callback(records, observer);
+        const previous = currentObserverId;
+        currentObserverId = id;
+        try {
+          callback(records, observer);
+        } finally {
+          currentObserverId = previous;
+        }
       });
       Object.defineProperty(observer, '__epohiStartupObserverAttributionId', { value: id });
       return observer;
@@ -143,6 +177,8 @@ function delta(after, before) {
       records: 0,
       drainedBatches: 0,
       drainedRecords: 0,
+      scheduledDeliveries: 0,
+      executedDeliveries: 0,
       mutationTargets: {},
       mutationTypes: {}
     };
@@ -152,20 +188,38 @@ function delta(after, before) {
       records: Number(item.records || 0) - Number(previous.records || 0),
       drainedBatches: Number(item.drainedBatches || 0) - Number(previous.drainedBatches || 0),
       drainedRecords: Number(item.drainedRecords || 0) - Number(previous.drainedRecords || 0),
+      scheduledDeliveries: Number(item.scheduledDeliveries || 0) - Number(previous.scheduledDeliveries || 0),
+      executedDeliveries: Number(item.executedDeliveries || 0) - Number(previous.executedDeliveries || 0),
       registrations: item.registrations,
       mutationTargets: objectDelta(item.mutationTargets, previous.mutationTargets),
       mutationTypes: objectDelta(item.mutationTypes, previous.mutationTypes),
       constructStack: item.constructStack,
-      observeStack: item.observeStack
+      observeStack: item.observeStack,
+      deliveryScheduleStack: item.deliveryScheduleStack
     };
-  }).filter(item => item.nativeCallbacks || item.records || item.drainedBatches || item.drainedRecords);
+  }).filter(item => item.nativeCallbacks || item.records || item.drainedBatches || item.drainedRecords || item.scheduledDeliveries || item.executedDeliveries);
+}
+
+function pendingBefore(items) {
+  return items.map(item => ({
+    id: item.id,
+    pendingDeliveries: Math.max(0, Number(item.scheduledDeliveries || 0) - Number(item.executedDeliveries || 0)),
+    registrations: item.registrations,
+    constructStack: item.constructStack,
+    observeStack: item.observeStack,
+    deliveryScheduleStack: item.deliveryScheduleStack
+  })).filter(item => item.pendingDeliveries > 0);
 }
 
 async function attachDelta(page, name, callbackBefore, before, waitMs) {
   await page.waitForTimeout(waitMs);
   const callbackAfter = await callbackCount(page);
   const after = await snapshot(page);
-  const payload = { callbackDelta: callbackAfter - callbackBefore, attributionDelta: delta(after, before) };
+  const payload = {
+    callbackDelta: callbackAfter - callbackBefore,
+    pendingBefore: pendingBefore(before),
+    attributionDelta: delta(after, before)
+  };
   await test.info().attach(name + '.json', { body: Buffer.from(JSON.stringify(payload, null, 2)), contentType: 'application/json' });
   console.log('EPOHI_STARTUP_OBSERVER_ATTRIBUTION ' + name + ' ' + JSON.stringify(payload));
   return payload;
