@@ -13,6 +13,9 @@
     const nativeTakeRecords = NativeObserver.prototype.takeRecords;
     const nativeRaf = window.requestAnimationFrame.bind(window);
     const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeQueueMicrotask = typeof window.queueMicrotask === "function"
+      ? window.queueMicrotask.bind(window)
+      : function (callback) { Promise.resolve().then(callback); };
     let activeProtectedObserver = null;
 
     const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
@@ -142,7 +145,8 @@
     function CoalescedMutationObserver(callback) {
       const observerState = {
         native: null,
-        frame: 0,
+        deliveryScheduled: false,
+        deliveryGeneration: 0,
         pending: [],
         registrations: [],
         disconnectedByClient: false,
@@ -151,9 +155,12 @@
       };
 
       function scheduleDelivery() {
-        if (observerState.frame || observerState.disconnectedByClient || !observerState.pending.length) return;
-        observerState.frame = nativeRaf(function () {
-          observerState.frame = 0;
+        if (observerState.deliveryScheduled || observerState.disconnectedByClient || !observerState.pending.length) return;
+        observerState.deliveryScheduled = true;
+        const generation = ++observerState.deliveryGeneration;
+        nativeQueueMicrotask(function () {
+          if (generation !== observerState.deliveryGeneration) return;
+          observerState.deliveryScheduled = false;
           if (observerState.disconnectedByClient || !observerState.pending.length) {
             observerState.pending = [];
             return;
@@ -189,10 +196,8 @@
         observerState.disconnectedByClient = true;
         observerState.registrations = [];
         observerState.pending = [];
-        if (observerState.frame) {
-          window.cancelAnimationFrame(observerState.frame);
-          observerState.frame = 0;
-        }
+        observerState.deliveryScheduled = false;
+        observerState.deliveryGeneration += 1;
         return nativeDisconnect.call(native);
       };
 
@@ -215,7 +220,7 @@
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
     window.EpohiObserverSafety = {
-      version: 8,
+      version: 9,
       mode: "observer-local",
       stats: stats,
       runProtected: function (callback) {
@@ -237,7 +242,7 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 9,
+    version: 10,
     mode: "observer-local-safety",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
