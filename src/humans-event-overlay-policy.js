@@ -166,16 +166,25 @@
   function dismissToast() {
     window.clearTimeout(timer);
     const node = document.getElementById("flowEventToast");
-    if (node) node.classList.remove("show");
+    if (node && node.classList.contains("show")) node.classList.remove("show");
   }
 
   function dismissBaseToast() {
     const node = document.getElementById("toast");
-    if (node) node.classList.remove("show");
+    if (node && node.classList.contains("show")) node.classList.remove("show");
   }
 
   function pendingDecision(gs) {
     return gs && (gs.urgentDecisions || []).find(function (item) { return item.status === "pending"; }) || null;
+  }
+
+  function setShown(node, shown) {
+    if (!node) return false;
+    const current = node.classList.contains("show");
+    if (current === !!shown) return false;
+    if (shown) node.classList.add("show");
+    else node.classList.remove("show");
+    return true;
   }
 
   function blockingOverlay() {
@@ -190,9 +199,11 @@
     const node = document.getElementById("flowEventToast");
     if (!node) return;
     node.textContent = text;
-    node.classList.add("show");
+    if (!node.classList.contains("show")) node.classList.add("show");
     window.clearTimeout(timer);
-    timer = window.setTimeout(function () { node.classList.remove("show"); }, 1800);
+    timer = window.setTimeout(function () {
+      if (node.classList.contains("show")) node.classList.remove("show");
+    }, 1800);
   }
 
   function normalize() {
@@ -204,7 +215,7 @@
       if (!modal || !modal.classList.contains("show")) return;
       const content = document.getElementById("stabilityMajorContent");
       const text = content ? content.textContent.trim() : "";
-      modal.classList.remove("show");
+      setShown(modal, false);
       modal.setAttribute("aria-hidden", "true");
       const gs = state();
       if (gs && window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.syncChronicle(gs);
@@ -229,23 +240,23 @@
 
     const indicator = document.getElementById("urgentDecisionIndicator");
     if (indicator) {
-      indicator.classList.remove("show");
-      indicator.hidden = true;
-      indicator.setAttribute("aria-hidden", "true");
+      setShown(indicator, false);
+      if (!indicator.hidden) indicator.hidden = true;
+      if (indicator.getAttribute("aria-hidden") !== "true") indicator.setAttribute("aria-hidden", "true");
     }
 
-    if (!urgent && decision) decision.classList.remove("show");
+    if (!urgent) setShown(decision, false);
 
     if (victoryOpen) {
-      if (capture) capture.classList.remove("show");
-      if (decision) decision.classList.remove("show");
-      if (proposal) proposal.classList.remove("show");
+      setShown(capture, false);
+      setShown(decision, false);
+      setShown(proposal, false);
     } else if (captureOpen) {
-      if (decision) decision.classList.remove("show");
-      if (proposal) proposal.classList.remove("show");
+      setShown(decision, false);
+      setShown(proposal, false);
     } else if (urgent) {
-      if (decision) decision.classList.add("show");
-      if (proposal) proposal.classList.remove("show");
+      setShown(decision, true);
+      setShown(proposal, false);
     }
 
     higherPriorityWasOpen = higherPriorityOpen;
@@ -340,7 +351,7 @@
   installObserverSafety();
 
   window.EpohiEventOverlayPolicy = {
-    version: 11,
+    version: 12,
     normalize: normalize,
     dismissToast: dismissToast,
     handleTurnChange: handleTurnChange,
