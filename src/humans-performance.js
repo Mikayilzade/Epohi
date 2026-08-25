@@ -13,8 +13,7 @@
     const nativeTakeRecords = NativeObserver.prototype.takeRecords;
     const nativeRaf = window.requestAnimationFrame.bind(window);
     const nativeSetTimeout = window.setTimeout.bind(window);
-    const observerStates = [];
-    let safetyDepth = 0;
+    let activeProtectedObserver = null;
 
     const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
       observers: 0,
@@ -84,51 +83,59 @@
       return input;
     }
 
-    function pauseObservers() {
-      observerStates.forEach(function (observerState) {
-        if (observerState.disconnectedByClient || !observerState.native) return;
-        appendPending(observerState, nativeTakeRecords.call(observerState.native));
-        nativeDisconnect.call(observerState.native);
-      });
+    function pauseObserver(observerState) {
+      if (!observerState || observerState.disconnectedByClient || !observerState.native) return false;
+      appendPending(observerState, nativeTakeRecords.call(observerState.native));
+      nativeDisconnect.call(observerState.native);
+      return true;
     }
 
-    function restoreObservers() {
-      observerStates.forEach(function (observerState) {
-        if (observerState.disconnectedByClient || !observerState.native) return;
-        observerState.registrations.forEach(function (entry) {
-          nativeObserve.call(observerState.native, entry.target, entry.options);
-        });
-        if (observerState.pending.length) observerState.scheduleDelivery();
+    function restoreObserver(observerState) {
+      if (!observerState || observerState.disconnectedByClient || !observerState.native) return;
+      observerState.registrations.forEach(function (entry) {
+        nativeObserve.call(observerState.native, entry.target, entry.options);
       });
+      if (observerState.pending.length) observerState.scheduleDelivery();
     }
 
-    function runProtectedTask(callback, thisArg, args) {
-      const outermost = safetyDepth === 0;
-      if (outermost) pauseObservers();
-      safetyDepth += 1;
+    function runProtectedTask(observerState, callback, thisArg, args) {
+      if (typeof callback !== "function") return undefined;
+      if (!observerState) {
+        stats.protectedTasks += 1;
+        return callback.apply(thisArg, args || []);
+      }
+
+      const outermostForObserver = observerState.protectionDepth === 0;
+      const paused = outermostForObserver ? pauseObserver(observerState) : false;
+      const previousActive = activeProtectedObserver;
+      observerState.protectionDepth += 1;
+      activeProtectedObserver = observerState;
       stats.protectedTasks += 1;
       try {
         return callback.apply(thisArg, args || []);
       } finally {
-        safetyDepth -= 1;
-        if (outermost) restoreObservers();
+        activeProtectedObserver = previousActive;
+        observerState.protectionDepth -= 1;
+        if (outermostForObserver && paused) restoreObserver(observerState);
       }
     }
 
     window.requestAnimationFrame = function (callback) {
-      if (typeof callback !== "function" || safetyDepth <= 0) return nativeRaf(callback);
+      if (typeof callback !== "function" || !activeProtectedObserver) return nativeRaf(callback);
+      const owner = activeProtectedObserver;
       return nativeRaf(function (time) {
-        return runProtectedTask(callback, window, [time]);
+        return runProtectedTask(owner, callback, window, [time]);
       });
     };
 
     window.setTimeout = function (callback, delay) {
       const args = Array.prototype.slice.call(arguments, 2);
-      if (typeof callback !== "function" || safetyDepth <= 0) {
+      if (typeof callback !== "function" || !activeProtectedObserver) {
         return nativeSetTimeout.apply(window, [callback, delay].concat(args));
       }
+      const owner = activeProtectedObserver;
       return nativeSetTimeout(function () {
-        return runProtectedTask(callback, window, args);
+        return runProtectedTask(owner, callback, window, args);
       }, delay);
     };
 
@@ -139,6 +146,7 @@
         pending: [],
         registrations: [],
         disconnectedByClient: false,
+        protectionDepth: 0,
         scheduleDelivery: null
       };
 
@@ -155,7 +163,7 @@
           stats.callbacks += 1;
           stats.records += batch.length;
           stats.maxBatch = Math.max(stats.maxBatch, batch.length);
-          runProtectedTask(callback, observerState.native, [batch, observerState.native]);
+          runProtectedTask(observerState, callback, observerState.native, [batch, observerState.native]);
         });
       }
       observerState.scheduleDelivery = scheduleDelivery;
@@ -165,7 +173,6 @@
         scheduleDelivery();
       });
       observerState.native = native;
-      observerStates.push(observerState);
 
       native.observe = function (target, options) {
         observerState.disconnectedByClient = false;
@@ -174,7 +181,7 @@
         const existing = observerState.registrations.find(function (entry) { return entry.target === target; });
         if (existing) existing.options = normalized;
         else observerState.registrations.push({ target: target, options: normalized });
-        if (safetyDepth > 0) return;
+        if (observerState.protectionDepth > 0) return;
         return nativeObserve.call(native, target, normalized);
       };
 
@@ -208,11 +215,12 @@
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
     window.EpohiObserverSafety = {
-      version: 7,
+      version: 8,
+      mode: "observer-local",
       stats: stats,
       runProtected: function (callback) {
         if (typeof callback !== "function") return undefined;
-        return runProtectedTask(callback, window, []);
+        return runProtectedTask(activeProtectedObserver, callback, window, []);
       }
     };
   }
@@ -229,12 +237,12 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 8,
-    mode: "explicit-invalidation-bridge",
+    version: 9,
+    mode: "observer-local-safety",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
       return {
-        mode: "explicit-invalidation-bridge",
+        mode: "observer-local-safety",
         uptimeMs: Date.now() - startedAt,
         waterTiles: document.querySelectorAll("#map .tile.water").length,
         routeBadges: document.querySelectorAll("#map .route-badge").length,

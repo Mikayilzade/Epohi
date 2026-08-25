@@ -39,7 +39,8 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
     observer: window.EpohiHumansObserver && window.EpohiHumansObserver.stats(),
     feedbackVersion: window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.version,
     hasStackSync: !!(window.EpohiPlayerFeedbackStabilization && window.EpohiPlayerFeedbackStabilization.addStackSelectionAcknowledgement),
-    hasProtectedBridge: !!(window.EpohiObserverSafety && typeof window.EpohiObserverSafety.runProtected === "function")
+    hasProtectedBridge: !!(window.EpohiObserverSafety && typeof window.EpohiObserverSafety.runProtected === "function"),
+    safetyMode: window.EpohiObserverSafety && window.EpohiObserverSafety.mode
   }));
 
   expect(initial.invalidation.broadObservers).toBe(0);
@@ -48,6 +49,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(initial.feedbackVersion).toBeGreaterThanOrEqual(5);
   expect(initial.hasStackSync).toBe(true);
   expect(initial.hasProtectedBridge).toBe(true);
+  expect(initial.safetyMode).toBe("observer-local");
 
   for (let i = 0; i < 40; i += 1) {
     await page.evaluate(() => {
@@ -71,8 +73,7 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   expect(settled.invalidation.visualSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
   expect(settled.invalidation.feedbackSyncs).toBeGreaterThan(0);
   expect(settled.invalidation.feedbackSyncs).toBeLessThanOrEqual(settled.invalidation.flushes);
-  expect(settled.invalidation.protectedFlushes).toBeGreaterThan(0);
-  expect(settled.invalidation.protectedFlushes).toBeLessThanOrEqual(settled.invalidation.flushes);
+  expect(settled.invalidation.protectedFlushes).toBe(0);
   expect(settled.invalidation.scheduled).toBe(false);
 
   const bridgeBefore = await page.evaluate(() => ({
@@ -88,7 +89,8 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
     protectedFlushes: window.EpohiRuntimeInvalidation.stats().protectedFlushes,
     scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
   }));
-  expect(bridgeAfter.protectedFlushes).toBeGreaterThan(bridgeBefore.protectedFlushes);
+  expect(bridgeAfter.protectedFlushes).toBe(bridgeBefore.protectedFlushes);
+  expect(bridgeAfter.protectedFlushes).toBe(0);
   expect(bridgeAfter.callbacks - bridgeBefore.callbacks).toBeLessThanOrEqual(3);
   expect(bridgeAfter.scheduled).toBe(false);
 
