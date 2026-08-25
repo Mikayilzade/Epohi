@@ -63,20 +63,20 @@
     syncPlayerFeedback();
   }
 
-  function runFlushProtected() {
-    const safety = window.EpohiObserverSafety;
-    if (safety && typeof safety.runProtected === "function") {
-      stats.protectedFlushes += 1;
-      safety.runProtected(flush);
-      return;
-    }
+  function runExplicitFlush() {
+    // RuntimeInvalidation is already the explicit lifecycle boundary for ordinary UI
+    // decoration. Routing this flush through the global observer safety bridge used to
+    // pause/drain/reconnect every registered MutationObserver. On mobile WebKit that
+    // converted one bounded action flush into a backlog of per-observer delivery RAFs
+    // that executed during the later idle/actionability window. Keep the safety bridge
+    // for actual observer callbacks, but do not invoke its global quarantine here.
     flush();
   }
 
   function scheduleFrame() {
     timer = 0;
     if (frame) return;
-    frame = window.requestAnimationFrame(runFlushProtected);
+    frame = window.requestAnimationFrame(runExplicitFlush);
   }
 
   function request(reason) {
@@ -136,7 +136,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 10,
+    version: 11,
     request: request,
     flush: flush,
     stats: function () {
