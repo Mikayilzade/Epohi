@@ -1,7 +1,10 @@
 (function () {
   "use strict";
 
-  const MIN_FLUSH_INTERVAL_MS = 24;
+  // Keep explicit UI invalidation responsive, but do not let a request storm turn
+  // into near-frame-rate decorator work. 32 ms caps the scheduler at roughly 30 Hz
+  // while ordinary click/transition requests still settle well inside the 1 s gates.
+  const MIN_FLUSH_INTERVAL_MS = 32;
   let frame = 0;
   let timer = 0;
   let lastFlushAt = 0;
@@ -136,7 +139,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 11,
+    version: 12,
     request: request,
     flush: flush,
     stats: function () {

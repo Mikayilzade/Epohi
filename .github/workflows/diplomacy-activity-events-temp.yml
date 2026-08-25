@@ -88,6 +88,7 @@ jobs:
           set +e
           tests=(
             tests/runtime-invalidation.spec.js
+            tests/runtime-invalidation-cadence.spec.js
             tests/legacy-observer-containment.spec.js
             tests/explicit-legacy-refresh-bridge.spec.js
             tests/mobile-performance-stability.spec.js
