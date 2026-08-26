@@ -116,6 +116,26 @@ async function promoteSmallFixtureRivals(page, rivals) {
     // mapSize-driven iteration/render bound from 12 to 8. The backing map, real End
     // Turn handler, turn increment, diplomacy processor and proposal assertions remain intact.
     gs.mapSize = Math.min(Number(gs.mapSize) || gs.map.length, 8);
+
+    // Diagnostic-only attribution for the synthetic multi-rival fixture. Keep the
+    // strict 20 s test budget unchanged, but expose which living-civilization phase
+    // consumes it so the next package fixes a measured owner instead of shrinking
+    // the fixture again. These wrappers preserve arguments, return values and errors.
+    const living = window.EpohiLivingCivilizations;
+    if (living && !living.__fixtureTimingWrapped) {
+      ['processTurn', 'processAlliedActions'].forEach((name) => {
+        const original = living[name];
+        if (typeof original !== 'function') return;
+        living[name] = function (...args) {
+          const started = performance.now();
+          try { return original.apply(this, args); }
+          finally {
+            console.log(`[fixture-phase] ${name} ${(performance.now() - started).toFixed(1)}ms turn=${gs.turn}`);
+          }
+        };
+      });
+      living.__fixtureTimingWrapped = true;
+    }
   }, rivals);
 }
 
