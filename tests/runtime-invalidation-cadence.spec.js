@@ -27,6 +27,99 @@ test('runtime invalidation request storm stays below near-frame-rate flush caden
   expect(result.scheduled).toBe(false);
 });
 
+async function installAsyncCallbackAttribution(page) {
+  await page.addInitScript(() => {
+    if (window.__epohiFixtureAsyncAttributionInstalled) return;
+    window.__epohiFixtureAsyncAttributionInstalled = true;
+
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeSetInterval = window.setInterval.bind(window);
+    const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+    const nativeQueueMicrotask = window.queueMicrotask ? window.queueMicrotask.bind(window) : null;
+    const stats = {};
+    let active = false;
+    let snapshots = 0;
+
+    function scheduleStack() {
+      return String(new Error().stack || '')
+        .split('\n')
+        .slice(2, 7)
+        .join(' <- ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function wrap(kind, callback) {
+      if (typeof callback !== 'function') return callback;
+      const stack = scheduleStack();
+      return function (...args) {
+        if (!active) return callback.apply(this, args);
+        const started = performance.now();
+        try {
+          return callback.apply(this, args);
+        } finally {
+          const elapsed = performance.now() - started;
+          const key = `${kind} :: ${stack || 'unknown'}`;
+          const item = stats[key] || (stats[key] = { kind, stack, calls: 0, totalMs: 0, maxMs: 0 });
+          item.calls += 1;
+          item.totalMs += elapsed;
+          item.maxMs = Math.max(item.maxMs, elapsed);
+          if (elapsed >= 8 || item.calls === 1 || item.calls % 100 === 0) {
+            console.log(`[fixture-async] ${kind} calls=${item.calls} lastMs=${elapsed.toFixed(1)} totalMs=${item.totalMs.toFixed(1)} maxMs=${item.maxMs.toFixed(1)} stack=${stack || 'unknown'}`);
+          }
+        }
+      };
+    }
+
+    window.setTimeout = function (callback, delay, ...args) {
+      return nativeSetTimeout(wrap('setTimeout', callback), delay, ...args);
+    };
+    window.setInterval = function (callback, delay, ...args) {
+      return nativeSetInterval(wrap('setInterval', callback), delay, ...args);
+    };
+    window.requestAnimationFrame = function (callback) {
+      return nativeRequestAnimationFrame(wrap('requestAnimationFrame', callback));
+    };
+    if (nativeQueueMicrotask) {
+      window.queueMicrotask = function (callback) {
+        return nativeQueueMicrotask(wrap('queueMicrotask', callback));
+      };
+    }
+
+    function compact() {
+      return Object.values(stats)
+        .sort((a, b) => b.totalMs - a.totalMs || b.calls - a.calls)
+        .slice(0, 12)
+        .map(item => ({
+          kind: item.kind,
+          calls: item.calls,
+          totalMs: Number(item.totalMs.toFixed(1)),
+          maxMs: Number(item.maxMs.toFixed(1)),
+          stack: item.stack
+        }));
+    }
+
+    window.__epohiFixtureAsyncAttribution = {
+      start() {
+        Object.keys(stats).forEach(key => delete stats[key]);
+        snapshots = 0;
+        active = true;
+        const timer = nativeSetInterval(() => {
+          if (!active) return;
+          console.log(`[fixture-async-snapshot] ${JSON.stringify(compact())}`);
+          snapshots += 1;
+          if (snapshots >= 8) window.clearInterval(timer);
+        }, 250);
+      },
+      stop() {
+        active = false;
+        return compact();
+      },
+      snapshot: compact
+    };
+  });
+}
+
 async function installPostTurnOwnerAttribution(page) {
   await page.evaluate(() => {
     if (window.__epohiFixturePostTurnAttributionInstalled) return;
@@ -99,6 +192,7 @@ async function installPostTurnOwnerAttribution(page) {
 test('synthetic joint-war End Turn emits retained phase timing', async ({ page }) => {
   const phases = [];
   const owners = [];
+  const asyncOwners = [];
   page.on('console', message => {
     const text = message.text();
     if (text.startsWith('[fixture-phase]')) {
@@ -109,9 +203,15 @@ test('synthetic joint-war End Turn emits retained phase timing', async ({ page }
     if (text.startsWith('[fixture-owner]') || text.startsWith('[fixture-owner-snapshot]')) {
       owners.push(text);
       console.log(`EPOHI_FIXTURE_OWNER ${text}`);
+      return;
+    }
+    if (text.startsWith('[fixture-async]') || text.startsWith('[fixture-async-snapshot]')) {
+      asyncOwners.push(text);
+      console.log(`EPOHI_FIXTURE_ASYNC ${text}`);
     }
   });
 
+  await installAsyncCallbackAttribution(page);
   await clearStorage(page);
   await createGame(page, 2, 'small');
   await page.waitForFunction(() => window.EpohiCombatWorldStability && window.__epohiDebug().state);
@@ -133,6 +233,7 @@ test('synthetic joint-war End Turn emits retained phase timing', async ({ page }
     const modulo = (Number(String(ally.civilizationId).replace(/\D/g, '')) || 0) % 4;
     gs.turn = (modulo || 4) - 1;
     window.__epohiFixtureStartPostTurnSnapshots(gs.turn);
+    window.__epohiFixtureAsyncAttribution.start();
     return { ally: ally.civilizationId, target: target.civilizationId, beforeTurn: gs.turn };
   });
 
@@ -144,7 +245,7 @@ test('synthetic joint-war End Turn emits retained phase timing', async ({ page }
       setup.beforeTurn
     );
   } finally {
-    console.log(`EPOHI_FIXTURE_END_TURN totalMs=${Date.now() - started} phases=${JSON.stringify(phases)} owners=${JSON.stringify(owners)}`);
+    console.log(`EPOHI_FIXTURE_END_TURN totalMs=${Date.now() - started} phases=${JSON.stringify(phases)} owners=${JSON.stringify(owners)} async=${JSON.stringify(asyncOwners)}`);
   }
 
   const proposal = await page.evaluate(({ ally, target }) => window.__epohiDebug().state.diplomaticProposals.find(
