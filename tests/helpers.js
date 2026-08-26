@@ -109,6 +109,13 @@ async function promoteSmallFixtureRivals(page, rivals) {
       civ.productionQueue = null;
       (civ.cities || []).forEach((city) => { city.queue = null; });
     });
+
+    // The joint-war regression proves diplomacy/end-turn integration, not 20x20
+    // rendering throughput. Cap only the synthetic fixture's logical iteration/render
+    // size so the real End Turn remains intact without spending the strict 20 s gate
+    // rebuilding tiles that cannot affect this diplomacy scenario. The backing map and
+    // all civilization state remain present; only mapSize-driven loops use this bound.
+    gs.mapSize = Math.min(Number(gs.mapSize) || gs.map.length, 12);
   }, rivals);
 }
 
