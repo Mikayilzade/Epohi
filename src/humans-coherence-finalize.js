@@ -487,7 +487,10 @@
     document.addEventListener("click", handleClick);
     const turn = document.getElementById("turnValue");
     if (turn) new MutationObserver(onTurnChange).observe(turn, {childList:true,characterData:true,subtree:true});
-    ["captureChoiceModal", "stabilityDecisionModal", "coherenceProposalModal", "strategyDiplomacyModal"].forEach(function (id) {
+    // Coherence proposals have their own priority observer in EventOverlayPolicy. The
+    // finalizer does not decorate proposal content, so observing proposal class changes
+    // here duplicated semantic ownership and could keep observer delivery active at idle.
+    ["captureChoiceModal", "stabilityDecisionModal", "strategyDiplomacyModal"].forEach(function (id) {
       const node = document.getElementById(id);
       if (node) new MutationObserver(schedule).observe(node, {attributes:true,childList:true,subtree:true,attributeFilter:["class"]});
     });
@@ -497,7 +500,7 @@
   }
 
   window.EpohiCoherenceFinalize = {
-    version: 2,
+    version: 3,
     ensureState: ensureState,
     processAiExperience: processAiExperience,
     syncForeignBuildingKnowledge: syncForeignBuildingKnowledge,

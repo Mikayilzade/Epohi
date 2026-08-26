@@ -1,4 +1,6 @@
 const { test, expect } = require("@playwright/test");
+const fs = require("fs");
+const path = require("path");
 
 test("legacy decorator roots stay quarantined while explicit invalidation owns UI refresh", async ({ page }) => {
   const errors = [];
@@ -41,4 +43,16 @@ test("legacy decorator roots stay quarantined while explicit invalidation owns U
   expect(after.observerSuppressedHeavy).toBeGreaterThanOrEqual(before.observerSuppressedHeavy);
   expect(after.observerCallbacks - before.observerCallbacks).toBeLessThanOrEqual(3);
   expect(errors).toEqual([]);
+});
+
+test("coherence finalizer does not duplicate proposal-modal observer ownership", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../src/humans-coherence-finalize.js"), "utf8");
+  const installStart = source.indexOf("function install() {");
+  const exportStart = source.indexOf("window.EpohiCoherenceFinalize =", installStart);
+  expect(installStart).toBeGreaterThanOrEqual(0);
+  expect(exportStart).toBeGreaterThan(installStart);
+  const installBlock = source.slice(installStart, exportStart);
+
+  expect(installBlock).not.toContain('"coherenceProposalModal"');
+  expect(installBlock).toContain('["captureChoiceModal", "stabilityDecisionModal", "strategyDiplomacyModal"]');
 });
