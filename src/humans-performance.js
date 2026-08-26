@@ -13,9 +13,11 @@
     const nativeTakeRecords = NativeObserver.prototype.takeRecords;
     const nativeRaf = window.requestAnimationFrame.bind(window);
     const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeClearTimeout = window.clearTimeout.bind(window);
     const nativeQueueMicrotask = typeof window.queueMicrotask === "function"
       ? window.queueMicrotask.bind(window)
       : function (callback) { Promise.resolve().then(callback); };
+    const observerRedeliveryDelayMs = 64;
     let activeProtectedObserver = null;
 
     const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
@@ -147,6 +149,8 @@
         native: null,
         deliveryScheduled: false,
         deliveryGeneration: 0,
+        deliveryTimer: 0,
+        lastDeliveryAt: 0,
         pending: [],
         registrations: [],
         disconnectedByClient: false,
@@ -154,23 +158,37 @@
         scheduleDelivery: null
       };
 
+      function deliver(generation) {
+        if (generation !== observerState.deliveryGeneration) return;
+        observerState.deliveryScheduled = false;
+        observerState.deliveryTimer = 0;
+        if (observerState.disconnectedByClient || !observerState.pending.length) {
+          observerState.pending = [];
+          return;
+        }
+        const batch = observerState.pending;
+        observerState.pending = [];
+        observerState.lastDeliveryAt = performance.now();
+        stats.callbacks += 1;
+        stats.records += batch.length;
+        stats.maxBatch = Math.max(stats.maxBatch, batch.length);
+        runProtectedTask(observerState, callback, observerState.native, [batch, observerState.native]);
+      }
+
       function scheduleDelivery() {
         if (observerState.deliveryScheduled || observerState.disconnectedByClient || !observerState.pending.length) return;
         observerState.deliveryScheduled = true;
         const generation = ++observerState.deliveryGeneration;
+        const elapsed = observerState.lastDeliveryAt ? performance.now() - observerState.lastDeliveryAt : observerRedeliveryDelayMs;
+        const delay = Math.max(0, observerRedeliveryDelayMs - elapsed);
+        if (delay > 0) {
+          observerState.deliveryTimer = nativeSetTimeout(function () {
+            deliver(generation);
+          }, Math.ceil(delay));
+          return;
+        }
         nativeQueueMicrotask(function () {
-          if (generation !== observerState.deliveryGeneration) return;
-          observerState.deliveryScheduled = false;
-          if (observerState.disconnectedByClient || !observerState.pending.length) {
-            observerState.pending = [];
-            return;
-          }
-          const batch = observerState.pending;
-          observerState.pending = [];
-          stats.callbacks += 1;
-          stats.records += batch.length;
-          stats.maxBatch = Math.max(stats.maxBatch, batch.length);
-          runProtectedTask(observerState, callback, observerState.native, [batch, observerState.native]);
+          deliver(generation);
         });
       }
       observerState.scheduleDelivery = scheduleDelivery;
@@ -198,6 +216,10 @@
         observerState.pending = [];
         observerState.deliveryScheduled = false;
         observerState.deliveryGeneration += 1;
+        if (observerState.deliveryTimer) {
+          nativeClearTimeout(observerState.deliveryTimer);
+          observerState.deliveryTimer = 0;
+        }
         return nativeDisconnect.call(native);
       };
 
@@ -220,7 +242,7 @@
     window.MutationObserver = CoalescedMutationObserver;
     window.__epohiCoherenceObserverSafetyInstalled = true;
     window.EpohiObserverSafety = {
-      version: 9,
+      version: 10,
       mode: "observer-local",
       stats: stats,
       runProtected: function (callback) {
@@ -242,7 +264,7 @@
   installMobileGpuGuard();
 
   window.EpohiPerformance = {
-    version: 10,
+    version: 11,
     mode: "observer-local-safety",
     snapshot: function () {
       const observerStats = window.__epohiObserverSafetyStats || {};
