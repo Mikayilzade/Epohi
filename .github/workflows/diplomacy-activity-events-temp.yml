@@ -101,9 +101,12 @@ jobs:
             tests/combat-world-stability.spec.js
           )
 
-          # Keep per-test limits strict while avoiding runner CPU contention from
-          # making unrelated mobile timing assertions compete with one another.
-          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=2 --max-failures=20 2>&1 | tee focused-chromium.txt
+          # Keep strict per-test limits while avoiding runner CPU contention from
+          # making timing-sensitive mobile assertions compete with another browser worker.
+          # Run #164 proved WebKit joint-war green at one worker while Chromium still
+          # consumed nearly the entire 20 s budget at two workers, so both focused gates
+          # now use one worker for equivalent contention conditions.
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
           chromium_code=${PIPESTATUS[0]}
 
           npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
@@ -121,7 +124,7 @@ jobs:
         run: |
           set +e
 
-          npx playwright test --project=chromium-mobile --reporter=line --workers=2 --max-failures=30 2>&1 | tee full-chromium.txt
+          npx playwright test --project=chromium-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-chromium.txt
           chromium_code=${PIPESTATUS[0]}
 
           npx playwright test --project=webkit-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-webkit.txt

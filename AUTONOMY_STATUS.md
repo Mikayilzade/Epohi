@@ -11,27 +11,26 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR #84 head inspected before this package: `6207d13418f2110dae64a3460a76d07482286083` (`Normalize cross-browser gate worker contention`).
+Exact PR #84 head inspected before this package: `4b5fe8272219d0a7b9122f83be46aba86c67daa0` (`Bound synthetic joint-war turn fixture`).
 
-Its automatically-triggered browser CI is run `32944068129` (run #163), completed **failure**. Artifact `9597752469` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected; static integrity was green and full Chromium/WebKit regression was skipped because the focused gate failed.
+Its automatically-triggered browser CI is run `32959775485` (run #164), completed **failure**. Artifact `9603600991` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected; static integrity was green and full Chromium/WebKit regression was skipped because the focused gate failed.
 
-## Exact CI / validation for `6207d134...`
+## Exact CI / validation for `4b5fe827...`
 - Chromium focused: **53/55 passed, 2 failed**.
+  - `tests/combat-world-stability.spec.js:177`: the real End Turn did increment the turn and return to idle, but only near the 20-second budget; the immediately-following proposal read then hit the unchanged 20-second test timeout.
   - `tests/runtime-invalidation-cadence.spec.js:3`: the 400 ms request storm produced **13 flushes vs required <=12**.
-  - `tests/combat-world-stability.spec.js:177`: the allied joint-war real-turn regression reached the turn increment + idle condition only near the 20-second budget and then timed out on the following proposal read.
-- WebKit focused: **53/55 passed, 2 failed**.
-  - `tests/combat-world-stability.spec.js:177`: the same joint-war real-turn regression exhausted the unchanged 20-second budget while waiting for the real turn increment + return to `!isTurnProcessing()`.
+- WebKit focused: **54/55 passed, 1 failed**.
   - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`.
-- Lower worker contention removed the unrelated hill-movement, three-rival culture, and open-city actionability timeouts from run #162, so the concurrency normalization was useful. It did **not** close joint-war on either engine.
+- Crucially, the unchanged joint-war real-turn regression is now **green on WebKit** with the synthetic micro-turn fixture and one WebKit worker. That proves the fixture can satisfy the 20-second budget without bypassing real End Turn or calling the diplomacy processor directly.
 - No timeout, callback threshold, cadence threshold, actionability limit, gameplay assertion, or physical-device requirement was weakened.
 
 ## What this package changes
-The remaining joint-war timeout is still the canonical first blocker. Its behavior under test is diplomacy/end-turn integration, not 20×20 map rendering. The synthetic `small + 2 rivals` fixture therefore keeps the real End Turn button, real turn increment, real return from turn processing, real `EpohiLivingCivilizations.processTurn()` integration and all joint-war assertions, but caps only `mapSize`-driven iteration/render work at 12 cells for this already-synthetic multi-rival fixture. The backing map and civilization state remain present; no diplomacy processor is called directly and the 20-second timeout remains unchanged.
+Run #164 provides a clean contention comparison: WebKit at one worker passed joint-war, while Chromium at two workers still spent almost the entire 20-second budget in the same real-turn scenario and also missed the cadence limit by one flush. The earlier 4→2 Chromium reduction had already removed several unrelated timing failures. The next bounded step is therefore CI-equivalence, not another speculative gameplay/test-fixture rewrite.
 
-This is a test-fixture isolation package, not a product gameplay change. The existing joint-war regression remains the acceptance test and is intentionally unchanged.
+This package changes only the temporary PR gate concurrency: focused and full Chromium are reduced from 2 workers to 1, matching WebKit. The strict 20-second per-test timeout, `<=12` cadence assertion, `<=6/<=8` observer thresholds, 1-second actionability limits, real End Turn path and all gameplay assertions remain unchanged.
 
 ## Current blocker
-The joint-war real-turn regression must become green on both Chromium and WebKit under the unchanged 20-second budget before advancing to the remaining cadence or WebKit wheel failures.
+The focused runtime gate must prove the unchanged joint-war and cadence assertions under one-worker Chromium contention before any further source/test changes. The WebKit `mouse.wheel` incompatibility remains the next known browser-specific factual failure if the focused runtime assertions become green.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -43,7 +42,7 @@ The joint-war real-turn regression must become green on both Chromium and WebKit
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the exact automatically-triggered Chromium/WebKit CI for the synthetic micro-turn fixture checkpoint containing this status. Do not make another source/test/runtime push while that run is pending. If joint-war is green on both engines, advance to the first remaining factual focused-gate failure from that same run; if it still fails, use only that exact low-contention artifact to choose the next bounded fix without increasing the 20-second timeout or calling the diplomacy processor directly.
+Inspect the exact automatically-triggered Chromium/WebKit CI for the one-worker-equivalence checkpoint containing this status. Do not make another source/test/runtime push while that run is pending. If joint-war and cadence are green on Chromium, advance to the first remaining factual focused-gate failure from that same run (expected candidate: WebKit mouse-wheel incompatibility); otherwise use only that exact one-worker artifact to choose the next bounded fix without increasing the 20-second timeout or weakening cadence/observer/actionability thresholds.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
