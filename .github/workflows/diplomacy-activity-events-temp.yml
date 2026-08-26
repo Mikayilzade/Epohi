@@ -101,10 +101,12 @@ jobs:
             tests/combat-world-stability.spec.js
           )
 
-          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=4 --max-failures=20 2>&1 | tee focused-chromium.txt
+          # Keep per-test limits strict while avoiding runner CPU contention from
+          # making unrelated mobile timing assertions compete with one another.
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=2 --max-failures=20 2>&1 | tee focused-chromium.txt
           chromium_code=${PIPESTATUS[0]}
 
-          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=2 --max-failures=20 2>&1 | tee focused-webkit.txt
+          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
           webkit_code=${PIPESTATUS[0]}
 
           echo "Chromium focused exit: $chromium_code"
@@ -119,10 +121,10 @@ jobs:
         run: |
           set +e
 
-          npx playwright test --project=chromium-mobile --reporter=line --workers=4 --max-failures=30 2>&1 | tee full-chromium.txt
+          npx playwright test --project=chromium-mobile --reporter=line --workers=2 --max-failures=30 2>&1 | tee full-chromium.txt
           chromium_code=${PIPESTATUS[0]}
 
-          npx playwright test --project=webkit-mobile --reporter=line --workers=2 --max-failures=30 2>&1 | tee full-webkit.txt
+          npx playwright test --project=webkit-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-webkit.txt
           webkit_code=${PIPESTATUS[0]}
 
           echo "Chromium full exit: $chromium_code"
