@@ -56,3 +56,33 @@ test("coherence finalizer does not duplicate proposal-modal observer ownership",
   expect(installBlock).not.toContain('"coherenceProposalModal"');
   expect(installBlock).toContain('["captureChoiceModal", "stabilityDecisionModal", "strategyDiplomacyModal"]');
 });
+
+test("hidden coherence proposal rerenders do not rewrite the modal class", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.EpohiDiplomacyCoherence && typeof window.__epohiDebug === "function");
+
+  const result = await page.evaluate(async () => {
+    const value = window.__epohiDebug();
+    const gs = value && value.state;
+    if (!gs) return { ready: false, mutations: -1, shown: true };
+    gs.diplomaticProposals = [];
+    window.EpohiDiplomacyCoherence.renderProposal(gs);
+    await new Promise(resolve => window.setTimeout(resolve, 100));
+
+    const modal = document.getElementById("coherenceProposalModal");
+    let mutations = 0;
+    const observer = new MutationObserver(records => {
+      mutations += records.filter(record => record.type === "attributes" && record.attributeName === "class").length;
+    });
+    observer.observe(modal, { attributes: true, attributeFilter: ["class"] });
+
+    for (let i = 0; i < 30; i += 1) window.EpohiDiplomacyCoherence.renderProposal(gs);
+    await new Promise(resolve => window.setTimeout(resolve, 250));
+    observer.disconnect();
+    return { ready: true, mutations, shown: modal.classList.contains("show") };
+  });
+
+  expect(result.ready).toBe(true);
+  expect(result.shown).toBe(false);
+  expect(result.mutations).toBe(0);
+});

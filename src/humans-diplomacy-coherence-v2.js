@@ -188,7 +188,7 @@
       if (!button) return;
       const gs = state();
       const item = gs && (gs.diplomaticProposals || []).find(function (proposal) { return String(proposal.id) === String(button.dataset.proposalId); });
-      if (!gs || !item || item.status !== "pending") { modal.classList.remove("show"); return; }
+      if (!gs || !item || item.status !== "pending") { if (modal.classList.contains("show")) modal.classList.remove("show"); return; }
       const accepted = button.dataset.coherenceProposalAnswer === "yes";
       let resolved = false;
       if (item.type === "trade" && window.EpohiPlayerFeedback && typeof window.EpohiPlayerFeedback.resolveTradeProposal === "function") {
@@ -209,7 +209,7 @@
   function renderProposal(gs) {
     const modal = ensureProposalModal();
     const pending = (gs.diplomaticProposals || []).find(function (item) { return item.status === "pending"; });
-    if (!pending) { modal.classList.remove("show"); lastProposalId = ""; return; }
+    if (!pending) { if (modal.classList.contains("show")) modal.classList.remove("show"); lastProposalId = ""; return; }
     const civ = civById(gs, pending.civId), target = civById(gs, pending.targetId), effects = proposalEffects(pending);
     document.getElementById("coherenceProposalTitle").textContent = proposalTitle(pending, civ, target);
     document.getElementById("coherenceProposalContent").innerHTML =
