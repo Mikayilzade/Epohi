@@ -90,6 +90,25 @@ async function promoteSmallFixtureRivals(page, rivals) {
     if (window.EpohiLivingCivilizations && window.EpohiLivingCivilizations.migrate) {
       window.EpohiLivingCivilizations.migrate(gs);
     }
+
+    // A synthetic small-map multi-rival world exists only to exercise logic that
+    // needs two living civilizations on a map size that intentionally supports
+    // one real rival. Keep unrelated AI production/barbarian work quiescent so
+    // real End Turn integration tests spend their budget on the behavior under test.
+    gs.barbarianActivity = 'off';
+    gs.barbarians = [];
+    (gs.map || []).forEach((row) => row.forEach((tile) => {
+      if (tile.camp) tile.camp = null;
+    }));
+    gs.rivals.forEach((civ) => {
+      civ.resources = civ.resources || {};
+      civ.resources.food = 0;
+      civ.resources.production = 0;
+      civ.resources.gold = 0;
+      civ.resources.science = 0;
+      civ.productionQueue = null;
+      (civ.cities || []).forEach((city) => { city.queue = null; });
+    });
   }, rivals);
 }
 
