@@ -11,33 +11,32 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this package: `341873fa4b0ee3f74366bed1a7e7d9bb44ec40fe` (`Bound observer feedback redelivery cadence`).
+Exact implementation/test head inspected before this package: `dfc3e5ef1bf068c69fd9fe09e7ad8e9342714de9` (`Attribute observer safety timer deliveries`).
 
-Its automatically-triggered PR workflow is run `33030989443` (run #175), completed **failure**. Artifact `9630310197` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected. Static integrity was green; full Chromium/WebKit regression was skipped because the focused gate failed.
+Its automatically-triggered PR workflow is run `33033995448`, completed **failure**. Artifact `9631408038` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected. Static integrity was green; full Chromium/WebKit regression was skipped because the focused gate failed.
 
-## Exact CI / validation for `341873fa...`
-- Chromium focused: **57/59 passed, 2 failed**.
+## Exact CI / validation for `dfc3e5ef...`
+- Chromium focused: **56/59 passed, 3 failed**.
   - `tests/mobile-performance-stability.spec.js:219`: 30 city open/close cycles left **12 observer callbacks vs required <=8**.
+  - `tests/observer-startup-attribution.spec.js:293`: controlled 30-cycle diagnostic also measured **12 callbacks vs <=8**.
   - `tests/runtime-invalidation-cadence.spec.js:4`: invalidation request storm produced **13 flushes vs required <=12**.
-- WebKit focused: **56/59 passed, 3 failed**.
+- WebKit focused: **57/59 passed, 2 failed**.
   - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`.
-  - `tests/mobile-performance-stability.spec.js:219`: 30 city open/close cycles left **12 observer callbacks vs required <=8**.
-  - `tests/observer-startup-attribution.spec.js:253`: diagnostic callback gate also measured **12 vs <=8**.
-- The 128 ms observer redelivery floor did not solve the callback gate.
-- Crucially, both retained callback diagnostics reported `callbackDelta:12` while `attributionDelta` was empty. The startup diagnostic also reported an empty `pendingBefore` list. This means the current attribution layer can no longer name internal safety deliveries after observer-safety moved from `requestAnimationFrame` to `setTimeout` / `queueMicrotask`; it tracks only rAF delivery scheduling and therefore has a measurement blind spot.
+  - `tests/observer-startup-attribution.spec.js:293`: controlled 30-cycle diagnostic measured **12 callbacks vs <=8**.
+- The improved attribution is now conclusive: immediately before the quiet window there are **12 pending observer-safety deliveries**, and all 12 execute once during that window. The owners are independent legacy observers, but every measured cohort contains a `#turnValue` registration; most observe only `#turnValue`, while PopulationWorkforce also observes its small explicit roots. No new native mutation callback/record is required during the quiet window for those queued deliveries to fire.
 - No timeout, cadence threshold, callback threshold, actionability limit, gameplay assertion, or physical-device requirement was weakened.
 
 ## Diagnostic finding
-The first factual blocker is still the 30-cycle callback gate, but the retained owner attribution is now incomplete rather than evidence for another semantic owner. `tests/observer-startup-attribution.spec.js` wraps `requestAnimationFrame` only, while `src/humans-performance.js` currently schedules first delivery through `queueMicrotask` and delayed redelivery through `setTimeout`. Therefore safety callbacks can execute during the quiet window with no corresponding scheduled/executed attribution delta.
+The common source is the turn label itself rather than one modal owner. `app.js::renderTop()` unconditionally assigns `turnValue.textContent = String(state.turn)` on every render, even when the turn has not changed. Replacing an identical text node still emits a `childList` mutation, so any decorator/observer callback that causes another render can wake the whole `#turnValue` observer cohort again and leave one synchronized safety delivery per owner queued into the later quiet window.
 
 ## Bounded package in this checkpoint
-- Extend startup observer attribution to wrap `setTimeout` and `queueMicrotask` in addition to `requestAnimationFrame` before application scripts load.
-- Attribute scheduled/executed safety deliveries to the native observer owner through the existing `currentObserverId` / drained-owner mechanism.
-- Record delivery-kind deltas (`requestAnimationFrame`, `setTimeout`, `queueMicrotask`) in snapshots, `pendingBefore`, retained artifact JSON and console output.
-- This is diagnostic/test-only: no gameplay source, callback threshold, invalidation threshold or timeout is changed.
+- Add `src/humans-turn-label-stability.js`, loaded immediately after `humans-performance.js`, that makes only `#turnValue.textContent` idempotent: identical text writes are no-ops, while a real turn-number change still delegates to the native DOM setter.
+- Add `tests/turn-label-idempotence.spec.js`: a real turn-label change must render, then 30 same-turn renders must preserve the same text node and text value.
+- Add that regression to the focused Chromium/WebKit gate.
+- This package does not suppress any semantic observer, change gameplay, or weaken any threshold; it removes the redundant DOM mutation that all 12 measured owners share.
 
 ## Current blocker
-Validate the improved attribution on exact Chromium/WebKit CI and use its retained `city-30-cycle-idle` payload to identify the first actual observer-safety owner of the 12 callbacks. Do not make a speculative source fix before that evidence exists. Chromium cadence **13 vs <=12** and WebKit `mouse.wheel` remain secondary until the callback owner is named.
+Validate this exact idempotent-turn-label package on Chromium and WebKit. The callback gate is still the first blocker until the new exact CI proves the 12 queued deliveries are gone or reduced within <=8. Chromium cadence **13 vs <=12** and WebKit `mouse.wheel` remain secondary until then.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -49,7 +48,7 @@ Validate the improved attribution on exact Chromium/WebKit CI and use its retain
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the automatically-triggered exact Chromium/WebKit CI for the commit containing this status. Do not push another source/test change while that run is in progress. If the 30-cycle callback gate still fails, inspect the retained `city-30-cycle-idle` delivery-kind attribution and fix only the first measured owner with one bounded source+regression package. If the callback gate is green on both engines, record the exact counts/SHA and target the first remaining factual failure without weakening thresholds.
+Inspect the automatically-triggered exact Chromium/WebKit CI for the commit containing this status. Do not push another source/test change while that run is in progress. If the 30-cycle callback gates are green on both engines, record exact counts/SHA and target the first remaining factual failure without weakening thresholds. If callback bounds still fail, inspect the retained attribution and fix only the first remaining measured feedback source with one bounded source+regression package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
