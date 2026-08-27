@@ -23,11 +23,13 @@ test.describe('Автономные приказы людей', () => {
     const moduleInfo = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       window.EpohiHumansAutonomy.ensureAutonomyState(state);
+      const unit = state.units[0];
       return {
         version: window.EpohiHumansAutonomy.version,
         hasAssign: typeof window.EpohiHumansAutonomy.assignOrder === 'function',
         hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function',
-        reports: state.autonomyReports
+        reports: state.autonomyReports,
+        unit: { x: unit.x, y: unit.y }
       };
     });
 
@@ -35,7 +37,12 @@ test.describe('Автономные приказы людей', () => {
     expect(moduleInfo.hasAssign).toBe(true);
     expect(moduleInfo.hasProcess).toBe(true);
     expect(moduleInfo.reports).toEqual([]);
-    await expect(page.locator('#autonomyReportBtn')).toHaveCount(1);
+
+    // The runtime no longer promises observer-driven decoration immediately after
+    // direct state readiness. Exercise the real user boundary that renders unit
+    // context; the autonomy report control must then become actionable promptly.
+    await page.locator(`.tile[data-x="${moduleInfo.unit.x}"][data-y="${moduleInfo.unit.y}"]`).click();
+    await expect(page.locator('#autonomyReportBtn')).toHaveCount(1, { timeout: 1000 });
   });
 
   test('разведчик самостоятельно идёт к границе известного мира и открывает клетки', async ({ page }) => {
