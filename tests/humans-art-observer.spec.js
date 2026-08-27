@@ -116,7 +116,7 @@ test.describe('Визуальная демка и режим наблюдени�
     const problems = watchConsole(page);
     await createConfiguredGame(page, { size: 'small', rivals: 0, barbarians: 'off' });
 
-    await page.evaluate(() => {
+    const refresh = await page.evaluate(() => {
       const debug = window.__epohiDebug();
       const state = debug.state;
       const city = state.cities[0];
@@ -125,7 +125,11 @@ test.describe('Визуальная демка и режим наблюдени�
       state.map[point.y][point.x].terrain = 'hill';
       state.map[point.y][point.x].poi = { type: 'cave', used: false };
       debug.render();
+      const hasExplicitDecorator = Boolean(window.EpohiHumansVisuals && typeof window.EpohiHumansVisuals.decorate === 'function');
+      if (hasExplicitDecorator) window.EpohiHumansVisuals.decorate();
+      return { hasExplicitDecorator };
     });
+    expect(refresh.hasExplicitDecorator).toBe(true);
     await page.waitForFunction(() => Boolean(document.querySelector('.piece.poi[data-art-kind="cave"]')));
 
     const art = await page.evaluate(() => {
