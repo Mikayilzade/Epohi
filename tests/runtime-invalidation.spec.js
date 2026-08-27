@@ -134,7 +134,8 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
 
   const contextBefore = await page.evaluate(() => ({
     count: document.getElementById("contextActions").dataset.actionCount || "",
-    requests: window.EpohiRuntimeInvalidation.stats().requests
+    requests: window.EpohiRuntimeInvalidation.stats().requests,
+    contextTailSyncs: window.EpohiRuntimeInvalidation.stats().contextTailSyncs
   }));
   await page.evaluate(() => {
     const actions = document.getElementById("contextActions");
@@ -149,10 +150,12 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   const contextAfter = await page.evaluate(() => ({
     count: document.getElementById("contextActions").dataset.actionCount,
     requests: window.EpohiRuntimeInvalidation.stats().requests,
+    contextTailSyncs: window.EpohiRuntimeInvalidation.stats().contextTailSyncs,
     scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
   }));
   expect(Number(contextAfter.count)).toBeGreaterThan(Number(contextBefore.count || 0));
   expect(contextAfter.requests).toBeGreaterThan(contextBefore.requests);
+  expect(contextAfter.contextTailSyncs).toBe(contextBefore.contextTailSyncs);
   expect(contextAfter.scheduled).toBe(false);
 
   const observerBeforeOutcomeChurn = await page.evaluate(() => window.EpohiPerformance.snapshot().observerCallbacks);

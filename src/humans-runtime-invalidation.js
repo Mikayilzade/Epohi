@@ -28,11 +28,35 @@
     throttledSchedules: 0
   };
 
+  function strategyIdentitySignature(gs) {
+    if (!gs) return "";
+    const rivals = (gs.rivals || []).map(function (civ) {
+      return [
+        civ.civilizationId || "",
+        civ.cultureKey || "",
+        civ.name || "",
+        civ.color || "",
+        civ.darkColor || "",
+        civ.symbol || "",
+        civ.relation || "",
+        civ.diplomacyCampaignApplied ? 1 : 0,
+        (civ.cities || []).map(function (city) {
+          return [city.id || "", city.name || "", city.cultureNamed ? 1 : 0];
+        })
+      ];
+    });
+    return JSON.stringify([gs.playerIdentity ? 1 : 0, rivals]);
+  }
+
   function syncStrategyUx() {
     const strategy = window.EpohiStrategyUX;
-    if (!strategy || typeof strategy.refresh !== "function") return;
+    if (!strategy || typeof strategy.refresh !== "function") return false;
+    const debug = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
+    const gs = debug && debug.state ? debug.state : null;
+    const before = strategyIdentitySignature(gs);
     strategy.refresh();
     stats.strategySyncs += 1;
+    return before !== strategyIdentitySignature(gs);
   }
 
   function syncBasePlayerFeedback() {
@@ -75,7 +99,7 @@
     timer = 0;
     lastFlushAt = window.performance && typeof window.performance.now === "function" ? window.performance.now() : Date.now();
     stats.flushes += 1;
-    syncStrategyUx();
+    const strategyQueuedIdentityFollowup = syncStrategyUx();
     syncBasePlayerFeedback();
     if (window.EpohiHumansVisuals && typeof window.EpohiHumansVisuals.decorate === "function") {
       window.EpohiHumansVisuals.decorate();
@@ -86,11 +110,11 @@
     }
     syncPlayerFeedback();
 
-    // StrategyUX can enqueue a two-frame identity-followup chain from inside refresh():
-    // RAF(schedule) -> RAF(refresh). If that final legacy refresh lands after cleanup it
-    // restores the old "ready only" activity-counter semantics. RuntimeInvalidation owns
-    // the final ordering and reapplies accepted context semantics after the whole chain.
-    scheduleContextTailSync();
+    // The post-frame cleanup is only needed when StrategyUX actually mutated identity
+    // state and therefore queued its measured RAF(schedule) -> RAF(refresh) follow-up.
+    // Ordinary explicit invalidations must not stay "scheduled" for two blind frames:
+    // their synchronous cleanup above is already the final writer.
+    if (strategyQueuedIdentityFollowup) scheduleContextTailSync();
   }
 
   function runExplicitFlush() {
@@ -159,7 +183,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 15,
+    version: 16,
     request: request,
     flush: flush,
     stats: function () {
