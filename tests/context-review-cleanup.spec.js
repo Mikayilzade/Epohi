@@ -209,20 +209,23 @@ test.describe('Применение ревью контекстного инте
       const actions = document.getElementById('contextActions');
       const probe = actions.querySelector('[data-context-action="layout-probe"]');
       if (probe) probe.remove();
-      for (let index = 0; index < 4; index += 1) {
+      for (let index = 0; index < 12; index += 1) {
         const fake = document.createElement('button');
         fake.className = 'context-btn';
         fake.dataset.contextAction = 'layout-test-' + index;
         fake.textContent = 'Тест ' + index;
+        fake.style.flex = '0 0 96px';
         actions.appendChild(fake);
       }
       window.EpohiContextReviewCleanup.sync();
+      const overflowPx = actions.scrollWidth - actions.clientWidth;
       actions.scrollLeft = actions.scrollWidth;
       const shifted = actions.scrollLeft;
       document.getElementById('contextTitle').textContent += ' ';
       window.EpohiContextReviewCleanup.sync();
-      return { shifted, reset: actions.scrollLeft };
+      return { overflowPx, shifted, reset: actions.scrollLeft };
     });
+    expect(reset.overflowPx).toBeGreaterThan(0);
     expect(reset.shifted).toBeGreaterThan(0);
     expect(reset.reset).toBe(0);
     await expectNoConsoleProblems(consoleProblems);

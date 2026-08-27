@@ -11,34 +11,33 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this bounded package: `b5e22ba0fee7fa5dd34d6de01e977df0535ce9dd` (`Make turn label renders idempotent`). The branch head before packaging was docs-only `a8e2c1b08182c27d4a36fe9d51a83e3e7ad909ed`.
+Exact implementation/test head inspected before this bounded package: `6b0c4567632ffe79e976b2f5cca3737e3b3dea3d` (`Make context review tests explicit and deterministic`). PR #84 was confirmed still open/draft with this exact head before writing.
 
-Its automatically-triggered PR workflow run `33037010950` completed **failure**. Static integrity was green; focused Chromium/WebKit gate failed; full mobile regression was correctly skipped. Artifact `9632475575` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
+Its automatically-triggered PR workflow run `33050819901` completed **failure**. Static integrity was green; focused Chromium/WebKit gate failed; full mobile regression was correctly skipped. Artifact `9637650560` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
 
-## Exact CI / validation for `b5e22ba0...`
-- Chromium focused: **57/60 passed, 3 failed**.
-  - `tests/context-review-cleanup.spec.js:60`: after the fixture directly marked all units acted and city queues occupied, the readiness decorator still showed `2/2` instead of expected `0/2`.
-  - `tests/context-review-cleanup.spec.js:95`: direct fixture mutation + `debug.render()` left the context stack decorator unsynchronized, so `[data-context-stack-picker]` was absent.
-  - `tests/context-review-cleanup.spec.js:138`: the mobile context/layout scenario timed out waiting for context actions after the same unsynchronized decorator path.
-- WebKit focused: **57/60 passed, 3 failed**.
-  - `tests/context-review-cleanup.spec.js:60`: readiness decorator showed stale core-rendered value (`2`) instead of `0/2` after direct fixture mutation.
-  - `tests/context-review-cleanup.spec.js:138`: top science readiness remained disabled because the test proceeded before explicit context-review synchronization.
-  - `tests/humans-strategy-ux.spec.js:19`: Playwright reports `mouse.wheel` unsupported in mobile WebKit.
-- No callback-bound or invalidation-cadence failure appears in this exact run; the previous turn-label/observer package therefore removed those from the current focused failure set.
-- No timeout, callback threshold, cadence threshold, actionability limit, gameplay assertion, or physical-device requirement was weakened.
+## Exact CI / validation for `6b0c4567...`
+- Chromium focused: **58/60 passed, 2 failed**.
+  - `tests/context-review-cleanup.spec.js:148`: mobile layout test expected `contextActions.scrollLeft` to become positive, but the fixture appended only four fake buttons and they fit the current 393px layout, so `shifted` was `0`. This is a deterministic test-precondition failure, not evidence that reset behavior failed.
+  - `tests/runtime-invalidation-cadence.spec.js:4`: invalidation request storm produced **13 flushes vs required ≤12**.
+- WebKit focused: **58/60 passed, 2 failed**.
+  - the same `tests/context-review-cleanup.spec.js:148` overflow-precondition failure;
+  - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`.
+- The prior stack-picker synchronization and top-science readiness failures are gone in this exact run.
+- Callback churn remains inside limits in this exact run; no callback threshold was weakened.
+- No timeout, cadence threshold, actionability limit, gameplay assertion, or physical-device requirement was weakened.
 
 ## First factual failure and bounded package
-The first common factual failure is a **test-harness synchronization defect**, not evidence of a new gameplay regression. `humans-context-review-cleanup.js` no longer owns a broad DOM observer by design; it exposes an explicit `EpohiContextReviewCleanup.sync()` boundary. These tests mutate state directly through `__epohiDebug()` and call the core `debug.render()`, which intentionally does not re-run post-core decorators. The old tests were still relying on the removed observer to eventually synchronize those decorators.
+The first common failure is a **test-fixture overflow precondition defect**. The regression intends to prove that context-action horizontal scroll is reset to zero after a context fingerprint change, but four synthetic action buttons no longer guarantee overflow at the active mobile layout.
 
-This checkpoint updates only `tests/context-review-cleanup.spec.js`:
-- add an explicit `syncContextReview(page)` step after a fresh debug-created game is ready;
-- after direct test-only state mutation + `debug.render()`, invoke the explicit context-review synchronization boundary before asserting decorator-owned UI;
-- strengthen the readiness regression by asserting `data-ready-count="0"` as well as visible `0/N` text.
+This bounded package changes only the test fixture plus this status:
+- create twelve synthetic action buttons rather than four;
+- give each synthetic button a test-only `96px` fixed flex basis so the 393px container is guaranteed to overflow;
+- explicitly record and assert `scrollWidth - clientWidth > 0` before asserting that the fixture can shift and that `EpohiContextReviewCleanup.sync()` resets `scrollLeft` to `0`.
 
-No production source, observer, gameplay behavior, timeout, or threshold is changed. This keeps the architecture observer-free while making direct-debug fixtures obey the same explicit ownership boundary they are testing.
+No production source, gameplay behavior, timeout, callback/cadence threshold, or WebKit input workaround is changed.
 
 ## Current blocker
-Validate the exact test-harness synchronization package on Chromium and WebKit. The remaining known independent WebKit `mouse.wheel` incompatibility is secondary until this package proves the three context-review failures are removed; do not change it speculatively before the exact new CI result.
+Validate this deterministic overflow regression on Chromium and WebKit. The known Chromium cadence `13 > 12` and WebKit `mouse.wheel` incompatibility remain secondary and must not be changed in this same package.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -50,7 +49,7 @@ Validate the exact test-harness synchronization package on Chromium and WebKit. 
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the automatically-triggered exact Chromium/WebKit CI for the source/test commit that follows this status in the same branch update. Do not push another source/test change while that run is in progress. If all context-review-cleanup failures are green, record the exact SHA/counts and fix only the first remaining factual failure (expected candidate: mobile-WebKit wheel input incompatibility) with one bounded package, without weakening gameplay assertions or thresholds. If any context-review failure remains, inspect its exact artifact/log and fix that first.
+Inspect the automatically-triggered exact Chromium/WebKit CI for this two-file bounded package. Do not push another source/test change while that run is in progress. If the context-review-cleanup mobile layout regression is green on both engines, record the exact SHA/counts and fix only the first remaining factual failure from that exact run (Chromium cadence if still first; otherwise the exact earliest failure), without weakening thresholds. If the context-review regression still fails, inspect its exact artifact/log and fix that first.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
