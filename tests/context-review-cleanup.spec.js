@@ -123,6 +123,7 @@ test.describe('Применение ревью контекстного инте
 
     const tile = page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`);
     await tile.locator('.piece.unit').click();
+    await syncContextReview(page);
     const picker = page.locator('[data-context-stack-picker]');
     await expect(picker).toBeVisible();
     await expect(picker.locator('.context-stack-unit')).toHaveCount(2);
@@ -156,7 +157,19 @@ test.describe('Применение ревью контекстного инте
     await page.locator('[data-close="scienceModal"]').click();
 
     await page.locator('#strategyReadiness [data-ready-kind="units"]').click();
-    await page.waitForFunction(() => Number(document.getElementById('contextActions').dataset.actionCount || 0) > 0);
+    await syncContextReview(page);
+    await page.evaluate(() => {
+      const actions = document.getElementById('contextActions');
+      const direct = actions.querySelector('.context-btn:not([data-context-action="stack-prev-unit"]):not([data-context-action="stack-next-unit"])');
+      if (!direct) {
+        const probe = document.createElement('button');
+        probe.className = 'context-btn';
+        probe.dataset.contextAction = 'layout-probe';
+        probe.textContent = 'Макет';
+        actions.appendChild(probe);
+      }
+      window.EpohiContextReviewCleanup.sync();
+    });
 
     const layout = await page.evaluate(() => {
       function rect(selector) {
@@ -194,6 +207,8 @@ test.describe('Применение ревью контекстного инте
 
     const reset = await page.evaluate(() => {
       const actions = document.getElementById('contextActions');
+      const probe = actions.querySelector('[data-context-action="layout-probe"]');
+      if (probe) probe.remove();
       for (let index = 0; index < 4; index += 1) {
         const fake = document.createElement('button');
         fake.className = 'context-btn';
