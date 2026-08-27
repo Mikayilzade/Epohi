@@ -23,13 +23,11 @@ test.describe('Автономные приказы людей', () => {
     const moduleInfo = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       window.EpohiHumansAutonomy.ensureAutonomyState(state);
-      const unit = state.units[0];
       return {
         version: window.EpohiHumansAutonomy.version,
         hasAssign: typeof window.EpohiHumansAutonomy.assignOrder === 'function',
         hasProcess: typeof window.EpohiHumansAutonomy.processOrders === 'function',
-        reports: state.autonomyReports,
-        unit: { x: unit.x, y: unit.y }
+        reports: state.autonomyReports
       };
     });
 
@@ -38,10 +36,10 @@ test.describe('Автономные приказы людей', () => {
     expect(moduleInfo.hasProcess).toBe(true);
     expect(moduleInfo.reports).toEqual([]);
 
-    // The runtime no longer promises observer-driven decoration immediately after
-    // direct state readiness. Exercise the real user boundary that renders unit
-    // context; the autonomy report control must then become actionable promptly.
-    await page.locator(`.tile[data-x="${moduleInfo.unit.x}"][data-y="${moduleInfo.unit.y}"]`).click();
+    // Fresh-game rendering emits the explicit humans-ui-settled lifecycle signal.
+    // The report control must become actionable from that signal alone; requiring an
+    // extra context mutation would reintroduce the observer-coupling this hardening
+    // phase is removing.
     await expect(page.locator('#autonomyReportBtn')).toHaveCount(1, { timeout: 1000 });
   });
 
