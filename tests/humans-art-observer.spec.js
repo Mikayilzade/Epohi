@@ -11,11 +11,10 @@ async function createConfiguredGame(page, options = {}) {
   await page.goto('/');
   await expect(page.locator('#newGameScreenBtn')).toBeVisible();
   await page.locator('#newGameScreenBtn').click();
-  await expect(page.locator('#openMapMode')).toBeVisible();
+  await expect(page.locator('#partySize')).toBeVisible();
   if (options.size) await page.locator('#partySize').selectOption(options.size);
   if (options.rivals != null) await page.locator('#rivalCount').selectOption(String(options.rivals));
   if (options.barbarians) await page.locator('#barbarianActivity').selectOption(options.barbarians);
-  if (options.openMap) await page.locator('#openMapMode').check();
   await page.locator('#partyName').fill(options.name || 'Визуальный тест');
   await page.locator('#createParty').click();
   await expect(page.locator('#gameApp')).toBeVisible();
@@ -75,45 +74,47 @@ test.describe('Визуальная демка и режим наблюдени�
     await expectNoConsoleProblems(problems);
   });
 
-  test('открытая карта показывает весь мир и соперников с первого хода', async ({ page }) => {
+  test('показать всю карту меняет обзор камеры, но не отключает туман войны', async ({ page }) => {
     const problems = watchConsole(page);
     await createConfiguredGame(page, {
       size: 'normal',
       rivals: 1,
       barbarians: 'normal',
-      openMap: true,
       name: 'Наблюдение'
     });
-    await page.waitForFunction(() => {
-      const state = window.__epohiDebug().state;
-      return state.openMapMode && state.map.flat().every(tile => tile.revealed) &&
-        state.rivals.every(civ => civ.met) && document.querySelectorAll('.piece.ai-city').length > 0;
-    });
 
-    const snapshot = await page.evaluate(() => {
+    const before = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       return {
-        openMapMode: state.openMapMode,
         hiddenTiles: state.map.flat().filter(tile => !tile.revealed).length,
-        rivals: state.rivals.length,
-        unmetRivals: state.rivals.filter(civ => !civ.met).length,
-        bodyClass: document.body.classList.contains('open-map-mode'),
-        visibleAiCities: document.querySelectorAll('.piece.ai-city').length
+        hasLegacyOpenMapState: Object.prototype.hasOwnProperty.call(state, 'openMapMode'),
+        hasLegacyOpenMapControl: Boolean(document.querySelector('#openMapMode'))
       };
     });
 
-    expect(snapshot.openMapMode).toBe(true);
-    expect(snapshot.hiddenTiles).toBe(0);
-    expect(snapshot.rivals).toBe(1);
-    expect(snapshot.unmetRivals).toBe(0);
-    expect(snapshot.bodyClass).toBe(true);
-    expect(snapshot.visibleAiCities).toBeGreaterThan(0);
+    expect(before.hiddenTiles).toBeGreaterThan(0);
+    expect(before.hasLegacyOpenMapState).toBe(false);
+    expect(before.hasLegacyOpenMapControl).toBe(false);
+
+    await page.locator('#showMapBtn').click();
+    await page.waitForFunction(() => !document.querySelector('#map').classList.contains('camera-smooth'));
+
+    const after = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      return {
+        hiddenTiles: state.map.flat().filter(tile => !tile.revealed).length,
+        visibleTiles: document.querySelectorAll('#map .tile:not(.fog)').length
+      };
+    });
+
+    expect(after.hiddenTiles).toBe(before.hiddenTiles);
+    expect(after.visibleTiles).toBeGreaterThan(0);
     await expectNoConsoleProblems(problems);
   });
 
   test('карта использует рисованные фигурки и различимые находки вместо эмодзи', async ({ page }) => {
     const problems = watchConsole(page);
-    await createConfiguredGame(page, { size: 'small', rivals: 0, barbarians: 'off', openMap: true });
+    await createConfiguredGame(page, { size: 'small', rivals: 0, barbarians: 'off' });
 
     await page.evaluate(() => {
       const debug = window.__epohiDebug();
