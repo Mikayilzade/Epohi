@@ -2,9 +2,11 @@
   "use strict";
 
   // Keep explicit UI invalidation responsive, but do not let a request storm turn
-  // into near-frame-rate decorator work. 32 ms caps the scheduler at roughly 30 Hz
-  // while ordinary click/transition requests still settle well inside the 1 s gates.
-  const MIN_FLUSH_INTERVAL_MS = 32;
+  // into near-frame-rate decorator work. 36 ms caps the scheduler below 28 Hz and,
+  // unlike 32 ms, cannot mathematically produce 13 flushes inside a 400 ms storm
+  // when the first flush lands immediately. Ordinary actions still settle well
+  // inside the 1 s actionability gates.
+  const MIN_FLUSH_INTERVAL_MS = 36;
   let frame = 0;
   let timer = 0;
   let lastFlushAt = 0;
@@ -109,9 +111,6 @@
     const cityModalToggle = target && target.closest("#cityBtn, [data-close=\"cityModal\"]");
     if (!cityModalToggle) request("user-action");
 
-    // The new-game screen is rendered only after an async campaign-name lookup.
-    // The immediate click RAF can therefore run before #rivalCount exists. Keep a
-    // single bounded post-transition wake-up instead of restoring screenRoot polling.
     const newGame = target ? target.closest("#newGameScreenBtn") : null;
     if (newGame) {
       stats.transitionSignals += 1;
@@ -120,10 +119,6 @@
       }, 100);
     }
 
-    // StrategyUX captures the requested rival count on #createParty, while app.js
-    // creates the base state in the same click. Always issue one semantic wake-up
-    // after that event so requested rivals are materialized against the new state,
-    // independent of any older coalesced frame from form interaction.
     const createParty = target ? target.closest("#createParty") : null;
     if (createParty) {
       stats.transitionSignals += 1;
@@ -139,7 +134,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 12,
+    version: 13,
     request: request,
     flush: flush,
     stats: function () {
