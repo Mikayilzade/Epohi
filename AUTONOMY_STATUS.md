@@ -11,24 +11,28 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact head inspected before this package: `d506b315ee8745e8e9577d8880c5f7acde157860` (`Modernize visual observer tests for current new-game UI`). PR #84 is open/draft and mergeable.
+Exact implementation/test head inspected before this package: `71a482d911d325759f5d48be29ff3aa58e306dde` (`Stabilize activity switcher after strategy follow-up RAF`). PR #84 is open/draft and mergeable.
 
-Automatically-triggered PR workflow run `33077881535` completed **failure** on that exact SHA. Static integrity was green. Focused Chromium mobile was **60/60 passed**. Focused WebKit mobile was **59/60 passed**; full regression was skipped because the focused gate failed.
+Its automatically-triggered PR workflow run `33083997573` completed **failure** on that exact SHA. Retained artifact `9651524665` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
 
-## Exact factual blocker from run #187
-The only focused failure was `tests/context-review-cleanup.spec.js:65` on WebKit: the activity-switcher military button first satisfied the test's enabled assertion, then became disabled before Playwright could click it. The retained element still represented two living military units (`aria-label ... 0/2`, `data-has-object=true`) while the legacy StrategyUX readiness refresh had restored its old `ready-count === 0 => disabled` semantics.
+## Exact CI / factual blocker from run #188
+- Static integrity: **green**.
+- Focused Chromium mobile: **59/60 passed**.
+- Focused WebKit mobile: **58/60 passed**.
+- First/common failure on both engines: `tests/context-review-cleanup.spec.js:71` — after deliberately deleting `playerIdentity`, forcing `EpohiRuntimeInvalidation.flush()` and waiting two frames, the military activity counter was `0` instead of accepted context-review semantics `0/2`.
+- Separate WebKit-only failure: `tests/runtime-invalidation.spec.js:4` — after an explicit context invalidation and 120 ms settle window, `EpohiRuntimeInvalidation.stats().scheduled` remained `true`. Do not mix this secondary failure into the current package unless it is naturally closed by the ordering repair.
 
-Source inspection isolated the ordering race. `EpohiRuntimeInvalidation.flush()` synchronously runs StrategyUX first and ContextReviewCleanup afterward, which is correct. However StrategyUX can schedule an additional identity-followup `requestAnimationFrame` from inside `refresh()` after mutating identity and re-rendering. That already-queued module-local RAF can run after the synchronous ContextReviewCleanup pass and re-disable the activity switcher.
+Exact source inspection explains why the previous one-frame tail was insufficient. When StrategyUX repairs missing identity, `refresh()` synchronously re-renders and calls `requestAnimationFrame(schedule)`. That first RAF does not refresh readiness: `schedule()` itself queues a second `requestAnimationFrame(refresh)`. RuntimeInvalidation's one-frame context tail therefore ran between those two legacy frames, and the second StrategyUX refresh subsequently overwrote `0/N` with the old ready-only count.
 
 ## Bounded package completed this run
-- RuntimeInvalidation now owns one coalesced **post-frame context tail sync**. It lets any already-queued StrategyUX identity-followup RAF run, then reapplies ContextReviewCleanup once, preserving the accepted activity-switcher semantics without adding a MutationObserver or relaxing any threshold.
-- RuntimeInvalidation version is bumped to 14; stats expose `contextTailSyncs`, and `scheduled` includes the tail frame so quiet-window tests can still verify true quiescence.
-- The existing activity-switcher regression is strengthened to deliberately delete `playerIdentity`, force the StrategyUX identity-followup branch through an explicit runtime flush, wait two frames, and then require the 0/N object switchers to remain enabled and clickable.
-- No gameplay rule, timeout, callback threshold, cadence threshold, browser skip, or merge target was changed.
+- RuntimeInvalidation remains the single ordering owner, but its coalesced context tail now waits through the measured two-frame StrategyUX identity chain (`RAF(schedule) -> RAF(refresh)`) before reapplying `EpohiContextReviewCleanup.sync()`.
+- RuntimeInvalidation version is bumped to 15. `scheduled` continues to include the context tail; no quiet-window accounting is hidden.
+- The already-strengthened activity-switcher regression is intentionally left strict: it forces the real identity-followup branch, waits two frames, and still requires exact `0/N`, enabled/clickable object switching. The exact CI failure proves this regression catches the ordering defect, so no assertion, timeout, or threshold was weakened.
+- No gameplay rule, callback/cadence threshold, browser skip, timeout, merge target, observer, or polling loop was added or relaxed.
 
 ## Validation state
-- Pre-package exact CI evidence: run `33077881535`, Chromium focused 60/60, WebKit focused 59/60 with the single readiness race above.
-- New source/test checkpoint is being created from exact parent `d506b315...`; its automatically-triggered Chromium/WebKit CI is the next authority. Do not claim this repair green until that exact run completes.
+- Pre-package authority: run `33083997573` on exact head `71a482d9...`, with the failures above.
+- New source/status checkpoint is being created from exact parent `71a482d9...`; its automatically-triggered Chromium/WebKit CI is the next authority. Do not claim the two-frame ordering repair green until that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -40,7 +44,7 @@ Source inspection isolated the ordering race. `EpohiRuntimeInvalidation.flush()`
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for the automatically-triggered Chromium/WebKit CI of this exact source/test checkpoint. If focused gates are green, inspect the first full-suite failure and fix only that factual blocker. If the strengthened activity-switcher regression still fails, inspect the exact retained WebKit log/artifact and repair the measured ordering owner without weakening the test.
+Wait for the automatically-triggered Chromium/WebKit CI of this exact two-frame ordering checkpoint. If the activity-switcher regression is green, inspect the first remaining factual failure (including whether the prior WebKit `scheduled === true` failure remains) and fix only that blocker. If the activity-switcher regression still fails, inspect the retained exact artifact and identify the next measured writer/order owner without weakening the `0/N` assertion or adding timing slack.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

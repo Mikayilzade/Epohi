@@ -56,11 +56,17 @@
   function scheduleContextTailSync() {
     if (contextTailFrame) return;
     contextTailFrame = window.requestAnimationFrame(function () {
-      contextTailFrame = 0;
-      const cleanup = window.EpohiContextReviewCleanup;
-      if (!cleanup || typeof cleanup.sync !== "function") return;
-      cleanup.sync();
-      stats.contextTailSyncs += 1;
+      // StrategyUX's identity repair does not refresh readiness in the same frame:
+      // its first RAF calls schedule(), which queues the actual refresh for the next
+      // frame. Keep RuntimeInvalidation as the ordering owner by waiting through that
+      // measured two-frame legacy tail, then apply ContextReviewCleanup last.
+      contextTailFrame = window.requestAnimationFrame(function () {
+        contextTailFrame = 0;
+        const cleanup = window.EpohiContextReviewCleanup;
+        if (!cleanup || typeof cleanup.sync !== "function") return;
+        cleanup.sync();
+        stats.contextTailSyncs += 1;
+      });
     });
   }
 
@@ -80,11 +86,10 @@
     }
     syncPlayerFeedback();
 
-    // StrategyUX can enqueue one identity-followup RAF from inside refresh(). That
-    // callback is intentionally legacy-local, but if it lands after the synchronous
-    // cleanup above it can restore the old "ready only" disabled state on activity
-    // buttons. RuntimeInvalidation owns the final ordering: coalesce one tail frame,
-    // let any already-queued module RAF run first, then re-apply context semantics.
+    // StrategyUX can enqueue a two-frame identity-followup chain from inside refresh():
+    // RAF(schedule) -> RAF(refresh). If that final legacy refresh lands after cleanup it
+    // restores the old "ready only" activity-counter semantics. RuntimeInvalidation owns
+    // the final ordering and reapplies accepted context semantics after the whole chain.
     scheduleContextTailSync();
   }
 
@@ -154,7 +159,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 14,
+    version: 15,
     request: request,
     flush: flush,
     stats: function () {
