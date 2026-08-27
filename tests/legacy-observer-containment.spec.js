@@ -1,6 +1,7 @@
 const { test, expect } = require("@playwright/test");
 const fs = require("fs");
 const path = require("path");
+const { createGame } = require("./helpers");
 
 test("legacy decorator roots stay quarantined while explicit invalidation owns UI refresh", async ({ page }) => {
   const errors = [];
@@ -58,8 +59,8 @@ test("coherence finalizer does not duplicate proposal-modal observer ownership",
 });
 
 test("hidden coherence proposal rerenders do not rewrite the modal class", async ({ page }) => {
-  await page.goto("/");
-  await page.waitForFunction(() => window.EpohiDiplomacyCoherence && typeof window.__epohiDebug === "function");
+  await createGame(page, 1, "small");
+  await page.waitForFunction(() => window.EpohiDiplomacyCoherence && typeof window.__epohiDebug === "function" && window.__epohiDebug().state);
 
   const result = await page.evaluate(async () => {
     const value = window.__epohiDebug();
