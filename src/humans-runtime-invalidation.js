@@ -9,6 +9,7 @@
   const MIN_FLUSH_INTERVAL_MS = 36;
   let frame = 0;
   let timer = 0;
+  let contextTailFrame = 0;
   let lastFlushAt = 0;
   let lastReason = "startup";
   const stats = {
@@ -22,6 +23,7 @@
     feedbackSyncs: 0,
     strategySyncs: 0,
     playerFeedbackSyncs: 0,
+    contextTailSyncs: 0,
     protectedFlushes: 0,
     throttledSchedules: 0
   };
@@ -51,6 +53,17 @@
     stats.feedbackSyncs += 1;
   }
 
+  function scheduleContextTailSync() {
+    if (contextTailFrame) return;
+    contextTailFrame = window.requestAnimationFrame(function () {
+      contextTailFrame = 0;
+      const cleanup = window.EpohiContextReviewCleanup;
+      if (!cleanup || typeof cleanup.sync !== "function") return;
+      cleanup.sync();
+      stats.contextTailSyncs += 1;
+    });
+  }
+
   function flush() {
     frame = 0;
     timer = 0;
@@ -66,6 +79,13 @@
       window.EpohiContextReviewCleanup.sync();
     }
     syncPlayerFeedback();
+
+    // StrategyUX can enqueue one identity-followup RAF from inside refresh(). That
+    // callback is intentionally legacy-local, but if it lands after the synchronous
+    // cleanup above it can restore the old "ready only" disabled state on activity
+    // buttons. RuntimeInvalidation owns the final ordering: coalesce one tail frame,
+    // let any already-queued module RAF run first, then re-apply context semantics.
+    scheduleContextTailSync();
   }
 
   function runExplicitFlush() {
@@ -134,12 +154,12 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 13,
+    version: 14,
     request: request,
     flush: flush,
     stats: function () {
       return Object.assign({}, stats, {
-        scheduled: !!(frame || timer),
+        scheduled: !!(frame || timer || contextTailFrame),
         lastReason: lastReason
       });
     }

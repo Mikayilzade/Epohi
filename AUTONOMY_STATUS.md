@@ -11,46 +11,36 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected this run: `cca58d1c49a62d26acf5469dd6ac74c796af6aa3` (`Bound runtime invalidation cadence below 28Hz`). PR #84 is open/draft and still points to this exact implementation head.
+Exact head inspected before this package: `d506b315ee8745e8e9577d8880c5f7acde157860` (`Modernize visual observer tests for current new-game UI`). PR #84 is open/draft and mergeable.
 
-Its automatically-triggered PR workflow run `33063827902` completed **failure**. Artifact `9644146695` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
+Automatically-triggered PR workflow run `33077881535` completed **failure** on that exact SHA. Static integrity was green. Focused Chromium mobile was **60/60 passed**. Focused WebKit mobile was **59/60 passed**; full regression was skipped because the focused gate failed.
 
-## Exact CI / validation for `cca58d1c...`
-- Static integrity: **green**.
-- Focused Chromium mobile: **60/60 passed**.
-- Focused WebKit mobile: **60/60 passed**.
-- The new 36 ms invalidation cadence package is green on both engines; the previous Chromium `13 vs ≤12` cadence failure is closed.
-- The previously observed WebKit readiness-button transition timeout did **not** reproduce in the focused gate.
-- Callback churn, observer-delivery bounds, wheel zoom, mobile overflow, context cleanup, joint-war flow and the rest of the focused runtime hardening set are all green together on both engines at this exact SHA.
+## Exact factual blocker from run #187
+The only focused failure was `tests/context-review-cleanup.spec.js:65` on WebKit: the activity-switcher military button first satisfied the test's enabled assertion, then became disabled before Playwright could click it. The retained element still represented two living military units (`aria-label ... 0/2`, `data-has-object=true`) while the legacy StrategyUX readiness refresh had restored its old `ready-count === 0 => disabled` semantics.
 
-The workflow remains red because the **full mobile regression** now runs and exposes older/non-focused failures:
-- Full Chromium mobile: **151 passed, 25 failed**.
-- Full WebKit mobile: **150 passed, 26 failed**.
-- First WebKit-only failure in suite order: `tests/camera-2.spec.js:169` — after removing all units and centering on the capital, the camera test measured the capital far from the viewport center (`x ≈ 1548.80` vs center `≈195.20`). The selected-unit half of the same test passed before this assertion.
-- The first common failure family after that is `tests/humans-art-observer.spec.js`, whose old `createConfiguredGame` helper still waits for removed `#openMapMode`; this is a separate stale full-suite harness issue and must not be mixed into the camera package.
+Source inspection isolated the ordering race. `EpohiRuntimeInvalidation.flush()` synchronously runs StrategyUX first and ContextReviewCleanup afterward, which is correct. However StrategyUX can schedule an additional identity-followup `requestAnimationFrame` from inside `refresh()` after mutating identity and re-rendering. That already-queued module-local RAF can run after the synchronous ContextReviewCleanup pass and re-disable the activity switcher.
 
 ## Bounded package completed this run
-This run performed the exact post-cadence CI diagnosis rather than making a speculative source change:
-- confirmed the cadence fix and all focused hardening gates are green on both engines;
-- downloaded and inspected the retained full-suite logs rather than inferring from workflow status;
-- isolated the first remaining factual full-regression blocker to the WebKit camera focus scenario and separated it from the later stale new-game helper failures.
+- RuntimeInvalidation now owns one coalesced **post-frame context tail sync**. It lets any already-queued StrategyUX identity-followup RAF run, then reapplies ContextReviewCleanup once, preserving the accepted activity-switcher semantics without adding a MutationObserver or relaxing any threshold.
+- RuntimeInvalidation version is bumped to 14; stats expose `contextTailSyncs`, and `scheduled` includes the tail frame so quiet-window tests can still verify true quiescence.
+- The existing activity-switcher regression is strengthened to deliberately delete `playerIdentity`, force the StrategyUX identity-followup branch through an explicit runtime flush, wait two frames, and then require the 0/N object switchers to remain enabled and clickable.
+- No gameplay rule, timeout, callback threshold, cadence threshold, browser skip, or merge target was changed.
 
-No gameplay code, thresholds, timeouts or browser-specific skips were changed in this diagnostic package.
-
-## Current blocker
-Determine whether the WebKit camera-center failure is a real camera-state/transition defect or a stale fixed-delay assertion. The test currently waits fixed `50 ms` after `render()` and `220 ms` after `centerCameraOnFocus(true)` before measuring geometry. A repair must preserve the exact centering assertion; do not weaken it into a broad tolerance and do not skip WebKit.
+## Validation state
+- Pre-package exact CI evidence: run `33077881535`, Chromium focused 60/60, WebKit focused 59/60 with the single readiness race above.
+- New source/test checkpoint is being created from exact parent `d506b315...`; its automatically-triggered Chromium/WebKit CI is the next authority. Do not claim this repair green until that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
-- [x] Phase 0B — PR CI for Chromium + WebKit mobile projects and full regression.
-- [x] Phase 1 focused gate — runtime/UI architecture hardening focused suite is green 60/60 on Chromium and 60/60 on WebKit at `cca58d1c...`; full-regression cleanup remains before Phase 2 can be declared green.
+- [x] Phase 0B — Chromium + WebKit mobile PR CI.
+- [x] Phase 1 focused runtime architecture hardening structurally implemented; exact revalidation pending for the current package.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage.
-- [ ] Phase 3 — autonomous soak player; deterministic multi-seed long-run campaigns.
-- [ ] Phase 4 — automated balance/UX/layout pass from soak telemetry and screenshots.
-- [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
+- [ ] Phase 3 — deterministic autonomous soak player.
+- [ ] Phase 4 — automated UX/layout/balance pass.
+- [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Isolate `tests/camera-2.spec.js:169` on WebKit by comparing the internal camera state/target immediately after `centerCameraOnFocus(true)` with the rendered tile geometry after the camera transition settles. If internal state is wrong, fix the camera source and add/strengthen a regression; if state is correct and only the fixed-delay geometry sample races WebKit transition/layout, replace that fixed delay with an explicit deterministic settled-state wait while preserving the exact center assertion. Do not touch the later `humans-art-observer` helper failures in the same package.
+Wait for the automatically-triggered Chromium/WebKit CI of this exact source/test checkpoint. If focused gates are green, inspect the first full-suite failure and fix only that factual blocker. If the strengthened activity-switcher regression still fails, inspect the exact retained WebKit log/artifact and repair the measured ordering owner without weakening the test.
 
 ## Completion signal
-Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
+Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

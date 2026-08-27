@@ -10,6 +10,12 @@ async function syncContextReview(page) {
   await page.evaluate(() => window.EpohiContextReviewCleanup.sync());
 }
 
+async function waitTwoFrames(page) {
+  await page.evaluate(() => new Promise(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  }));
+}
+
 async function openFreshGame(page) {
   const consoleProblems = watchConsole(page);
   await clearStorage(page);
@@ -70,13 +76,20 @@ test.describe('Применение ревью контекстного инте
       const state = debug.state;
       state.units.forEach(unit => { unit.moves = 0; unit.acted = true; delete unit.travelOrder; delete unit.order; });
       state.cities.forEach(city => { city.queue = { type: 'unit', id: 'scout', progress: 0 }; });
+
+      // Force StrategyUX through its identity-followup branch. Before the runtime
+      // ordering fix that branch queued a later RAF which could re-disable the
+      // activity switcher after ContextReviewCleanup had already made it actionable.
+      delete state.playerIdentity;
       debug.render();
-      window.EpohiContextReviewCleanup.sync();
+      window.EpohiRuntimeInvalidation.flush();
       return {
         military: state.units.filter(unit => unit.hp > 0 && unit.type !== 'worker').map(unit => String(unit.id)),
         cities: state.cities.length
       };
     });
+
+    await waitTwoFrames(page);
 
     const militaryButton = page.locator('#strategyReadiness [data-ready-kind="units"]');
     await expect(militaryButton.locator('b')).toHaveText(`0/${setup.military.length}`);
