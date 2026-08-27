@@ -149,6 +149,15 @@
     scheduleFrame();
   }
 
+  function emitSettledWhenStateReady(source) {
+    const debug = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
+    if (!debug || !debug.state) return false;
+    document.dispatchEvent(new CustomEvent("epohi:humans-ui-settled", {
+      detail: { source: source || "runtime-invalidation" }
+    }));
+    return true;
+  }
+
   document.addEventListener("epohi:humans-ui-settled", function () {
     stats.settledSignals += 1;
     request("humans-ui-settled");
@@ -173,6 +182,11 @@
       stats.transitionSignals += 1;
       window.setTimeout(function () {
         request("new-game-created-post-transition");
+        // The capture-phase click hook runs before app.js creates the campaign. By the
+        // zero-delay transition callback the new state is synchronously installed, so
+        // emit the canonical settled boundary only when that state is actually readable.
+        // This closes the lost-lifecycle race without polling or broad DOM observation.
+        emitSettledWhenStateReady("new-game-created-post-transition");
       }, 0);
     }
   }, true);
@@ -183,7 +197,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 16,
+    version: 17,
     request: request,
     flush: flush,
     stats: function () {
