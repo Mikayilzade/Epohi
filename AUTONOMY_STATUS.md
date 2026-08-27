@@ -11,43 +11,46 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this bounded package: `1162ca0d0a1029e60c6d1f16055980888403dd34` (`Make wheel zoom regression cross-browser deterministic`). PR #84 was confirmed open/draft with this exact head before writing.
+Exact implementation/test head inspected this run: `cca58d1c49a62d26acf5469dd6ac74c796af6aa3` (`Bound runtime invalidation cadence below 28Hz`). PR #84 is open/draft and still points to this exact implementation head.
 
-Its automatically-triggered PR workflow run `33059394360` completed **failure**. Static integrity was green; focused Chromium/WebKit gate failed; full mobile regression was correctly skipped. Artifact `9641197429` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
+Its automatically-triggered PR workflow run `33063827902` completed **failure**. Artifact `9644146695` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
 
-## Exact CI / validation for `1162ca0d...`
-- Chromium focused: **59/60 passed, 1 failed**.
-  - `tests/runtime-invalidation-cadence.spec.js:4`: a 400 ms request storm produced **13 flushes vs required ≤12**.
-- WebKit focused: **59/60 passed, 1 failed**.
-  - `tests/context-review-cleanup.spec.js:65`: the readiness units control was enabled at the explicit readiness assertion, but became disabled before Playwright could complete the subsequent click, timing out at 20 s. This remains secondary for this package.
-- The deterministic mobile overflow regression is green on both engines.
-- The DOM `WheelEvent` zoom regression is green on both engines; the prior Playwright WebKit `mouse.wheel` incompatibility is gone.
-- Callback churn remains inside limits; no callback threshold, timeout, actionability limit, or gameplay assertion was weakened.
+## Exact CI / validation for `cca58d1c...`
+- Static integrity: **green**.
+- Focused Chromium mobile: **60/60 passed**.
+- Focused WebKit mobile: **60/60 passed**.
+- The new 36 ms invalidation cadence package is green on both engines; the previous Chromium `13 vs ≤12` cadence failure is closed.
+- The previously observed WebKit readiness-button transition timeout did **not** reproduce in the focused gate.
+- Callback churn, observer-delivery bounds, wheel zoom, mobile overflow, context cleanup, joint-war flow and the rest of the focused runtime hardening set are all green together on both engines at this exact SHA.
 
-## First factual failure and bounded package
-The first remaining factual failure is the Chromium runtime-invalidation cadence. The scheduler used `MIN_FLUSH_INTERVAL_MS = 32`, but a 400 ms storm can legitimately contain an immediate flush plus twelve 32 ms intervals (0, 32, ..., 384 ms), i.e. **13 flushes**. The implementation therefore did not mathematically guarantee the existing `≤12` gate.
+The workflow remains red because the **full mobile regression** now runs and exposes older/non-focused failures:
+- Full Chromium mobile: **151 passed, 25 failed**.
+- Full WebKit mobile: **150 passed, 26 failed**.
+- First WebKit-only failure in suite order: `tests/camera-2.spec.js:169` — after removing all units and centering on the capital, the camera test measured the capital far from the viewport center (`x ≈ 1548.80` vs center `≈195.20`). The selected-unit half of the same test passed before this assertion.
+- The first common failure family after that is `tests/humans-art-observer.spec.js`, whose old `createConfiguredGame` helper still waits for removed `#openMapMode`; this is a separate stale full-suite harness issue and must not be mixed into the camera package.
 
-This bounded package:
-- raises the production minimum invalidation interval from **32 ms to 36 ms**, capping sustained scheduler work below ~28 Hz while remaining far inside the 1 s actionability gates;
-- bumps `EpohiRuntimeInvalidation.version` to 13;
-- adds `tests/runtime-invalidation-repeat-cadence.spec.js`, which runs two consecutive 400 ms request storms and requires each to stay `≤12` with no scheduled tail, so the fix is covered against stateful drift as well as a single burst.
+## Bounded package completed this run
+This run performed the exact post-cadence CI diagnosis rather than making a speculative source change:
+- confirmed the cadence fix and all focused hardening gates are green on both engines;
+- downloaded and inspected the retained full-suite logs rather than inferring from workflow status;
+- isolated the first remaining factual full-regression blocker to the WebKit camera focus scenario and separated it from the later stale new-game helper failures.
 
-No timeout, callback/cadence threshold, gameplay assertion, or browser-specific skip is changed.
+No gameplay code, thresholds, timeouts or browser-specific skips were changed in this diagnostic package.
 
 ## Current blocker
-Validate the 36 ms cadence bound on exact Chromium/WebKit CI. The WebKit readiness-button transition timeout from run `33059394360` remains the next known secondary failure and must not be changed in this same package.
+Determine whether the WebKit camera-center failure is a real camera-state/transition defect or a stale fixed-delay assertion. The test currently waits fixed `50 ms` after `render()` and `220 ms` after `centerCameraOnFocus(true)` before measuring geometry. A repair must preserve the exact centering assertion; do not weaken it into a broad tolerance and do not skip WebKit.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — PR CI for Chromium + WebKit mobile projects and full regression.
-- [ ] Phase 1 — runtime/UI architecture hardening; remove observer/decorator feedback cycles.
+- [x] Phase 1 focused gate — runtime/UI architecture hardening focused suite is green 60/60 on Chromium and 60/60 on WebKit at `cca58d1c...`; full-regression cleanup remains before Phase 2 can be declared green.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage.
 - [ ] Phase 3 — autonomous soak player; deterministic multi-seed long-run campaigns.
 - [ ] Phase 4 — automated balance/UX/layout pass from soak telemetry and screenshots.
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the automatically-triggered exact Chromium/WebKit CI for this cadence package. Do not push another source/test change while that run is in progress. If the cadence regression is green, record exact counts and fix only the first remaining factual failure from that exact run (expected next candidate: the WebKit readiness units control transition if it reproduces). If cadence still fails, inspect its exact artifact/log and repair that first without weakening the `≤12` threshold.
+Isolate `tests/camera-2.spec.js:169` on WebKit by comparing the internal camera state/target immediately after `centerCameraOnFocus(true)` with the rendered tile geometry after the camera transition settles. If internal state is wrong, fix the camera source and add/strengthen a regression; if state is correct and only the fixed-delay geometry sample races WebKit transition/layout, replace that fixed delay with an explicit deterministic settled-state wait while preserving the exact center assertion. Do not touch the later `humans-art-observer` helper failures in the same package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
