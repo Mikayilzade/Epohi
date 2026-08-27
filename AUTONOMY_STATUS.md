@@ -11,42 +11,41 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this package: `cc229d984f767b0554426d563518c62f449b9b35` (`Order context cleanup after full strategy identity tail`). PR #84 is open/draft and mergeable.
+Exact implementation/test head inspected before this package: `e081704b45c1c0b15a55dbdc519299033b593d5c` (`Refresh visuals explicitly in direct-state art regression`). PR #84 is open, draft, mergeable, and still targets `prototype/humans-v1`.
 
-Its automatically-triggered PR workflow run `33089589838` completed **failure** on that exact SHA. Retained artifact `9653947475` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
+Its automatically-triggered PR workflow run `33099456679` (#191) completed **failure** on that exact SHA. Retained artifact `9659289543` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
 
-## Exact CI / factual blockers from run #189
+## Exact CI / factual blockers from run #191
 - Static integrity: **green**.
-- Focused Chromium mobile: **59/60 passed**.
-- Focused WebKit mobile: **59/60 passed**.
-- The activity-switcher regression that motivated the previous package is now green on both engines: the two-frame identity ordering repair preserved exact `0/N` context-review semantics.
-- WebKit failure: `tests/runtime-invalidation.spec.js:4` — after an ordinary explicit context invalidation and the existing 120 ms settle window, `EpohiRuntimeInvalidation.stats().scheduled` was still `true`.
-- Chromium failure: `tests/combat-world-stability.spec.js:155` — the three same-type stacked-unit scenario timed out waiting for `[data-context-action="move"]` during its movement loop. This is a separate blocker and is intentionally not mixed into the current bounded package.
-
-Source inspection isolated the WebKit scheduler failure. `EpohiRuntimeInvalidation.flush()` was scheduling the two-frame context tail **for every flush**, even though that tail exists only to outrun StrategyUX's special identity-repair chain (`RAF(schedule) -> RAF(refresh)`). Ordinary explicit invalidations already run ContextReviewCleanup synchronously; on slower WebKit frame pacing the unnecessary blind two-frame tail could still be pending at the quiet-window assertion and falsely keep runtime invalidation non-quiescent.
+- Focused Chromium + WebKit mobile runtime gate: **green**.
+- Full cross-browser regression: **red**.
+- The previously repaired explicit Humans visuals regression is no longer the first blocker; focused runtime hardening remains green.
+- Full Chromium still contains a broad stale/direct-state cluster, including the first Chromium failure `tests/humans-autonomy.spec.js:20` where `#autonomyReportBtn` is absent after fresh-game creation, plus later pathing/context/diplomacy/UI failures. These remain separate blockers and are intentionally not mixed into this package.
+- Full WebKit's first factual failure is `tests/barbarian-camps.spec.js:55`: the legacy migration fixture expected exactly one pre-migration camp but captured **4** live camps before stripping legacy IDs. The migration itself still returned valid IDs; the fixture was depending on asynchronous live-map maintenance having exactly one camp at capture time.
 
 ## Bounded package completed this run
-- RuntimeInvalidation now fingerprints the identity/culture state around `EpohiStrategyUX.refresh()` and schedules the two-frame context tail only when StrategyUX actually mutated identity state and therefore queued its identity follow-up render chain.
-- Ordinary explicit invalidations no longer create a blind post-frame tail; their synchronous ContextReviewCleanup pass remains the final writer.
-- RuntimeInvalidation version is bumped to 16. `scheduled` still honestly includes real frame/timer/context-tail work; no accounting is hidden.
-- `tests/runtime-invalidation.spec.js` is strengthened: the ordinary context-explicit-sync regression now records `contextTailSyncs` and requires it to remain unchanged while still requiring exact action-count update and `scheduled === false` inside the existing 120 ms window. This catches both the old unnecessary tail and any future regression that merely hides its scheduled state.
-- No gameplay rule, timeout, callback/cadence threshold, browser skip, merge target, observer, or polling loop was added or relaxed.
+- Hardened only the legacy barbarian-camp migration regression fixture.
+- Before constructing the legacy save, the test now snapshots the current live camps, retains exactly one real camp, removes any additional asynchronously maintained camps, removes that camp's legacy-missing `campId`, and then exercises migration.
+- The no-camp migration branch is still tested from the same normalized legacy base and remains required to produce zero camps and stable director timing across repeated migration.
+- Added an explicit `sourceCount > 0` assertion so the regression cannot pass by manufacturing a camp-less fixture; the migrated one-camp save still must produce exactly one camp with an assigned ID.
+- No gameplay source, camp spawning rules, target counts, timeouts, browser skips, runtime thresholds, merge target, or CI cadence was changed.
 
 ## Validation state
-- Pre-package authority: run `33089589838` on exact head `cc229d98...`, with the two focused failures above.
-- New source/test/status checkpoint is being created from exact parent `cc229d98...`; its automatically-triggered Chromium/WebKit CI is the next authority. Do not claim the WebKit quiescence repair green until that exact run completes.
+- Pre-package authority: run `33099456679` on exact head `e081704b...`; static + focused cross-browser gates green, full regression red.
+- This package is test/status-only and is being committed as one coherent Git object from exact parent `e081704b...`.
+- The automatically-triggered Chromium/WebKit CI of the new checkpoint is the next authority. Do not claim the WebKit legacy-migration regression green until that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 focused runtime architecture hardening structurally implemented; exact revalidation pending for the current package.
+- [x] Phase 1 focused runtime architecture hardening is currently green in run #191.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for the automatically-triggered Chromium/WebKit CI of this exact selective-tail checkpoint. If the WebKit runtime-invalidation regression is green, inspect the first remaining factual failure and fix only that blocker; the known Chromium stacked-unit movement timeout is the expected next candidate if it reproduces. If WebKit still reports `scheduled === true`, inspect the exact retained artifact and identify which real `frame`, `timer`, or identity-tail owner remains pending without weakening the existing 120 ms assertion.
+Wait for the automatically-triggered Chromium/WebKit CI of this exact deterministic legacy-camp fixture checkpoint. If the WebKit migration regression is green, inspect the first remaining factual full-suite failure on that exact SHA and fix only that blocker; do not mix in unrelated stale/direct-state failures before the new artifact establishes their current order.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
