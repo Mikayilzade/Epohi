@@ -11,28 +11,33 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this package: `504274ee5a2de272607c682e0303356b9ac8b3c2` (`Remove duplicate proposal observer ownership`).
+Exact implementation/test head inspected before this package: `341873fa4b0ee3f74366bed1a7e7d9bb44ec40fe` (`Bound observer feedback redelivery cadence`).
 
-Its automatically-triggered PR workflow is run `33021191609` (run #172), completed **failure**. Artifact `9626696530` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected. Static integrity was green; full Chromium/WebKit regression was skipped because the focused gate failed.
+Its automatically-triggered PR workflow is run `33030989443` (run #175), completed **failure**. Artifact `9630310197` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected. Static integrity was green; full Chromium/WebKit regression was skipped because the focused gate failed.
 
-## Exact CI / validation for `504274ee...`
-- Chromium focused: **58/58 passed**. The 30-cycle callback gate, invalidation cadence gate, joint-war real-turn regression and observer redelivery regressions are green on this engine.
-- WebKit focused: **56/58 passed, 2 failed**.
-  - `tests/mobile-performance-stability.spec.js:219`: 30 city open/close cycles left **13 observer callbacks vs required <=8**. Retained attribution now names only one native semantic registration: `humans-event-overlay-policy.js` observing `#coherenceProposalModal` class changes. Duplicate `CoherenceFinalize` ownership is gone.
-  - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`; this remains secondary until the callback gate is green.
-- The retained proposal attribution had `callbackDelta:13` but only one native callback/record on the remaining proposal owner, which points to repeated hidden-modal class writes being magnified by observer-safety redelivery on WebKit rather than duplicate semantic ownership.
+## Exact CI / validation for `341873fa...`
+- Chromium focused: **57/59 passed, 2 failed**.
+  - `tests/mobile-performance-stability.spec.js:219`: 30 city open/close cycles left **12 observer callbacks vs required <=8**.
+  - `tests/runtime-invalidation-cadence.spec.js:4`: invalidation request storm produced **13 flushes vs required <=12**.
+- WebKit focused: **56/59 passed, 3 failed**.
+  - `tests/humans-strategy-ux.spec.js:19`: Playwright mobile WebKit does not support `mouse.wheel`.
+  - `tests/mobile-performance-stability.spec.js:219`: 30 city open/close cycles left **12 observer callbacks vs required <=8**.
+  - `tests/observer-startup-attribution.spec.js:253`: diagnostic callback gate also measured **12 vs <=8**.
+- The 128 ms observer redelivery floor did not solve the callback gate.
+- Crucially, both retained callback diagnostics reported `callbackDelta:12` while `attributionDelta` was empty. The startup diagnostic also reported an empty `pendingBefore` list. This means the current attribution layer can no longer name internal safety deliveries after observer-safety moved from `requestAnimationFrame` to `setTimeout` / `queueMicrotask`; it tracks only rAF delivery scheduling and therefore has a measurement blind spot.
 - No timeout, cadence threshold, callback threshold, actionability limit, gameplay assertion, or physical-device requirement was weakened.
 
 ## Diagnostic finding
-The single-owner package worked on Chromium and removed duplicate proposal ownership on WebKit. The remaining measured owner is the proposal modal itself. `EpohiDiplomacyCoherence.renderProposal()` currently calls `modal.classList.remove("show")` every time there is no pending proposal, even when the modal is already hidden. During repeated city/render churn this creates unnecessary proposal-class mutation records on WebKit, waking `EventOverlayPolicy` and the protected observer delivery chain although the semantic visibility state did not change.
+The first factual blocker is still the 30-cycle callback gate, but the retained owner attribution is now incomplete rather than evidence for another semantic owner. `tests/observer-startup-attribution.spec.js` wraps `requestAnimationFrame` only, while `src/humans-performance.js` currently schedules first delivery through `queueMicrotask` and delayed redelivery through `setTimeout`. Therefore safety callbacks can execute during the quiet window with no corresponding scheduled/executed attribution delta.
 
 ## Bounded package in this checkpoint
-- Make proposal hiding class-idempotent in `src/humans-diplomacy-coherence-v2.js`: remove `show` only when it is actually present, both for the no-pending render path and stale/invalid proposal-answer path.
-- Preserve `EventOverlayPolicy` as the single semantic proposal-priority owner; do not remove its priority protection.
-- Strengthen `tests/legacy-observer-containment.spec.js` with a cross-browser runtime regression: 30 repeated hidden proposal renders must produce zero proposal class mutations and leave the modal hidden.
+- Extend startup observer attribution to wrap `setTimeout` and `queueMicrotask` in addition to `requestAnimationFrame` before application scripts load.
+- Attribute scheduled/executed safety deliveries to the native observer owner through the existing `currentObserverId` / drained-owner mechanism.
+- Record delivery-kind deltas (`requestAnimationFrame`, `setTimeout`, `queueMicrotask`) in snapshots, `pendingBefore`, retained artifact JSON and console output.
+- This is diagnostic/test-only: no gameplay source, callback threshold, invalidation threshold or timeout is changed.
 
 ## Current blocker
-Validate this idempotent proposal-hide change on its exact Chromium/WebKit PR CI. Do not touch the WebKit-only `mouse.wheel` incompatibility until the 30-cycle callback gate is green on both engines.
+Validate the improved attribution on exact Chromium/WebKit CI and use its retained `city-30-cycle-idle` payload to identify the first actual observer-safety owner of the 12 callbacks. Do not make a speculative source fix before that evidence exists. Chromium cadence **13 vs <=12** and WebKit `mouse.wheel` remain secondary until the callback owner is named.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
@@ -44,7 +49,7 @@ Validate this idempotent proposal-hide change on its exact Chromium/WebKit PR CI
 - [ ] Phase 5 — RC cleanup, exact immutable build, one physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the automatically-triggered exact Chromium/WebKit CI for the commit containing this status. Do not push another source change while that run is in progress. If the 30-cycle callback gates are green on both engines and the new hidden-proposal idempotence regression is green, record the exact counts/SHA and target the first remaining factual failure with one bounded package (expected candidate: WebKit `mouse.wheel` incompatibility). If callback bounds still fail, use retained attribution and fix only the first measured remaining owner.
+Inspect the automatically-triggered exact Chromium/WebKit CI for the commit containing this status. Do not push another source/test change while that run is in progress. If the 30-cycle callback gate still fails, inspect the retained `city-30-cycle-idle` delivery-kind attribution and fix only the first measured owner with one bounded source+regression package. If the callback gate is green on both engines, record the exact counts/SHA and target the first remaining factual failure without weakening thresholds.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable gates in `QUALITY_GATES.md` are green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

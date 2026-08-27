@@ -8,6 +8,10 @@ async function installObserverAttribution(page) {
     const nativeObserve = NativeObserver.prototype.observe;
     const nativeTakeRecords = NativeObserver.prototype.takeRecords;
     const nativeRaf = window.requestAnimationFrame.bind(window);
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeQueueMicrotask = typeof window.queueMicrotask === 'function'
+      ? window.queueMicrotask.bind(window)
+      : callback => Promise.resolve().then(callback);
     let nextId = 1;
     let currentObserverId = 0;
     const drainedOwnerQueue = [];
@@ -61,21 +65,52 @@ async function installObserverAttribution(page) {
       return batch;
     }
 
-    window.requestAnimationFrame = function (callback) {
-      if (typeof callback !== 'function') return nativeRaf(callback);
-      const stack = String(new Error().stack || '');
+    function deliveryEntry(stack) {
       let ownerId = currentObserverId;
       if (!ownerId && drainedOwnerQueue.length && stack.indexOf('humans-performance.js') >= 0) {
         ownerId = drainedOwnerQueue.shift();
       }
-      const entry = entryForId(ownerId);
-      if (entry) {
-        entry.scheduledDeliveries += 1;
-        if (!entry.deliveryScheduleStack) entry.deliveryScheduleStack = stack.split('\n').slice(1, 9).join('\n');
-      }
+      return entryForId(ownerId);
+    }
+
+    function markScheduled(entry, kind, stack) {
+      if (!entry) return;
+      entry.scheduledDeliveries += 1;
+      entry.deliveryKinds[kind] = (entry.deliveryKinds[kind] || 0) + 1;
+      if (!entry.deliveryScheduleStack) entry.deliveryScheduleStack = stack.split('\n').slice(1, 9).join('\n');
+    }
+
+    window.requestAnimationFrame = function (callback) {
+      if (typeof callback !== 'function') return nativeRaf(callback);
+      const stack = String(new Error().stack || '');
+      const entry = deliveryEntry(stack);
+      markScheduled(entry, 'requestAnimationFrame', stack);
       return nativeRaf(function (time) {
         if (entry) entry.executedDeliveries += 1;
         return callback(time);
+      });
+    };
+
+    window.setTimeout = function (callback, delay) {
+      const args = Array.prototype.slice.call(arguments, 2);
+      if (typeof callback !== 'function') return nativeSetTimeout.apply(window, [callback, delay].concat(args));
+      const stack = String(new Error().stack || '');
+      const entry = deliveryEntry(stack);
+      markScheduled(entry, 'setTimeout', stack);
+      return nativeSetTimeout(function () {
+        if (entry) entry.executedDeliveries += 1;
+        return callback.apply(window, args);
+      }, delay);
+    };
+
+    window.queueMicrotask = function (callback) {
+      if (typeof callback !== 'function') return nativeQueueMicrotask(callback);
+      const stack = String(new Error().stack || '');
+      const entry = deliveryEntry(stack);
+      markScheduled(entry, 'queueMicrotask', stack);
+      return nativeQueueMicrotask(function () {
+        if (entry) entry.executedDeliveries += 1;
+        return callback();
       });
     };
 
@@ -89,6 +124,7 @@ async function installObserverAttribution(page) {
         drainedRecords: 0,
         scheduledDeliveries: 0,
         executedDeliveries: 0,
+        deliveryKinds: {},
         registrations: [],
         mutationTargets: {},
         mutationTypes: {},
@@ -138,6 +174,7 @@ async function installObserverAttribution(page) {
     window.__epohiStartupObserverAttribution = {
       snapshot: () => entries.map(item => ({
         ...item,
+        deliveryKinds: { ...item.deliveryKinds },
         registrations: item.registrations.map(reg => ({ target: reg.target, options: { ...reg.options } })),
         mutationTargets: { ...item.mutationTargets },
         mutationTypes: { ...item.mutationTypes }
@@ -179,6 +216,7 @@ function delta(after, before) {
       drainedRecords: 0,
       scheduledDeliveries: 0,
       executedDeliveries: 0,
+      deliveryKinds: {},
       mutationTargets: {},
       mutationTypes: {}
     };
@@ -190,6 +228,7 @@ function delta(after, before) {
       drainedRecords: Number(item.drainedRecords || 0) - Number(previous.drainedRecords || 0),
       scheduledDeliveries: Number(item.scheduledDeliveries || 0) - Number(previous.scheduledDeliveries || 0),
       executedDeliveries: Number(item.executedDeliveries || 0) - Number(previous.executedDeliveries || 0),
+      deliveryKinds: objectDelta(item.deliveryKinds, previous.deliveryKinds),
       registrations: item.registrations,
       mutationTargets: objectDelta(item.mutationTargets, previous.mutationTargets),
       mutationTypes: objectDelta(item.mutationTypes, previous.mutationTypes),
@@ -204,6 +243,7 @@ function pendingBefore(items) {
   return items.map(item => ({
     id: item.id,
     pendingDeliveries: Math.max(0, Number(item.scheduledDeliveries || 0) - Number(item.executedDeliveries || 0)),
+    deliveryKinds: item.deliveryKinds,
     registrations: item.registrations,
     constructStack: item.constructStack,
     observeStack: item.observeStack,
