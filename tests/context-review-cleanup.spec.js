@@ -6,6 +6,10 @@ const {
   createGame
 } = require('./helpers');
 
+async function syncContextReview(page) {
+  await page.evaluate(() => window.EpohiContextReviewCleanup.sync());
+}
+
 async function openFreshGame(page) {
   const consoleProblems = watchConsole(page);
   await clearStorage(page);
@@ -17,6 +21,7 @@ async function openFreshGame(page) {
     window.__epohiDebug().state &&
     document.getElementById('strategyReadiness')
   ));
+  await syncContextReview(page);
   return consoleProblems;
 }
 
@@ -66,6 +71,7 @@ test.describe('Применение ревью контекстного инте
       state.units.forEach(unit => { unit.moves = 0; unit.acted = true; delete unit.travelOrder; delete unit.order; });
       state.cities.forEach(city => { city.queue = { type: 'unit', id: 'scout', progress: 0 }; });
       debug.render();
+      window.EpohiContextReviewCleanup.sync();
       return {
         military: state.units.filter(unit => unit.hp > 0 && unit.type !== 'worker').map(unit => String(unit.id)),
         cities: state.cities.length
@@ -74,6 +80,7 @@ test.describe('Применение ревью контекстного инте
 
     const militaryButton = page.locator('#strategyReadiness [data-ready-kind="units"]');
     await expect(militaryButton.locator('b')).toHaveText(`0/${setup.military.length}`);
+    await expect(militaryButton).toHaveAttribute('data-ready-count', '0');
     await expect(militaryButton).toBeEnabled();
 
     await militaryButton.click();
@@ -85,6 +92,7 @@ test.describe('Применение ревью контекстного инте
 
     const cityButton = page.locator('#strategyReadiness [data-ready-kind="cities"]');
     await expect(cityButton.locator('b')).toHaveText(`0/${setup.cities}`);
+    await expect(cityButton).toHaveAttribute('data-ready-count', '0');
     await expect(cityButton).toBeEnabled();
     await cityButton.click();
     expect(await page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('city');
@@ -109,6 +117,7 @@ test.describe('Применение ревью контекстного инте
       });
       state.units.push(copy);
       debug.render();
+      window.EpohiContextReviewCleanup.sync();
       return { x: original.x, y: original.y, copyId: String(copy.id) };
     });
 
