@@ -369,14 +369,8 @@
       if (city && before && typeof before.setActiveCity === "function") before.setActiveCity(city.id);
     }
 
-    if (layer === "unit" && selectedAlreadyHere && unitsHere.length) {
-      clickLayer("unit");
-      queueSync();
-      return;
-    }
-
     replayCoreTileClick(tile);
-    if (layer !== "unit" && selectedAlreadyHere && unitsHere.length > 1) selectStackUnitNow(selectedId);
+    if (selectedAlreadyHere && unitsHere.length > 1) selectStackUnitNow(selectedId);
     clickLayer(layer);
     queueSync();
   }, true);
