@@ -69,6 +69,6 @@ test('observer safety yields under cross-observer feedback instead of starving t
   });
 
   expect(result.timerFired).toBe(true);
-  expect(result.callbacksAtYield).toBeLessThanOrEqual(4);
-  expect(result.callbacksAfterSettle).toBeLessThanOrEqual(8);
+  expect(result.callbacksAtYield).toBeLessThanOrEqual(2);
+  expect(result.callbacksAfterSettle).toBeLessThanOrEqual(4);
 });

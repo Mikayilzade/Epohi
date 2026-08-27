@@ -17,7 +17,7 @@
     const nativeQueueMicrotask = typeof window.queueMicrotask === "function"
       ? window.queueMicrotask.bind(window)
       : function (callback) { Promise.resolve().then(callback); };
-    const observerRedeliveryDelayMs = 64;
+    const observerRedeliveryDelayMs = 128;
     let activeProtectedObserver = null;
 
     const stats = window.__epohiObserverSafetyStats = window.__epohiObserverSafetyStats || {
