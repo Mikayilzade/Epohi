@@ -61,6 +61,16 @@ async function tileScreenCenter(page, x, y) {
   }, { x, y });
 }
 
+async function waitForTileCentered(page, x, y) {
+  await expect.poll(async () => {
+    const centered = await tileScreenCenter(page, x, y);
+    return Math.max(
+      Math.abs(centered.x - centered.viewportCenterX),
+      Math.abs(centered.y - centered.viewportCenterY)
+    );
+  }, { timeout: 2000, intervals: [16, 32, 64, 100] }).toBeLessThan(0.2);
+}
+
 function expectCameraPositionWithinBounds(info) {
   const scaledWidth = info.map.width * info.camera.scale;
   const scaledHeight = info.map.height * info.camera.scale;
@@ -142,8 +152,6 @@ test.describe('Camera 2.0', () => {
     expect(new Set(mins.map((value) => value.toFixed(3))).size).toBeGreaterThan(1);
   });
 
-
-
   test('large map can fit short portrait and landscape viewports below legacy minimum', async ({ page }) => {
     await expectLargeMapFitsViewport(page, { width: 390, height: 667 });
     await expectLargeMapFitsViewport(page, { width: 844, height: 390 });
@@ -182,9 +190,9 @@ test.describe('Camera 2.0', () => {
       state.units[0].y = 3;
       debug.render();
     });
-    await page.waitForTimeout(50);
+    await page.waitForFunction(() => document.querySelector('.tile[data-x="2"][data-y="3"]'));
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await page.waitForTimeout(220);
+    await waitForTileCentered(page, 2, 3);
     let centered = await tileScreenCenter(page, 2, 3);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
@@ -196,9 +204,9 @@ test.describe('Camera 2.0', () => {
       debug.render();
       return { x: debug.state.city.x, y: debug.state.city.y };
     });
-    await page.waitForTimeout(50);
+    await page.waitForFunction(({ x, y }) => document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`), capital);
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await page.waitForTimeout(220);
+    await waitForTileCentered(page, capital.x, capital.y);
     centered = await tileScreenCenter(page, capital.x, capital.y);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
