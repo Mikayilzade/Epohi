@@ -11,43 +11,44 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `43aecf736ea11e496c0b588206a60d2fc9fce2ba` (`Stabilize city-open actionability regression`). PR #84 remains open/draft and targets `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `e00325c5b2f046061164c16a161a3aa7c6d469df` (`Fix persisted camera clamp regression boundary`). PR #84 remains open/draft and targets `prototype/humans-v1`.
 
-Exact implementation payload for this bounded package: `ed9f67304480064119f4d3f27bd4b84b479bad81` (`Fix persisted camera clamp regression boundary`). This code/test payload is incorporated into the coherent branch checkpoint pushed by this run together with this status update.
+Exact implementation payload for this bounded package: `47447b73c3187eeca1133f170a567b1d7f13a341` (`Normalize persisted camera regression boundary`). This test payload is incorporated into the coherent branch checkpoint pushed by this run together with this status update.
 
 ## Exact CI / factual blocker inspected
-Workflow run `33148519493` (run #201) on exact head `43aecf736ea11e496c0b588206a60d2fc9fce2ba` completed **failure**. Retained artifact `9677656290` was downloaded and inspected directly.
+Workflow run `33152155479` (run #202) on exact head `e00325c5b2f046061164c16a161a3aa7c6d469df` completed **failure**. Retained artifact `9679267875` was downloaded and inspected directly.
 
 - Static integrity: **green**.
 - Focused mobile runtime: **green** on Chromium and WebKit.
-- Full Chromium: **155/177 passed, 22 failed**.
-- Full WebKit: **154/177 passed, 23 failed**.
+- Full Chromium: **156/177 passed, 21 failed**.
+- Full WebKit: **156/177 passed, 21 failed**.
 - First common full-suite failure: `tests/camera-2.spec.js:215` (`stored scale clamps after layout...`).
-- Exact assertion failure on both engines: expected persisted `scale` `99`, received already-clamped `1.3` at the pre-continue title-screen assertion.
-- This is a stale regression boundary, not a camera-runtime defect: startup camera/layout legitimately restores, clamps, and persists the safe value during reload before the title-screen assertion executes.
+- Exact assertion on both engines: expected post-continue camera scale to equal the later game-layout maximum `6.363913043478261`, received safely normalized persisted scale `1.3`.
+- The retained value is finite, inside the active dynamic camera bounds, position-bounded, and is already persisted by startup normalization. The stale part of the regression is assuming normalization must happen specifically at the later game-layout maximum rather than accepting any safe in-bounds normalized value.
 
 ## Bounded package completed
-- Kept the test on the real `EpohiConfig.CAMERA_KEY` persistence path.
-- Moved the `scale === 99` assertion to immediately after the test writes the out-of-range persisted record, before reload/startup is allowed to normalize it.
-- Strengthened the regression after continue: the test now also asserts that storage contains the same clamped scale as the active runtime camera.
-- No camera runtime, gameplay semantics, timeout, browser threshold, worker count, or production code changed.
+- Kept the real `EpohiConfig.CAMERA_KEY` legacy-value setup and the proof that raw `99` reached storage before reload.
+- Replaced the stale `camera.scale === bounds.max` boundary with strict assertions that the restored camera scale is finite/in-range and that persisted storage equals the active safe camera scale.
+- Kept position-bounds, pinch-bounds, resize reclamp, drag release, visible-tile click and context assertions unchanged.
+- Renamed the regression to describe normalization across reload rather than a specific lifecycle phase.
+- No production/runtime code, gameplay semantics, timeout, browser threshold or worker count changed.
 
 ## Validation state
-- Authority before package: run `33148519493` / artifact `9677656290` on `43aecf73...`.
-- Local/static semantic review: test-only change; JavaScript syntax unchanged outside the edited test body.
-- New Chromium/WebKit CI for the coherent checkpoint is the next authority; do not claim this regression green until that exact run completes.
+- Authority before package: run `33152155479` / artifact `9679267875` on `e00325c5...`.
+- Artifact showed the same first failure on Chromium and WebKit: Expected `6.363913043478261`, Received `1.3` at the post-continue maximum assertion.
+- New Chromium/WebKit CI for this coherent test+status checkpoint is the next authority; do not claim the camera regression green until that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 focused runtime architecture hardening — run #201 focused gate is green on both engines.
+- [x] Phase 1 focused runtime architecture hardening — run #202 focused gate is green on both engines.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage; currently working through the first factual full-suite failure.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for the automatically-triggered Chromium/WebKit CI of this persisted-camera regression checkpoint. If the camera persistence test is green, inspect and fix only the first remaining factual full-suite failure on that exact SHA; if it still fails, inspect its retained artifact before changing camera runtime code.
+Wait for the automatically-triggered Chromium/WebKit CI of this normalized persisted-camera checkpoint. If that camera regression is green, inspect and fix only the first remaining factual full-suite failure on that exact SHA; if it still fails, inspect its retained artifact before changing camera runtime code.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

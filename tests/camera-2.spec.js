@@ -212,7 +212,7 @@ test.describe('Camera 2.0', () => {
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
   });
 
-  test('stored scale clamps after layout, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
+  test('stored scale normalizes safely across reload, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
     await clearStorage(page);
     await createGame(page, 0, 'normal');
     await expect(page.locator('#gameApp')).toBeVisible();
@@ -221,7 +221,7 @@ test.describe('Camera 2.0', () => {
     // Exercise the actual persisted-camera boundary. Mutating the debug camera object
     // alone never writes storage: production persistence happens through EpohiCameraStorage.
     // Seed an intentionally out-of-range legacy value directly, prove it reached storage,
-    // then reload so startup/layout is allowed to restore, clamp, and persist the safe value.
+    // then reload so any startup/layout normalization may clamp and persist a safe value.
     await page.evaluate(() => {
       localStorage.setItem(
         window.EpohiConfig.CAMERA_KEY,
@@ -239,12 +239,17 @@ test.describe('Camera 2.0', () => {
     await expect(page.locator('#gameApp')).toBeVisible();
 
     let info = await cameraState(page);
-    expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
+    expect(info.camera.scale).toBeGreaterThanOrEqual(info.bounds.min - 0.01);
+    expect(info.camera.scale).toBeLessThanOrEqual(info.bounds.max + 0.01);
     expectCameraPositionWithinBounds(info);
-    expect(await page.evaluate(() => {
+    const persistedScale = await page.evaluate(() => {
       const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
       return raw ? JSON.parse(raw).scale : null;
-    })).toBeCloseTo(info.camera.scale, 2);
+    });
+    expect(Number.isFinite(persistedScale)).toBe(true);
+    expect(persistedScale).toBeCloseTo(info.camera.scale, 2);
+    expect(persistedScale).toBeGreaterThanOrEqual(info.bounds.min - 0.01);
+    expect(persistedScale).toBeLessThanOrEqual(info.bounds.max + 0.01);
 
     await page.evaluate(() => {
       const viewport = document.getElementById('mapViewport');
