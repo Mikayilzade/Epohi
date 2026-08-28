@@ -11,43 +11,41 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact implementation/test head inspected before this package: `a079afe92348ba500eff2b6e51160fcc4cccacac` (`Wire autonomy controls to explicit settled lifecycle`). PR #84 remains open/draft, mergeable, and targets `prototype/humans-v1`.
+Exact implementation/test head inspected before this package: `606a6bf55275b9b91ec812f0a436b9b531e4d89f` (`Emit settled lifecycle after fresh game state`). PR #84 remains open/draft, mergeable, and targets `prototype/humans-v1`.
 
-Its automatically-triggered PR workflow run `33120089470` completed **failure** on that exact SHA. Retained artifact `9667253720` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
+Its automatically-triggered PR workflow run `33127087517` completed **failure** on that exact SHA. Retained artifact `9668895090` (`epohi-autonomous-cross-browser-results`) was downloaded and inspected directly.
 
-## Exact CI / factual blockers from run #194
+## Exact CI / factual blocker from run #195
 - Static integrity: **green**.
 - Focused Chromium: **60/60 passed**.
-- Focused WebKit: **60/60 passed**.
-- Full Chromium: **153/176 passed, 23 failed**.
-- Full WebKit: **153/176 passed, 23 failed**.
-- `tests/humans-autonomy.spec.js:20` still fails identically on both engines: `#autonomyReportBtn` remains absent inside the unchanged **1 second** actionability window.
-- The previous package proved that merely subscribing autonomy to `epohi:humans-ui-settled` is insufficient. The lifecycle signal is not reliably delivered after fresh-game state becomes readable.
-- Runtime inspection identified the concrete race: `humans-runtime-invalidation.js` owns the capture-phase `#createParty` transition hook, but it only queued an invalidation request after creation. It did not emit the canonical settled event at that post-transition boundary. The autonomy listener therefore had no reliable explicit signal after state installation.
+- Focused WebKit: **59/60 passed, 1 failed**.
+- Full Chromium/WebKit regression: **skipped** because the focused WebKit gate failed.
+- The fresh-game settled lifecycle/autonomy blocker is therefore no longer the first failure in focused CI.
+- The sole focused WebKit failure is `tests/combat-world-stability.spec.js:147` — `AI claims a known finite POI first and the player cannot collect it twice`; `claimed.used` remained `false` after the real end-turn.
+- Source inspection confirms the effective `processRivals` already prioritizes `nearestKnownFinitePoi` for scouts before barbarians/unknown exploration. The regression fixture, however, reused randomly generated map/runtime state at `(6,5)` and only replaced terrain/reveal/POI; it did not normalize a pre-existing camp/feature or other rival-unit occupancy. Chromium happened to pass while WebKit did not, making the fixture itself non-deterministic across generated worlds.
 
-## Bounded package completed this run
-- Fixed only the fresh-game explicit lifecycle race plus a dedicated regression and this status checkpoint.
-- `humans-runtime-invalidation.js` now emits `epohi:humans-ui-settled` from its existing zero-delay `#createParty` post-transition callback **only after `__epohiDebug().state` is readable**. This is a single bounded event, not polling or a broad observer.
-- Bumped `EpohiRuntimeInvalidation.version` from 16 to 17.
-- Added `tests/new-game-settled-lifecycle.spec.js`: it installs the lifecycle probe before creating the campaign, requires a `new-game-created-post-transition` settled signal with real state already present, and then keeps the existing **1 second** `#autonomyReportBtn` actionability contract.
-- No gameplay rules, callback/cadence limits, timeouts, observer scope, save format, or physical-device policy were changed.
+## Bounded package for this run
+- Fix only the deterministic setup of the known-POI priority regression; do not change AI/gameplay logic, route rules, timeouts, or thresholds.
+- Normalize the scout and target cell before the end-turn: keep only the tested rival scout, clear camp/feature on the POI target, make the target plain/passable/revealed/known to that civ, keep the unrelated barbarian far away, and leave a separate adjacent plain tile unknown to preserve a real competing exploration choice.
+- Keep all original product assertions unchanged: the POI must become used, it must no longer be targetable as a POI, the civ must gain resources, and `point-of-interest-resolved` must be logged.
+- This status checkpoint is intentionally doc-only; the immediately following test-only commit is the single source/test change for this package.
 
 ## Validation state
-- Pre-package authority: run `33120089470` on exact head `a079afe9...`; static and focused gates green, full regression red at 153/176 on both engines.
-- This source/test/status package is being created as one coherent Git commit from exact parent `a079afe9...`.
-- The automatically-triggered Chromium/WebKit CI of the new checkpoint is the next authority. Do not claim the autonomy lifecycle blocker green until that exact run completes.
+- Pre-package authority: exact run `33127087517` on `606a6bf...`; static green, Chromium focused 60/60, WebKit focused 59/60, full suite skipped.
+- No source/gameplay change has been made while diagnosing the artifact.
+- The next authority is the automatically-triggered Chromium/WebKit CI of the deterministic POI-fixture test commit. Do not claim the blocker green before that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 focused runtime architecture hardening remains green in run #194.
+- [ ] Phase 1 focused runtime architecture hardening — currently blocked only by the deterministic POI regression on WebKit in run #195.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for the automatically-triggered Chromium/WebKit CI of this exact fresh-game settled-lifecycle checkpoint. If both the new lifecycle regression and `tests/humans-autonomy.spec.js:20` are green, inspect the first remaining factual full-suite failure on that exact SHA and fix only that blocker. If either still fails, inspect the retained artifact for the observed settled probe/state ordering; keep the 1-second actionability assertion unchanged and do not add polling or reintroduce broad observer-driven decoration.
+Wait for the automatically-triggered Chromium/WebKit CI of the deterministic known-POI fixture checkpoint. If focused Chromium and WebKit are both green, inspect the first remaining factual full-suite failure on that exact SHA and fix only that blocker. If the POI test still fails, inspect the retained artifact for the scout position, target occupancy and civ exploration state after the single real turn before changing any gameplay code.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
