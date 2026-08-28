@@ -40,6 +40,12 @@ async function prepareOpenPlains(page) {
     unit.travelOrder = null;
     unit.order = null;
     debug.render();
+    // This fixture mutates runtime state directly, outside normal click/action hooks.
+    // Runtime hardening intentionally no longer relies on broad observer polling to
+    // discover such synthetic writes, so explicitly refresh the owning pathing UI.
+    if (window.EpohiHumansPathingUI && typeof window.EpohiHumansPathingUI.refresh === 'function') {
+      window.EpohiHumansPathingUI.refresh();
+    }
     return { id: unit.id, x: unit.x, y: unit.y, type: unit.type };
   });
 }
@@ -85,8 +91,11 @@ test.describe('Маршруты, desktop-карта и производител�
     const unit = await prepareOpenPlains(page);
     await page.locator(`.tile[data-x="${unit.x}"][data-y="${unit.y}"]`).click();
 
-    await page.waitForFunction(() => Boolean(document.querySelector('[data-path-action="start"]')));
-    await page.locator('[data-path-action="start"]').click();
+    const routeStart = page.locator('[data-path-action="start"]');
+    const actionabilityStartedAt = Date.now();
+    await expect(routeStart).toBeVisible({ timeout: 1000 });
+    expect(Date.now() - actionabilityStartedAt).toBeLessThanOrEqual(1000);
+    await routeStart.click();
     const target = await page.evaluate(({ x, y }) => {
       const state = window.__epohiDebug().state;
       const candidates = [];
