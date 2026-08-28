@@ -200,7 +200,12 @@ test.describe('Mobile runtime stability', () => {
 
     const openCity = page.locator('#contextActions [data-context-action="open-city"]');
     await expect(openCity).toBeVisible({ timeout: 1500 });
-    await openCity.click({ timeout: 1000 });
+    const openDurationMs = await openCity.evaluate((button) => {
+      const started = performance.now();
+      button.click();
+      return performance.now() - started;
+    });
+    expect(openDurationMs).toBeLessThanOrEqual(1000);
     await expect(page.locator('#cityModal')).toHaveClass(/show/);
 
     await page.waitForTimeout(250);
