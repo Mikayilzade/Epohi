@@ -78,7 +78,16 @@
   }
 
   function scheduleContextTailSync() {
-    if (contextTailFrame) return;
+    // A newer identity repair can arrive while an older two-frame cleanup tail is
+    // already pending. If we merely dedupe here, that older cleanup may run before
+    // the newer StrategyUX RAF(schedule) -> RAF(refresh) chain and the late refresh
+    // can overwrite the activity switcher again (observed on WebKit in run #198).
+    // Re-arm the tail from the newest identity mutation so ContextReviewCleanup is
+    // always the final writer for the latest follow-up, independent of RAF ordering.
+    if (contextTailFrame) {
+      window.cancelAnimationFrame(contextTailFrame);
+      contextTailFrame = 0;
+    }
     contextTailFrame = window.requestAnimationFrame(function () {
       // StrategyUX's identity repair does not refresh readiness in the same frame:
       // its first RAF calls schedule(), which queues the actual refresh for the next
@@ -197,7 +206,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 17,
+    version: 18,
     request: request,
     flush: flush,
     stats: function () {
