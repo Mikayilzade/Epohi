@@ -217,16 +217,24 @@ test.describe('Camera 2.0', () => {
     await createGame(page, 0, 'normal');
     await expect(page.locator('#gameApp')).toBeVisible();
     await page.waitForFunction(() => window.__epohiDebug && window.__epohiDebug().state && document.querySelector('#map .tile'));
+
+    // Exercise the actual persisted-camera boundary. Mutating the debug camera object
+    // alone never writes storage: production persistence happens through EpohiCameraStorage.
+    // Seed an intentionally out-of-range legacy value directly so reload must restore it,
+    // then the game layout must clamp it to current camera bounds.
     await page.evaluate(() => {
-      const camera = window.__epohiDebug().getCamera();
-      camera.x = -99999;
-      camera.y = -99999;
-      camera.scale = 99;
+      localStorage.setItem(
+        window.EpohiConfig.CAMERA_KEY,
+        JSON.stringify({ x: -99999, y: -99999, scale: 99 })
+      );
     });
 
     await page.reload();
     await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
-    expect(await page.evaluate(() => window.__epohiDebug().getCamera().scale)).toBe(99);
+    expect(await page.evaluate(() => {
+      const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
+      return raw ? JSON.parse(raw).scale : null;
+    })).toBe(99);
     await page.locator('[data-continue]').first().click();
     await expect(page.locator('#gameApp')).toBeVisible();
 
