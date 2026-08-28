@@ -64,6 +64,7 @@ test.describe('Маршруты, desktop-карта и производител�
         height: shell.height,
         mode: window.EpohiPerformance.mode,
         snapshotMode: snapshot.mode,
+        observerMode: window.EpohiObserverSafety && window.EpohiObserverSafety.mode,
         waterAnimation: water ? getComputedStyle(water, '::after').animationName : 'none',
         backdrop: getComputedStyle(resource).backdropFilter
       };
@@ -71,8 +72,9 @@ test.describe('Маршруты, desktop-карта и производител�
 
     expect(result.width).toBeGreaterThanOrEqual(700);
     expect(result.height).toBeGreaterThan(250);
-    expect(result.mode).toBe('static-visuals');
-    expect(result.snapshotMode).toBe('static-visuals');
+    expect(result.mode).toBe('observer-local-safety');
+    expect(result.snapshotMode).toBe(result.mode);
+    expect(result.observerMode).toBe('observer-local');
     expect(result.waterAnimation).toBe('none');
     expect(['none', '']).toContain(result.backdrop);
     await expectNoConsoleProblems(problems);
