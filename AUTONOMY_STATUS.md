@@ -11,46 +11,45 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `bdae9de06ab912e840cad10f0ceeff944266a1ad` (`Stabilize barbarian replacement camp fixture`). PR #84 remained open/draft and targeted `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `1b2851f9e18d784d34be141a8e1cb45ce364e2c3` (`Bridge pathing UI into explicit invalidation`). PR #84 remained open/draft and targeted `prototype/humans-v1`.
 
-Exact implementation head for this bounded package: `3526b8cc9d37d985f024cb4dd25dd74af8b1837a` (`Stabilize AI finite POI fixture`). Only `tests/combat-world-stability.spec.js` changed in the implementation checkpoint; production/runtime code was not changed.
+Exact implementation head under validation: `1b2851f9e18d784d34be141a8e1cb45ce364e2c3`. That checkpoint adds pathing UI refresh ownership to `EpohiRuntimeInvalidation` plus `tests/pathing-explicit-invalidation.spec.js`; no new source/test/runtime change was pushed in this run because the exact CI checkpoint had already completed and needed factual full-suite diagnosis before another engineering change.
 
 ## Exact CI / factual blocker inspected
-Workflow run `33176506529` (run #209) on exact implementation head `3526b8cc9d37d985f024cb4dd25dd74af8b1837a` completed **failure**. Retained artifact `9688003399` was downloaded and inspected directly.
+Workflow run `33190892349` (run #213) on exact implementation head `1b2851f9e18d784d34be141a8e1cb45ce364e2c3` completed **failure**. Retained artifact `9694971588` was downloaded and inspected directly.
 
 - Static integrity: **green**.
-- Focused Chromium: **60/60 passed**.
-- Focused WebKit: **59/60 passed, 1 failed**.
-- The stabilized finite-POI regression passed in the checkpoint; the prior Chromium-only POI fixture failure did not reproduce.
-- Full Chromium/WebKit regression: **skipped** because the focused gate failed.
-- First remaining factual failure: `tests/combat-world-stability.spec.js:98` (`enemy selected from the map exposes and resolves a visible unit attack`) on WebKit only.
-- Exact assertion at line 108: expected the attacked enemy unit to be absent (`false`) after the visible attack action; received `true`. Chromium passed the same regression in the same run.
-- No source fix for this new blocker was attempted in this run; its exact runtime/fixture cause remains to be established from the retained WebKit diagnostics before changing code or test semantics.
+- Focused Chromium + WebKit gate: **green**.
+- Full Chromium regression: **159/178 passed, 19 failed**.
+- Full WebKit regression: **161/178 passed, 17 failed**.
+- First Chromium full-suite failure: `tests/humans-pathing-performance.spec.js:89` (`кнопка Идти назначает маршрут, показывает шаги и переносит приказ между ходами`). Exact failure: `[data-path-action="start"]` was absent/not visible within the required 1000 ms actionability window.
+- The new `tests/pathing-explicit-invalidation.spec.js` regression also failed later in the Chromium full suite on the same route-start visibility contract even though it passed in the focused gate. This is evidence of a remaining full-suite pathing lifecycle/timing defect; do not weaken the 1 s gate without proving the accepted actionability contract changed.
+- First WebKit full-suite failure was independently in `tests/camera-2.spec.js:177`; later WebKit failures include several hidden-action/time-out cases. They have not been assumed to share the Chromium pathing cause.
+- Artifact diagnostics show many later failures, so this run deliberately did not shotgun-fix the 36 failing cases or infer a common cause from counts alone.
 
 ## Bounded package completed
-- Stabilized only the finite-POI regression fixture identified by run #208; no gameplay/runtime source changed.
-- Reset the rival exploration map to a deterministic single known finite POI instead of inheriting random generated `civ.explored` entries that could legitimately outrank the intended target.
-- Relocated the rival capital away from the exercised target tile and normalized that capital tile, removing random occupancy coupling from `canRivalEnter`.
-- Kept the unrelated distant barbarian so the regression still proves a scout chooses its known finite POI before an irrelevant barbarian target.
-- Strengthened the regression to assert the exact AI scout position on the POI after the turn, in addition to one-time consumption, resource gain, event logging, and post-consumption target semantics.
-- Run #209 confirms this bounded fixture repair is green on Chromium and WebKit; the gate now stops on an earlier independent WebKit-only visible-attack regression.
+- Closed the prior `1b2851f9...` checkpoint with exact CI/artifact inspection rather than guessing from workflow status.
+- Confirmed the explicit pathing invalidation bridge is sufficient for the focused matrix but not yet deterministic under the complete Chromium suite.
+- Identified the earliest bounded engineering target and preserved the existing strict route actionability regression as the acceptance boundary.
+- No speculative source/test push was made after CI; this status-only checkpoint must not trigger browser CI under the push-gated workflow policy.
 
 ## Validation state
-- Authority before package: run `33172013955` / artifact `9686111458` on `bdae9de0...`: static green, focused Chromium 59/60, focused WebKit 60/60, full suite skipped; first factual blocker was the finite-POI regression on Chromium.
-- Authority after package: run `33176506529` / artifact `9688003399` on exact implementation head `3526b8cc...`: static green, focused Chromium 60/60, focused WebKit 59/60, full suite skipped.
-- Current blocker is the WebKit-only visible enemy attack regression described above. No physical-device test is requested.
+- Run `33190892349` / artifact `9694971588` on `1b2851f9...`: static green; focused Chromium + WebKit green; full Chromium 159/178; full WebKit 161/178.
+- Gate B/C focused runtime are green at this checkpoint.
+- Gate D complete regression remains blocked by the exact failures above.
+- No physical-device test is requested.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [ ] Phase 1 focused runtime architecture hardening — latest exact checkpoint still has one WebKit focused failure.
-- [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage; blocked until focused gate is green again.
+- [x] Phase 1 focused runtime architecture hardening — exact run #213 focused gate is green on both engines.
+- [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage; full suite is not green yet.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the retained WebKit diagnostics for run `33176506529` / artifact `9688003399` around `tests/combat-world-stability.spec.js:98`, determine whether the adjacent visible-attack failure is a fixture synchronization issue or a runtime defect, and implement exactly one regression-backed bounded fix for that first factual blocker.
+Inspect and reproduce the first Chromium full-suite blocker from run `33190892349` around `tests/humans-pathing-performance.spec.js:89`, together with the same-run recurrence in `tests/pathing-explicit-invalidation.spec.js`, determine why route controls can miss the strict 1 s actionability contract after normal unit-tile selection, and implement exactly one regression-backed bounded fix without weakening accepted pathing semantics or the actionability gate.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
