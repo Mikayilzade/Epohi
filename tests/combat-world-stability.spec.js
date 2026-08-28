@@ -146,9 +146,21 @@ test.describe('Combat, AI and world stability', () => {
 
   test('AI claims a known finite POI first and the player cannot collect it twice', async ({ page }) => {
     await ready(page,1);
-    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],ai=civ.units[0],player=gs.units[0],target=gs.map[5][6],competitor=gs.map[6][5];ai.type='scout';ai.x=5;ai.y=5;ai.moves=2;ai.acted=false;civ.units=[ai];player.x=8;player.y=5;Object.assign(target,{terrain:'plains',revealed:true,camp:null,feature:null,improvement:null,poi:{type:'depot',used:false}});Object.assign(competitor,{terrain:'plains',camp:null,feature:null,improvement:null,poi:null});civ.explored['6,5']=true;delete civ.explored['5,6'];gs.barbarians=[{id:'unrelated-raider',x:12,y:12,hp:75,maxHp:75,homeX:12,homeY:12}];window.__epohiDebug().render();return{x:6,y:5,before:civ.resources.science+civ.resources.gold+civ.resources.production};});
+    const setup=await page.evaluate(()=>{
+      const gs=window.__epohiDebug().state,civ=gs.rivals[0],ai=civ.units[0],player=gs.units[0],capital=civ.cities[0],target=gs.map[5][6],competitor=gs.map[6][5];
+      ai.type='scout'; ai.x=5; ai.y=5; ai.moves=2; ai.acted=false; civ.units=[ai]; civ.relation='neutral';
+      Object.assign(capital,{x:2,y:2}); Object.assign(gs.map[2][2],{terrain:'plains',camp:null,poi:null,feature:null,improvement:null});
+      player.x=8; player.y=5;
+      Object.assign(target,{terrain:'plains',revealed:true,camp:null,feature:null,improvement:null,poi:{type:'depot',used:false}});
+      Object.assign(competitor,{terrain:'plains',camp:null,feature:null,improvement:null,poi:null});
+      civ.explored={'6,5':true}; civ.visible={};
+      gs.barbarians=[{id:'unrelated-raider',x:12,y:12,hp:75,maxHp:75,homeX:12,homeY:12}];
+      window.__epohiDebug().render();
+      return{x:6,y:5,aiId:ai.id,before:civ.resources.science+civ.resources.gold+civ.resources.production};
+    });
     await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
-    const claimed=await page.evaluate(({x,y,before})=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],tile=gs.map[y][x],target=window.EpohiHumansPathing.targetFromTile(gs,x,y);return{used:tile.poi.used,targetKind:target.targetKind,gain:civ.resources.science+civ.resources.gold+civ.resources.production-before,events:gs.eventLog.map(e=>e.eventType)};},setup);
+    const claimed=await page.evaluate(({x,y,aiId,before})=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],tile=gs.map[y][x],target=window.EpohiHumansPathing.targetFromTile(gs,x,y),ai=civ.units.find(unit=>unit.id===aiId);return{used:tile.poi.used,targetKind:target.targetKind,gain:civ.resources.science+civ.resources.gold+civ.resources.production-before,events:gs.eventLog.map(e=>e.eventType),aiPosition:ai&&{x:ai.x,y:ai.y}};},setup);
+    expect(claimed.aiPosition).toEqual({x:setup.x,y:setup.y});
     expect(claimed.used).toBe(true); expect(claimed.targetKind).not.toBe('poi'); expect(claimed.gain).toBeGreaterThan(0); expect(claimed.events).toContain('point-of-interest-resolved');
   });
 
