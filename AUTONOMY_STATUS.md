@@ -11,42 +11,43 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected before this package: `c5ad7c3fd8405374e78cf38ffc0f0111d3e40b51` (`Re-arm context cleanup after overlapping identity repair`). PR #84 remains open/draft and targets `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `43aecf736ea11e496c0b588206a60d2fc9fce2ba` (`Stabilize city-open actionability regression`). PR #84 remains open/draft and targets `prototype/humans-v1`.
 
-Its automatically-triggered workflow run `33142436810` (run #199) completed **failure** on that exact SHA. Retained artifact `9675199244` was downloaded and inspected directly.
+Exact implementation payload for this bounded package: `ed9f67304480064119f4d3f27bd4b84b479bad81` (`Fix persisted camera clamp regression boundary`). This code/test payload is incorporated into the coherent branch checkpoint pushed by this run together with this status update.
 
-## Exact CI / factual blocker from run #199
+## Exact CI / factual blocker inspected
+Workflow run `33148519493` (run #201) on exact head `43aecf736ea11e496c0b588206a60d2fc9fce2ba` completed **failure**. Retained artifact `9677656290` was downloaded and inspected directly.
+
 - Static integrity: **green**.
-- Focused Chromium: **60/60 passed**.
-- Focused WebKit: **60/60 passed**.
-- Full Chromium: **156/177 passed, 21 failed**.
-- Full WebKit: **156/177 passed, 21 failed**.
-- The previous context-tail ordering blocker is therefore closed in the focused gate.
-- First exact full-suite failure by execution order: `tests/camera-2.spec.js:215` on Chromium — the test expected in-memory `debug.getCamera().scale` to remain `99` across a page reload, but received the previously persisted camera scale `2.2`.
-- Source inspection confirms this is a stale test boundary rather than a camera-runtime defect: direct mutation of the debug camera object does not persist anything; production camera persistence is explicit through `EpohiCameraStorage.saveCamera()` / the scheduled save path. The test intended to validate clamping of an out-of-range **stored** camera value, but never actually wrote that stored value.
+- Focused mobile runtime: **green** on Chromium and WebKit.
+- Full Chromium: **155/177 passed, 22 failed**.
+- Full WebKit: **154/177 passed, 23 failed**.
+- First common full-suite failure: `tests/camera-2.spec.js:215` (`stored scale clamps after layout...`).
+- Exact assertion failure on both engines: expected persisted `scale` `99`, received already-clamped `1.3` at the pre-continue title-screen assertion.
+- This is a stale regression boundary, not a camera-runtime defect: startup camera/layout legitimately restores, clamps, and persists the safe value during reload before the title-screen assertion executes.
 
-## Bounded package for this run
-- Update only the persisted-camera setup in `tests/camera-2.spec.js`.
-- Seed the real `EpohiConfig.CAMERA_KEY` storage record with `{x:-99999,y:-99999,scale:99}` before reload instead of mutating the transient debug camera object.
-- Strengthen the regression boundary by asserting the raw persisted record still contains scale `99` on the title screen before continuing; the existing post-layout assertions still require the runtime camera to clamp to the current dynamic maximum and remain position-bounded.
-- No camera implementation, gameplay semantics, timeouts, browser thresholds, or worker counts are changed.
+## Bounded package completed
+- Kept the test on the real `EpohiConfig.CAMERA_KEY` persistence path.
+- Moved the `scale === 99` assertion to immediately after the test writes the out-of-range persisted record, before reload/startup is allowed to normalize it.
+- Strengthened the regression after continue: the test now also asserts that storage contains the same clamped scale as the active runtime camera.
+- No camera runtime, gameplay semantics, timeout, browser threshold, worker count, or production code changed.
 
 ## Validation state
-- Authority before package: run `33142436810` on `c5ad7c3f...`; static green, focused Chromium/WebKit both 60/60, full suites 156/177 on each engine.
-- Artifact `9675199244` showed Chromium first failure `Expected: 99`, `Received: 2.2` at `camera-2.spec.js:229`, which matches the transient-vs-persisted setup error above.
-- The next authority is the automatically-triggered Chromium/WebKit CI for this single coherent test+status checkpoint. Do not claim the camera regression green before that exact run completes.
+- Authority before package: run `33148519493` / artifact `9677656290` on `43aecf73...`.
+- Local/static semantic review: test-only change; JavaScript syntax unchanged outside the edited test body.
+- New Chromium/WebKit CI for the coherent checkpoint is the next authority; do not claim this regression green until that exact run completes.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 focused runtime architecture hardening — run #199 focused Chromium/WebKit are both 60/60.
+- [x] Phase 1 focused runtime architecture hardening — run #201 focused gate is green on both engines.
 - [ ] Phase 2 — complete cross-browser functional regression and save/migration coverage; currently working through the first factual full-suite failure.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Wait for the automatically-triggered Chromium/WebKit CI of this persisted-camera regression checkpoint. If focused gates remain green and the camera test passes, inspect and fix only the first remaining factual full-suite failure on that exact SHA. If the camera test still fails, inspect the retained artifact and camera storage/layout ordering before changing any runtime camera code.
+Wait for the automatically-triggered Chromium/WebKit CI of this persisted-camera regression checkpoint. If the camera persistence test is green, inspect and fix only the first remaining factual full-suite failure on that exact SHA; if it still fails, inspect its retained artifact before changing camera runtime code.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.

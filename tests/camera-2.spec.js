@@ -220,27 +220,31 @@ test.describe('Camera 2.0', () => {
 
     // Exercise the actual persisted-camera boundary. Mutating the debug camera object
     // alone never writes storage: production persistence happens through EpohiCameraStorage.
-    // Seed an intentionally out-of-range legacy value directly so reload must restore it,
-    // then the game layout must clamp it to current camera bounds.
+    // Seed an intentionally out-of-range legacy value directly, prove it reached storage,
+    // then reload so startup/layout is allowed to restore, clamp, and persist the safe value.
     await page.evaluate(() => {
       localStorage.setItem(
         window.EpohiConfig.CAMERA_KEY,
         JSON.stringify({ x: -99999, y: -99999, scale: 99 })
       );
     });
-
-    await page.reload();
-    await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
     expect(await page.evaluate(() => {
       const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
       return raw ? JSON.parse(raw).scale : null;
     })).toBe(99);
+
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
     await page.locator('[data-continue]').first().click();
     await expect(page.locator('#gameApp')).toBeVisible();
 
     let info = await cameraState(page);
     expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
     expectCameraPositionWithinBounds(info);
+    expect(await page.evaluate(() => {
+      const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
+      return raw ? JSON.parse(raw).scale : null;
+    })).toBeCloseTo(info.camera.scale, 2);
 
     await page.evaluate(() => {
       const viewport = document.getElementById('mapViewport');
