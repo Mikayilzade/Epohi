@@ -23,6 +23,7 @@
     feedbackSyncs: 0,
     strategySyncs: 0,
     playerFeedbackSyncs: 0,
+    pathingSyncs: 0,
     contextTailSyncs: 0,
     protectedFlushes: 0,
     throttledSchedules: 0
@@ -77,6 +78,13 @@
     stats.feedbackSyncs += 1;
   }
 
+  function syncPathingUi() {
+    const pathing = window.EpohiHumansPathingUI;
+    if (!pathing || typeof pathing.refresh !== "function") return;
+    pathing.refresh();
+    stats.pathingSyncs += 1;
+  }
+
   function scheduleContextTailSync() {
     // A newer identity repair can arrive while an older two-frame cleanup tail is
     // already pending. If we merely dedupe here, that older cleanup may run before
@@ -118,6 +126,11 @@
       window.EpohiContextReviewCleanup.sync();
     }
     syncPlayerFeedback();
+    // Pathing controls used to depend on the context MutationObserver noticing that
+    // app.js rebuilt the context card. The observer-local safety architecture no longer
+    // guarantees delivery for that synthetic dependency, so make the explicit runtime
+    // invalidation boundary the owner of route/worker control refresh as well.
+    syncPathingUi();
 
     // The post-frame cleanup is only needed when StrategyUX actually mutated identity
     // state and therefore queued its measured RAF(schedule) -> RAF(refresh) follow-up.
@@ -206,7 +219,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 18,
+    version: 19,
     request: request,
     flush: flush,
     stats: function () {
