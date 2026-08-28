@@ -6,6 +6,15 @@ on:
       - prototype/humans-v1
     types:
       - synchronize
+    paths:
+      - .github/workflows/diplomacy-activity-events-temp.yml
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
+      - index.html
+      - sw.js
   workflow_dispatch:
 
 concurrency:
@@ -153,9 +162,8 @@ jobs:
           retention-days: 7
 
 # Temporary PR-only autonomy gate for PR #84.
-# Every branch update creates at most one pull_request synchronize run.
+# PR synchronize events are created only for source/test/runtime paths above, so a status/docs-only
+# checkpoint cannot enter this concurrency group and cancel an in-flight validating code run.
+# The in-job detector remains as defense in depth and for explicit workflow_dispatch diagnostics.
 # Pull-request checkout is pinned to the exact PR head SHA, so HEAD^..HEAD means the latest branch commit,
-# not GitHub's synthetic merge ref. Source/test/runtime changes execute the browser gate;
-# status/docs-only commits finish green after the cheap detector and do not install browsers or run Playwright.
-# workflow_dispatch remains available only for an explicit diagnostic run when genuinely needed.
-# Remove this temporary workflow before final merge into prototype/humans-v1.
+# not GitHub's synthetic merge ref. Remove this temporary workflow before final merge into prototype/humans-v1.
