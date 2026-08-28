@@ -101,7 +101,7 @@ test.describe('Combat, AI and world stability', () => {
     await clickMapTileDom(page,5,5);
     expect(await page.evaluate(()=>window.__epohiDebug().getSelectedUnitId())).toBe(setup.attackerId);
     await clickMapTileDom(page,6,5);
-    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
+    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атак');
     await page.evaluate(() => {
       const attack = document.querySelector('[data-context-action="attack"]');
       if (!attack) throw new Error('Visible attack action disappeared before click');
