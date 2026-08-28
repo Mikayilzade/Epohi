@@ -19,7 +19,11 @@ on:
 
 concurrency:
   group: epohi-autonomy-${{ github.ref }}
-  cancel-in-progress: true
+  # pull_request trigger filters are evaluated from the base-side workflow definition.
+  # Until this temporary gate is merged/replaced, a status-only synchronize event can
+  # still be created even when this branch declares paths above. Never let such a cheap
+  # detector-only run cancel the already-validating code checkpoint.
+  cancel-in-progress: false
 
 jobs:
   verify:
@@ -162,8 +166,10 @@ jobs:
           retention-days: 7
 
 # Temporary PR-only autonomy gate for PR #84.
-# PR synchronize events are created only for source/test/runtime paths above, so a status/docs-only
-# checkpoint cannot enter this concurrency group and cancel an in-flight validating code run.
-# The in-job detector remains as defense in depth and for explicit workflow_dispatch diagnostics.
+# The branch-level paths list is the intended durable source/test/runtime trigger policy,
+# but pull_request trigger selection is controlled by the base-side workflow until this
+# workflow is merged/replaced. The in-job detector therefore remains the effective guard
+# for status/docs-only synchronize events on this Draft PR. Such runs are cheap and, with
+# cancel-in-progress disabled, cannot invalidate an in-flight source/test checkpoint.
 # Pull-request checkout is pinned to the exact PR head SHA, so HEAD^..HEAD means the latest branch commit,
 # not GitHub's synthetic merge ref. Remove this temporary workflow before final merge into prototype/humans-v1.

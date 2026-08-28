@@ -20,6 +20,8 @@ test('status/docs-only pushes cannot cancel a validating code checkpoint', async
   const workflow = fs.readFileSync(workflowPath, 'utf8');
   const block = pullRequestBlock(workflow);
 
+  // Keep the durable trigger allowlist restricted to code/test/runtime paths for the
+  // point where this workflow definition lives on the PR base.
   expect(block).toContain('    paths:');
   for (const requiredPath of [
     '.github/workflows/diplomacy-activity-events-temp.yml',
@@ -36,5 +38,12 @@ test('status/docs-only pushes cannot cancel a validating code checkpoint', async
 
   expect(block).not.toContain('AUTONOMY_STATUS.md');
   expect(block).not.toMatch(/-\s+\*\*\/\*\.md/);
-  expect(workflow).toContain('cancel-in-progress: true');
+
+  // On a pull_request workflow GitHub evaluates event trigger eligibility from the
+  // base-side workflow definition. While this gate only exists on the Draft PR branch,
+  // a docs/status synchronize can still start a detector-only run. It must never cancel
+  // a source/test run that is already validating the previous checkpoint.
+  expect(workflow).toContain('cancel-in-progress: false');
+  expect(workflow).toContain('Detect meaningful source change');
+  expect(workflow).toContain('run_browser_gate=false');
 });
