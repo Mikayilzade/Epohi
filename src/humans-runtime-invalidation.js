@@ -17,6 +17,7 @@
     flushes: 0,
     settledSignals: 0,
     actionSignals: 0,
+    tilePointerSignals: 0,
     transitionSignals: 0,
     broadObservers: 0,
     visualSyncs: 0,
@@ -185,6 +186,19 @@
     request("humans-ui-settled");
   });
 
+  // Mobile map taps are resolved by app.js on mapViewport pointerup, where the
+  // handler intentionally preventDefaults the synthetic click. A click-only
+  // invalidation hook can therefore miss the exact lifecycle that rebuilt the
+  // context card and leave pathing controls waiting on observer delivery. Listen
+  // at document bubble phase so app.js has already completed handleTileClick(),
+  // then schedule one bounded explicit refresh for the rebuilt unit context.
+  document.addEventListener("pointerup", function (event) {
+    const target = event.target && event.target.closest ? event.target : null;
+    if (!target || !target.closest("#map .tile")) return;
+    stats.tilePointerSignals += 1;
+    request("map-tile-pointerup");
+  });
+
   document.addEventListener("click", function (event) {
     stats.actionSignals += 1;
     const target = event.target && event.target.closest ? event.target : null;
@@ -219,7 +233,7 @@
   });
 
   window.EpohiRuntimeInvalidation = {
-    version: 19,
+    version: 20,
     request: request,
     flush: flush,
     stats: function () {
