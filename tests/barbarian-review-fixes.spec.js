@@ -45,9 +45,37 @@ test.describe('v1.4.4 review fixes for living camps', () => {
 
   test('replacement camp excludes the last destroyed tile when another candidate exists', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
-    const r = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state; d.activeCampEntries(s).forEach(c=>s.map[c.y][c.x].camp=null); for(let y=0;y<s.mapSize;y++) for(let x=0;x<s.mapSize;x++){ const t=s.map[y][x]; t.terrain='water'; t.camp=null; t.owner=null; t.poi=null; t.improvement=null; t.feature=null; t.resource=null; t.revealed=false; }
-      const cap=s.city; for(let x=cap.x;x<=18;x++) s.map[18][x].terrain='plains'; for(let y=cap.y;y<=18;y++) s.map[y][cap.x].terrain='plains'; s.map[1][1].terrain='plains'; s.map[18][18].terrain='plains'; s.map[18][18].owner=null; s.units.forEach(u=>{u.x=cap.x;u.y=cap.y;}); s.barbarianDirector.lastDestroyedCamp={x:1,y:1,turn:20,campId:'old'}; s.turn=30; s.barbarianDirector.nextCampSpawnTurn=30; s.barbarianDirector.lastMaintenanceTurn=null; const spawned=d.maintainBarbarianCamps(s,()=>0,{x:18,y:18}); return { spawned:spawned && {x:spawned.x,y:spawned.y}, oldValid:d.isValidCampSpawnTile(s,1,1), targetValid:!!spawned, count:d.activeCampEntries(s).length }; });
-    expect(r.spawned).toEqual({x:18,y:18}); expect(r.oldValid).toBeFalsy(); expect(r.targetValid).toBeTruthy(); expect(r.count).toBe(1);
+    const r = await page.evaluate(() => {
+      const d=window.__epohiDebug(), s=d.state, cap=s.city, edge=s.mapSize-2;
+      d.activeCampEntries(s).forEach(c=>s.map[c.y][c.x].camp=null);
+      for(let y=0;y<s.mapSize;y++) for(let x=0;x<s.mapSize;x++){
+        const t=s.map[y][x];
+        t.terrain='water'; t.camp=null; t.owner=null; t.poi=null; t.improvement=null; t.feature=null; t.resource=null; t.revealed=false;
+      }
+      const corners=[{x:1,y:1},{x:1,y:edge},{x:edge,y:1},{x:edge,y:edge}]
+        .sort((a,b)=>Math.max(Math.abs(cap.x-b.x),Math.abs(cap.y-b.y))-Math.max(Math.abs(cap.x-a.x),Math.abs(cap.y-a.y)));
+      const target=corners[0], old=corners[1];
+      const carve=(p)=>{
+        const sx=Math.min(cap.x,p.x), ex=Math.max(cap.x,p.x), sy=Math.min(cap.y,p.y), ey=Math.max(cap.y,p.y);
+        for(let x=sx;x<=ex;x++) s.map[cap.y][x].terrain='plains';
+        for(let y=sy;y<=ey;y++) s.map[y][p.x].terrain='plains';
+      };
+      carve(target); carve(old);
+      s.units.forEach(u=>{u.x=cap.x;u.y=cap.y;});
+      s.barbarianDirector.lastDestroyedCamp=null;
+      const oldBefore=d.isValidCampSpawnTile(s,old.x,old.y), targetBefore=d.isValidCampSpawnTile(s,target.x,target.y);
+      s.barbarianDirector.lastDestroyedCamp={x:old.x,y:old.y,turn:20,campId:'old'};
+      const oldAfter=d.isValidCampSpawnTile(s,old.x,old.y), targetAfter=d.isValidCampSpawnTile(s,target.x,target.y);
+      s.turn=30; s.barbarianDirector.nextCampSpawnTurn=30; s.barbarianDirector.lastMaintenanceTurn=null;
+      const spawned=d.maintainBarbarianCamps(s,()=>0,target);
+      return { target, oldBefore, targetBefore, oldAfter, targetAfter, spawned:spawned && {x:spawned.x,y:spawned.y}, count:d.activeCampEntries(s).length };
+    });
+    expect(r.oldBefore).toBeTruthy();
+    expect(r.targetBefore).toBeTruthy();
+    expect(r.oldAfter).toBeFalsy();
+    expect(r.targetAfter).toBeTruthy();
+    expect(r.spawned).toEqual(r.target);
+    expect(r.count).toBe(1);
   });
 
   test('initial camp creation mutates only the passed newState director, not the current global state', async ({ page }) => {
