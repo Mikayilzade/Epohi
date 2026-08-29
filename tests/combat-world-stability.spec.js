@@ -15,6 +15,16 @@ async function clickMapTileDom(page, x, y) {
   }, { x, y });
 }
 
+async function clickMapUnitSemanticDom(page, x, y) {
+  await page.evaluate(({ x, y }) => {
+    const tile = document.querySelector(`#map .tile[data-x="${x}"][data-y="${y}"]`);
+    if (!tile) throw new Error(`Map tile ${x},${y} not found`);
+    const marker = tile.querySelector('.piece.unit') || tile.querySelector('.unit-count');
+    if (!marker) throw new Error(`Own-unit marker ${x},${y} not found`);
+    marker.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+  }, { x, y });
+}
+
 test.describe('Combat, AI and world stability', () => {
   test('weighted route prefers a longer cheap route and reports its cost', async ({ page }) => {
     await ready(page, 0);
@@ -170,14 +180,13 @@ test.describe('Combat, AI and world stability', () => {
   test('three same-type stacked units keep distinct selection and orders', async ({ page }) => {
     await ready(page,0);
     const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
-    const stackTile=page.locator('#map .tile[data-x="5"][data-y="5"]');
-    await stackTile.locator('.piece.unit, .unit-count').first().click();
+    await clickMapUnitSemanticDom(page,5,5);
     await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(3);
     const targets=[[6,5],[5,6],[4,5]];
     for(let index=0;index<ids.length;index+=1){
       const id=ids[index], [x,y]=targets[index], remaining=ids.length-index;
       if(index>0){
-        await stackTile.locator('.piece.unit, .unit-count').first().click();
+        await clickMapUnitSemanticDom(page,5,5);
       }
       if(remaining>1){
         await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(remaining);
