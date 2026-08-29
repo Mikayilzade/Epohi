@@ -370,7 +370,10 @@
     }
 
     replayCoreTileClick(tile);
-    if (selectedAlreadyHere && unitsHere.length > 1) selectStackUnitNow(selectedId);
+    if (layer === "unit" && unitsHere.length) {
+      const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
+      selectStackUnitNow(targetId);
+    }
     clickLayer(layer);
     queueSync();
   }, true);
@@ -390,7 +393,7 @@
   }, true);
 
   window.EpohiContextReviewCleanup = {
-    version: 3,
+    version: 4,
     semanticLayer: semanticLayer,
     sync: syncUi,
     selectStackUnit: selectStackUnit,
