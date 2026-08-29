@@ -217,7 +217,6 @@
     gs.populationWorkforcePreparedTurn = turn;
     return true;
   }
-
   function activePlayerCity(gs) {
     const cities = playerCities(gs);
     const value = debug();
@@ -419,12 +418,16 @@
 
     if (window.MutationObserver && document.body) {
       observer = new MutationObserver(scheduleUiSync);
-      ["gameApp", "cityContent", "wikiContent", "turnValue", "resourceScope"].forEach(function (id) {
-        const node = document.getElementById(id);
+      [
+        { id: "gameApp", options: { attributes: true, attributeFilter: ["class"] } },
+        { id: "cityContent", options: { childList: true } },
+        { id: "wikiContent", options: { childList: true } },
+        { id: "turnValue", options: { childList: true } },
+        { id: "resourceScope", options: { childList: true } }
+      ].forEach(function (entry) {
+        const node = document.getElementById(entry.id);
         if (!node) return;
-        const options = { childList: true, subtree: true, characterData: true };
-        if (id === "gameApp") { options.attributes = true; options.attributeFilter = ["class"]; }
-        observer.observe(node, options);
+        observer.observe(node, entry.options);
       });
     }
     scheduleUiSync();

@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-6-mobile-review-layout-v2";
+  "epohi-v1-8-13-population-observer-narrowed-v1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -41,6 +41,14 @@ const APP_FILES = [
   "./src/humans-combat-world-stability.js",
   "./src/humans-population-workforce.js",
   "./src/humans-context-review-cleanup.js",
+  "./src/humans-runtime-invalidation.js",
+  "./src/humans-diplomacy-event-flow.js",
+  "./src/humans-event-overlay-policy.js",
+  "./src/humans-chronicle-ui.js",
+  "./src/humans-worker-learning.js",
+  "./src/humans-capture-state.js",
+  "./src/humans-diplomacy-coherence-v2.js",
+  "./src/humans-coherence-finalize.js",
   "./manifest.webmanifest",
   "./apple-touch-icon.png",
   "./icon-192.png",

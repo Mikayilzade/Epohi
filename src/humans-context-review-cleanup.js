@@ -369,14 +369,11 @@
       if (city && before && typeof before.setActiveCity === "function") before.setActiveCity(city.id);
     }
 
-    if (layer === "unit" && selectedAlreadyHere && unitsHere.length) {
-      clickLayer("unit");
-      queueSync();
-      return;
-    }
-
     replayCoreTileClick(tile);
-    if (layer !== "unit" && selectedAlreadyHere && unitsHere.length > 1) selectStackUnitNow(selectedId);
+    if (layer === "unit" && unitsHere.length) {
+      const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
+      selectStackUnitNow(targetId);
+    }
     clickLayer(layer);
     queueSync();
   }, true);
@@ -395,12 +392,8 @@
     handleActivity(kind);
   }, true);
 
-  const observer = new MutationObserver(queueSync);
-  observer.observe(contextPanel, { childList: true, subtree: true, characterData: true });
-  observer.observe(document.body, { childList: true, subtree: true });
-
   window.EpohiContextReviewCleanup = {
-    version: 2,
+    version: 4,
     semanticLayer: semanticLayer,
     sync: syncUi,
     selectStackUnit: selectStackUnit,

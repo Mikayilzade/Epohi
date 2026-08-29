@@ -35,7 +35,12 @@ test.describe('Автономные приказы людей', () => {
     expect(moduleInfo.hasAssign).toBe(true);
     expect(moduleInfo.hasProcess).toBe(true);
     expect(moduleInfo.reports).toEqual([]);
-    await expect(page.locator('#autonomyReportBtn')).toHaveCount(1);
+
+    // Fresh-game rendering emits the explicit humans-ui-settled lifecycle signal.
+    // The report control must become actionable from that signal alone; requiring an
+    // extra context mutation would reintroduce the observer-coupling this hardening
+    // phase is removing.
+    await expect(page.locator('#autonomyReportBtn')).toHaveCount(1, { timeout: 1000 });
   });
 
   test('разведчик самостоятельно идёт к границе известного мира и открывает клетки', async ({ page }) => {
@@ -134,12 +139,13 @@ test.describe('Автономные приказы людей', () => {
     expect(result.reports).toContain('guard-combat');
   });
 
-  test('рабочий по приказу развивает город и тратит локальное производство', async ({ page }) => {
+  test('рабочий по приказу развивает город рабочим временем без расхода производства', async ({ page }) => {
     await openFreshGame(page, 'Авторабочий');
 
     const result = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       const autonomy = window.EpohiHumansAutonomy;
+      const workerLearning = window.EpohiWorkerLearning;
       const city = state.cities[0];
       const point = window.EpohiUtils.neighborsOf(city.x, city.y, state.mapSize)
         .find(item => state.map[item.y] && state.map[item.y][item.x]);
@@ -180,21 +186,48 @@ test.describe('Автономные приказы людей', () => {
       });
       autonomy.processOrders(state);
 
+      const started = {
+        improvement: tile.improvement,
+        production: city.production,
+        acted: worker.acted,
+        project: worker.workerProject ? { ...worker.workerProject } : null,
+        events: state.eventLog.map(item => item.eventType)
+      };
+
+      // Worker projects intentionally consume working turns rather than city production.
+      // Advance only the worker-project clock; this keeps the regression deterministic
+      // and verifies that an autonomous develop order eventually completes the farm.
+      let guard = 0;
+      while (worker.workerProject && guard < 8) {
+        state.turn += 1;
+        workerLearning.processWorkerProjects(state);
+        guard += 1;
+      }
+
       return {
         assigned,
+        started,
         improvement: tile.improvement,
         productionBefore,
         productionAfter: city.production,
-        acted: worker.acted,
-        reports: state.autonomyReports.map(item => item.kind)
+        workerProject: worker.workerProject,
+        finalOrderStatus: worker.order && worker.order.status,
+        events: state.eventLog.map(item => item.eventType)
       };
     });
 
     expect(result.assigned).toBe(true);
+    expect(result.started.project).not.toBeNull();
+    expect(result.started.project.improvementId).toBe('farm');
+    expect(result.started.improvement).toBeNull();
+    expect(result.started.production).toBe(result.productionBefore);
+    expect(result.started.acted).toBe(true);
+    expect(result.started.events).toContain('worker-project-started');
     expect(result.improvement).toBe('farm');
-    expect(result.productionAfter).toBeLessThan(result.productionBefore);
-    expect(result.acted).toBe(true);
-    expect(result.reports).toContain('worker-build');
+    expect(result.productionAfter).toBe(result.productionBefore);
+    expect(result.workerProject).toBeNull();
+    expect(result.finalOrderStatus).toBe('active');
+    expect(result.events).toContain('worker-build');
   });
 
   test('приказ можно отменить и он не выполняется после отмены', async ({ page }) => {

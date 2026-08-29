@@ -153,10 +153,11 @@ test.describe('Сага Ардены, сценарии и визуальный �
     });
 
     await expect(page.locator('[data-journey-alert]')).toHaveClass(/has-event/);
-    await page.locator('[data-open-human-journey]').first().click();
-    await expect(page.locator('#humansJourneyModal')).toHaveClass(/show/);
-    await expect(page.locator('#humansJourneyContent')).toContainText('Странствующий мастер');
-    await page.locator('[data-story-choice="teach"]').click();
+    const decision = page.locator('#stabilityDecisionModal');
+    await expect(decision).toHaveClass(/show/);
+    await expect(decision).toContainText('Странствующий мастер');
+    await expect(page.locator('#humansJourneyModal')).not.toHaveClass(/show/);
+    await decision.getByRole('button', { name: /Попросить обучить учеников/ }).click();
 
     const result = await page.evaluate(() => {
       const state = window.__epohiDebug().state;

@@ -5,6 +5,15 @@ async function ready(page) {
   await page.waitForFunction(() => window.EpohiLivingCivilizations && window.__epohiDebug && window.__epohiDebug().state);
 }
 
+async function acceptCentralProposal(page, id) {
+  const modal = page.locator('#coherenceProposalModal');
+  await expect(modal).toHaveClass(/show/);
+  await expect(page.locator('#livingProposals')).not.toBeVisible();
+  const action = modal.locator(`[data-coherence-proposal-answer="yes"][data-proposal-id="${id}"]`);
+  await expect(action).toBeVisible();
+  await action.click();
+}
+
 test.describe('Living Civilizations', () => {
   test('мигрирует дипломатию v1 и объясняет доверие, страх и обиды', async ({ page }) => {
     const problems = watchConsole(page); await clearStorage(page); await createGame(page, 2); await ready(page);
@@ -45,7 +54,7 @@ test.describe('Living Civilizations', () => {
       const p=api.createProposal(gs,c,'trade','Выгодный путь'); window.__epohiDebug().render();
       return {id:p.id,gold:gs.resources.gold,trust:c.diplomacy.trust};
     });
-    await page.locator(`[data-proposal="${before.id}"][data-answer="yes"]`).click();
+    await acceptCentralProposal(page, before.id);
     const after = await page.evaluate(() => {
       const gs=window.__epohiDebug().state,c=gs.rivals[0],route=window.EpohiPlayerFeedback.activeTradeRoute(gs,c.civilizationId);
       return {gold:gs.resources.gold,trust:c.diplomacy.trust,status:gs.diplomaticProposals[0].status,route,events:gs.eventLog.map(e=>e.eventType)};
@@ -57,7 +66,7 @@ test.describe('Living Civilizations', () => {
   test('союзник идёт к варварам и вступает в войну игрока', async ({ page }) => {
     await clearStorage(page); await createGame(page, 3); await ready(page);
     const result = await page.evaluate(() => {
-      const gs=window.__epohiDebug().state, ally=gs.rivals[2], enemy=gs.rivals[0], unit=ally.units.find(u=>u.type!=='worker'&&u.type!=='settler'), city=gs.city||gs.cities[0];
+      const gs = window.__epohiDebug().state, ally=gs.rivals[2], enemy=gs.rivals[0], unit=ally.units.find(u=>u.type!=='worker'&&u.type!=='settler'), city=gs.city||gs.cities[0];
       ally.relation='ally'; enemy.relation='war'; unit.x=city.x+2; unit.y=city.y; unit.moves=window.EpohiData.UNIT_DEFS[unit.type].maxMoves; unit.acted=false;
       ally.units=[unit].concat(ally.units.filter(candidate=>candidate!==unit));
       gs.barbarians=[{id:'help-target',x:city.x+1,y:city.y,hp:5,maxHp:40}];
@@ -111,7 +120,7 @@ test.describe('Living Civilizations', () => {
   test('принятая совместная война немедленно взаимна', async ({ page }) => {
     await clearStorage(page); await createGame(page, 2); await ready(page);
     const proposal=await page.evaluate(() => {const gs=window.__epohiDebug().state,[ally,target]=gs.rivals;ally.met=true;target.met=true;const item=window.EpohiLivingCivilizations.createProposal(gs,ally,'jointWar','Ударим вместе',target.civilizationId);window.__epohiDebug().render();return {id:item.id,ally:ally.civilizationId,target:target.civilizationId};});
-    await page.locator(`[data-proposal="${proposal.id}"][data-answer="yes"]`).click();
+    await acceptCentralProposal(page, proposal.id);
     const relation=await page.evaluate(({ally,target}) => {const gs=window.__epohiDebug().state,a=gs.rivals.find(c=>c.civilizationId===ally),b=gs.rivals.find(c=>c.civilizationId===target);return {forward:a.diplomacy[target],reverse:b.diplomacy[ally]};},proposal);
     expect(relation.forward).toBe('war');expect(relation.reverse).toBe('war');
   });

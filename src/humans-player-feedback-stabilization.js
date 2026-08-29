@@ -2,7 +2,6 @@
   "use strict";
 
   let controls = null;
-  let contentObserver = null;
   let contextGuard = false;
   let stackSelectionPending = null;
 
@@ -38,12 +37,6 @@
       sheet.appendChild(controls);
     }
 
-    if (!contentObserver) {
-      contentObserver = new MutationObserver(function () {
-        removeRecreatedButtons(content);
-      });
-      contentObserver.observe(content, { childList: true, subtree: true });
-    }
     removeRecreatedButtons(content);
   }
 
@@ -112,16 +105,12 @@
       const previousEvents = new Set(beforeState && Array.isArray(beforeState.eventLog) ? beforeState.eventLog : []);
       const result = originalAssign(unitId, destination);
       const state = gameState();
-      const unit = state && (state.units || []).find(function (item) {
-        return String(item.id) === String(unitId);
-      });
+      const unit = state && (state.units || []).find(function (item) { return String(item.id) === String(unitId); });
       const order = unit && unit.travelOrder;
       const located = order && pathing.locateTarget(state, order);
       const adjacent = located && window.EpohiUtils.isAdjacent(unit.x, unit.y, located.x, located.y);
-      const expensiveDirectMove = adjacent && order.type === "move" &&
-        pathing.movementCost(state, unit, located) > unit.moves;
-      if (result && unit && unit.moves > 0 && !unit.acted && adjacent &&
-          (order.type === "attack" || expensiveDirectMove)) {
+      const expensiveDirectMove = adjacent && order.type === "move" && pathing.movementCost(state, unit, located) > unit.moves;
+      if (result && unit && unit.moves > 0 && !unit.acted && adjacent && (order.type === "attack" || expensiveDirectMove)) {
         pathing.processUnit(state, unit, { render: false });
         const value = debug();
         if (value && typeof value.render === "function") value.render();
@@ -133,16 +122,8 @@
 
   function promoteNewMajorEvent(state, previousEvents) {
     if (!state || !Array.isArray(state.eventLog)) return;
-    const majorTypes = [
-      "capital-fallen",
-      "state-destroyed",
-      "victory",
-      "defeat",
-      "major-diplomatic-event"
-    ];
-    const index = state.eventLog.findIndex(function (event) {
-      return !previousEvents.has(event) && majorTypes.indexOf(event.eventType) >= 0;
-    });
+    const majorTypes = ["capital-fallen", "state-destroyed", "victory", "defeat", "major-diplomatic-event"];
+    const index = state.eventLog.findIndex(function (event) { return !previousEvents.has(event) && majorTypes.indexOf(event.eventType) >= 0; });
     if (index <= 0) return;
     const major = state.eventLog.splice(index, 1)[0];
     state.eventLog.unshift(major);
@@ -152,29 +133,18 @@
     document.addEventListener("click", function (event) {
       const button = event.target.closest && event.target.closest('[data-context-action="attack"]');
       if (!button || button.disabled) return;
-
       const value = debug();
       const state = value && value.state;
       const pathing = window.EpohiHumansPathing;
       const tile = document.querySelector("#map .tile.inspect-tile");
       if (!state || !pathing || !tile || typeof value.getSelectedUnitId !== "function") return;
-
       const target = pathing.targetFromTile(state, Number(tile.dataset.x), Number(tile.dataset.y));
-      if (!target || (target.targetKind !== "rival-city" && target.targetKind !== "rival" &&
-          target.targetKind !== "barbarian" && target.targetKind !== "camp")) return;
-
-      const readyUnits = (state.units || []).filter(function (unit) {
-        return unit.hp > 0 && !unit.acted && unit.moves > 0;
-      });
+      if (!target || (target.targetKind !== "rival-city" && target.targetKind !== "rival" && target.targetKind !== "barbarian" && target.targetKind !== "camp")) return;
+      const readyUnits = (state.units || []).filter(function (unit) { return unit.hp > 0 && !unit.acted && unit.moves > 0; });
       const selectedId = value.getSelectedUnitId();
       const selected = readyUnits.find(function (unit) { return String(unit.id) === String(selectedId); });
-      const adjacent = readyUnits.filter(function (unit) {
-        return window.EpohiUtils.isAdjacent(unit.x, unit.y, target.x, target.y);
-      });
-      const attacker = selected && window.EpohiUtils.isAdjacent(selected.x, selected.y, target.x, target.y)
-        ? selected
-        : adjacent[0];
-
+      const adjacent = readyUnits.filter(function (unit) { return window.EpohiUtils.isAdjacent(unit.x, unit.y, target.x, target.y); });
+      const attacker = selected && window.EpohiUtils.isAdjacent(selected.x, selected.y, target.x, target.y) ? selected : adjacent[0];
       if (!attacker) return;
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -186,10 +156,8 @@
     document.addEventListener("click", function (event) {
       const opener = event.target.closest && event.target.closest("[data-open-human-journey]");
       if (!opener) return;
-
       const urgentModal = document.getElementById("stabilityDecisionModal");
       if (urgentModal) urgentModal.classList.remove("show");
-
       setTimeout(function () {
         const journeyModal = document.getElementById("humansJourneyModal");
         if (!journeyModal || journeyModal.classList.contains("show")) return;
@@ -211,8 +179,7 @@
         frame = 0;
         const app = document.getElementById("gameApp");
         const value = debug();
-        if (!app || app.classList.contains("is-hidden") || !value || !value.state ||
-            typeof value.applyCamera !== "function") return;
+        if (!app || app.classList.contains("is-hidden") || !value || !value.state || typeof value.applyCamera !== "function") return;
         value.applyCamera(true);
       });
     }).observe(viewport);
@@ -228,18 +195,13 @@
     const tile = event.target.closest && event.target.closest("#map .tile");
     const value = debug();
     const state = value && value.state;
-    if (!tile || !state || typeof value.getSelectedUnitId !== "function") {
-      stackSelectionPending = null;
-      return;
-    }
+    if (!tile || !state || typeof value.getSelectedUnitId !== "function") { stackSelectionPending = null; return; }
     const x = Number(tile.dataset.x);
     const y = Number(tile.dataset.y);
     const previousId = value.getSelectedUnitId();
     const previous = (state.units || []).find(function (unit) { return String(unit.id) === String(previousId); });
     const units = (state.units || []).filter(function (unit) { return unit.hp > 0 && unit.x === x && unit.y === y; });
-    stackSelectionPending = units.length > 1 && (!previous || previous.x !== x || previous.y !== y)
-      ? { x: x, y: y, previousId: previousId }
-      : null;
+    stackSelectionPending = units.length > 1 && (!previous || previous.x !== x || previous.y !== y) ? { x: x, y: y, previousId: previousId } : null;
   }
 
   function addStackSelectionAcknowledgement() {
@@ -282,42 +244,20 @@
     ensureStableControls();
     preserveFreePlay();
     stabilizeMovementExplanation();
-
-    const context = document.getElementById("contextPanel");
-    if (context) new MutationObserver(function () {
-      stabilizeMovementExplanation();
-      addStackSelectionAcknowledgement();
-    }).observe(context, { childList: true, subtree: true, characterData: true });
-
     document.addEventListener("pointerdown", rememberStackSelection, true);
-    document.addEventListener("click", function () { setTimeout(addStackSelectionAcknowledgement, 0); }, true);
 
-    const journeyModal = document.getElementById("humansJourneyModal");
-    if (journeyModal) new MutationObserver(closeUrgentDecisionForJourney).observe(journeyModal, { attributes: true, attributeFilter: ["class"] });
-
-    const modal = document.getElementById("victoryModal");
-    if (modal) {
-      new MutationObserver(function () {
-        ensureStableControls();
-        preserveFreePlay();
-      }).observe(modal, { attributes: true, attributeFilter: ["class"] });
-    }
-
-    const turn = document.getElementById("turnValue");
-    if (turn) {
-      new MutationObserver(function () {
-        preserveFreePlay();
-        expireSkippedJourneyEvents();
-      }).observe(turn, { childList: true, characterData: true, subtree: true });
-    }
+    // RuntimeInvalidation already invokes all stabilization sync functions after explicit
+    // UI/action signals. Local journey/victory/turn MutationObservers duplicated that work
+    // and kept callbacks alive during otherwise idle city/worker contexts.
   }
 
   window.EpohiPlayerFeedbackStabilization = {
-    version: 4,
+    version: 7,
     ensureStableControls: ensureStableControls,
     preserveFreePlay: preserveFreePlay,
     stabilizeMovementExplanation: stabilizeMovementExplanation,
-    expireSkippedJourneyEvents: expireSkippedJourneyEvents
+    expireSkippedJourneyEvents: expireSkippedJourneyEvents,
+    addStackSelectionAcknowledgement: addStackSelectionAcknowledgement
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once: true });

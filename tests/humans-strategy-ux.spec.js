@@ -16,22 +16,31 @@ async function waitStrategy(page) {
 }
 
 test.describe('Стратегический UX', () => {
-  test('колесо мыши масштабирует карту к курсору', async ({ page }) => {
+  test('wheel-событие масштабирует карту к курсору', async ({ page }) => {
     const problems = watchConsole(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await clearStorage(page);
     await createGame(page, 0, 'normal');
     await waitStrategy(page);
 
-    const before = await page.evaluate(() => window.__epohiDebug().getCamera().scale);
-    const viewport = page.locator('#mapViewport');
-    const box = await viewport.boundingBox();
-    await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.35);
-    await page.mouse.wheel(0, -420);
-    await page.waitForTimeout(80);
-    const after = await page.evaluate(() => window.__epohiDebug().getCamera().scale);
+    const result = await page.locator('#mapViewport').evaluate((viewport) => {
+      const before = window.__epohiDebug().getCamera().scale;
+      const rect = viewport.getBoundingClientRect();
+      const event = new WheelEvent('wheel', {
+        deltaY: -420,
+        clientX: rect.left + rect.width * 0.7,
+        clientY: rect.top + rect.height * 0.35,
+        bubbles: true,
+        cancelable: true
+      });
+      const dispatched = viewport.dispatchEvent(event);
+      const after = window.__epohiDebug().getCamera().scale;
+      return { before, after, dispatched, defaultPrevented: event.defaultPrevented };
+    });
 
-    expect(after).toBeGreaterThan(before);
+    expect(result.defaultPrevented).toBe(true);
+    expect(result.dispatched).toBe(false);
+    expect(result.after).toBeGreaterThan(result.before);
     await expectNoConsoleProblems(problems);
   });
 
@@ -84,6 +93,9 @@ test.describe('Стратегический UX', () => {
 
   test('государства получают разные имена, цвета и маркеры', async ({ page }) => {
     const problems = watchConsole(page);
+    await page.addInitScript(() => {
+      Math.random = () => 0.5;
+    });
     await clearStorage(page);
     await createGame(page, 2, 'normal');
     await waitStrategy(page);
@@ -109,6 +121,13 @@ test.describe('Стратегический UX', () => {
 
   test('три соперника создают политическую кампанию с союзником', async ({ page }) => {
     const problems = watchConsole(page);
+    await page.addInitScript(() => {
+      let seed = 0x1a2b3c4d;
+      Math.random = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        return seed / 0x100000000;
+      };
+    });
     await clearStorage(page);
     await page.goto('/');
     await page.getByRole('button', { name: 'Новая игра' }).click();

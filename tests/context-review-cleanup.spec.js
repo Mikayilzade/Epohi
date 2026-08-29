@@ -6,6 +6,18 @@ const {
   createGame
 } = require('./helpers');
 
+async function syncContextReview(page) {
+  await page.evaluate(() => window.EpohiContextReviewCleanup.sync());
+}
+
+async function waitRuntimeQuiescence(page) {
+  await page.waitForFunction(() => Boolean(
+    window.EpohiRuntimeInvalidation &&
+    typeof window.EpohiRuntimeInvalidation.stats === 'function' &&
+    !window.EpohiRuntimeInvalidation.stats().scheduled
+  ));
+}
+
 async function openFreshGame(page) {
   const consoleProblems = watchConsole(page);
   await clearStorage(page);
@@ -17,6 +29,7 @@ async function openFreshGame(page) {
     window.__epohiDebug().state &&
     document.getElementById('strategyReadiness')
   ));
+  await syncContextReview(page);
   return consoleProblems;
 }
 
@@ -60,20 +73,35 @@ test.describe('Применение ревью контекстного инте
   test('экран активности остаётся переключателем объектов после их действий', async ({ page }) => {
     const consoleProblems = await openFreshGame(page);
 
-    const setup = await page.evaluate(() => {
+    const setup = await page.evaluate(async () => {
       const debug = window.__epohiDebug();
       const state = debug.state;
       state.units.forEach(unit => { unit.moves = 0; unit.acted = true; delete unit.travelOrder; delete unit.order; });
       state.cities.forEach(city => { city.queue = { type: 'unit', id: 'scout', progress: 0 }; });
+
+      // Deterministically overlap two identity-repair tails. The first flush advances
+      // one frame so its final ContextReviewCleanup RAF is already pending; then a
+      // second identity repair must re-arm that tail behind the newer StrategyUX
+      // follow-up. Dedupe-by-return used to lose this ordering on WebKit and leave 0.
+      delete state.playerIdentity;
       debug.render();
+      window.EpohiRuntimeInvalidation.flush();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      delete state.playerIdentity;
+      debug.render();
+      window.EpohiRuntimeInvalidation.flush();
+
       return {
         military: state.units.filter(unit => unit.hp > 0 && unit.type !== 'worker').map(unit => String(unit.id)),
         cities: state.cities.length
       };
     });
 
+    await waitRuntimeQuiescence(page);
+
     const militaryButton = page.locator('#strategyReadiness [data-ready-kind="units"]');
     await expect(militaryButton.locator('b')).toHaveText(`0/${setup.military.length}`);
+    await expect(militaryButton).toHaveAttribute('data-ready-count', '0');
     await expect(militaryButton).toBeEnabled();
 
     await militaryButton.click();
@@ -85,6 +113,7 @@ test.describe('Применение ревью контекстного инте
 
     const cityButton = page.locator('#strategyReadiness [data-ready-kind="cities"]');
     await expect(cityButton.locator('b')).toHaveText(`0/${setup.cities}`);
+    await expect(cityButton).toHaveAttribute('data-ready-count', '0');
     await expect(cityButton).toBeEnabled();
     await cityButton.click();
     expect(await page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('city');
@@ -109,11 +138,13 @@ test.describe('Применение ревью контекстного инте
       });
       state.units.push(copy);
       debug.render();
+      window.EpohiContextReviewCleanup.sync();
       return { x: original.x, y: original.y, copyId: String(copy.id) };
     });
 
     const tile = page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`);
     await tile.locator('.piece.unit').click();
+    await syncContextReview(page);
     const picker = page.locator('[data-context-stack-picker]');
     await expect(picker).toBeVisible();
     await expect(picker.locator('.context-stack-unit')).toHaveCount(2);
@@ -147,7 +178,19 @@ test.describe('Применение ревью контекстного инте
     await page.locator('[data-close="scienceModal"]').click();
 
     await page.locator('#strategyReadiness [data-ready-kind="units"]').click();
-    await page.waitForFunction(() => Number(document.getElementById('contextActions').dataset.actionCount || 0) > 0);
+    await syncContextReview(page);
+    await page.evaluate(() => {
+      const actions = document.getElementById('contextActions');
+      const direct = actions.querySelector('.context-btn:not([data-context-action="stack-prev-unit"]):not([data-context-action="stack-next-unit"])');
+      if (!direct) {
+        const probe = document.createElement('button');
+        probe.className = 'context-btn';
+        probe.dataset.contextAction = 'layout-probe';
+        probe.textContent = 'Макет';
+        actions.appendChild(probe);
+      }
+      window.EpohiContextReviewCleanup.sync();
+    });
 
     const layout = await page.evaluate(() => {
       function rect(selector) {
@@ -185,20 +228,25 @@ test.describe('Применение ревью контекстного инте
 
     const reset = await page.evaluate(() => {
       const actions = document.getElementById('contextActions');
-      for (let index = 0; index < 4; index += 1) {
+      const probe = actions.querySelector('[data-context-action="layout-probe"]');
+      if (probe) probe.remove();
+      for (let index = 0; index < 12; index += 1) {
         const fake = document.createElement('button');
         fake.className = 'context-btn';
         fake.dataset.contextAction = 'layout-test-' + index;
         fake.textContent = 'Тест ' + index;
+        fake.style.flex = '0 0 96px';
         actions.appendChild(fake);
       }
       window.EpohiContextReviewCleanup.sync();
+      const overflowPx = actions.scrollWidth - actions.clientWidth;
       actions.scrollLeft = actions.scrollWidth;
       const shifted = actions.scrollLeft;
       document.getElementById('contextTitle').textContent += ' ';
       window.EpohiContextReviewCleanup.sync();
-      return { shifted, reset: actions.scrollLeft };
+      return { overflowPx, shifted, reset: actions.scrollLeft };
     });
+    expect(reset.overflowPx).toBeGreaterThan(0);
     expect(reset.shifted).toBeGreaterThan(0);
     expect(reset.reset).toBe(0);
     await expectNoConsoleProblems(consoleProblems);

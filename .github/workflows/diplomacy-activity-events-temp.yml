@@ -1,0 +1,175 @@
+name: Epohi Autonomous Cross-Browser Gate
+
+on:
+  pull_request:
+    branches:
+      - prototype/humans-v1
+    types:
+      - synchronize
+    paths:
+      - .github/workflows/diplomacy-activity-events-temp.yml
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
+      - index.html
+      - sw.js
+  workflow_dispatch:
+
+concurrency:
+  group: epohi-autonomy-${{ github.ref }}
+  # pull_request trigger filters are evaluated from the base-side workflow definition.
+  # Until this temporary gate is merged/replaced, a status-only synchronize event can
+  # still be created even when this branch declares paths above. Never let such a cheap
+  # detector-only run cancel the already-validating code checkpoint.
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Detect meaningful source change
+        id: source_change
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run_browser_gate=true" >> "$GITHUB_OUTPUT"
+            echo "Explicit diagnostic dispatch: browser gate enabled."
+            exit 0
+          fi
+
+          if git diff --quiet HEAD^ HEAD -- \
+            .github/workflows/diplomacy-activity-events-temp.yml \
+            playwright.config.js \
+            package.json \
+            package-lock.json \
+            src \
+            tests \
+            index.html \
+            sw.js; then
+            echo "run_browser_gate=false" >> "$GITHUB_OUTPUT"
+            echo "Latest commit is status/docs-only for this gate; browser CI skipped."
+          else
+            echo "run_browser_gate=true" >> "$GITHUB_OUTPUT"
+            echo "Meaningful source/test/runtime change detected; browser CI enabled."
+          fi
+
+      - name: Setup Node.js LTS
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Static integrity
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check playwright.config.js
+          node --check sw.js
+          git diff --check HEAD^ HEAD
+
+      - name: Focused mobile runtime — Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        shell: bash
+        run: |
+          set +e
+          tests=(
+            tests/runtime-invalidation.spec.js
+            tests/runtime-invalidation-cadence.spec.js
+            tests/turn-label-idempotence.spec.js
+            tests/legacy-observer-containment.spec.js
+            tests/explicit-legacy-refresh-bridge.spec.js
+            tests/mobile-performance-stability.spec.js
+            tests/observer-startup-attribution.spec.js
+            tests/observer-delivery-latency.spec.js
+            tests/coherence-capture-learning.spec.js
+            tests/diplomacy-activity-events.spec.js
+            tests/context-review-cleanup.spec.js
+            tests/humans-strategy-ux.spec.js
+            tests/combat-world-stability.spec.js
+          )
+
+          # Keep strict per-test limits while avoiding runner CPU contention from
+          # making timing-sensitive mobile assertions compete with another browser worker.
+          # Run #164 proved WebKit joint-war green at one worker while Chromium still
+          # consumed nearly the entire 20 s budget at two workers, so both focused gates
+          # now use one worker for equivalent contention conditions.
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          echo "Chromium focused exit: $chromium_code"
+          echo "WebKit focused exit: $webkit_code"
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Full mobile regression — Chromium and WebKit
+        if: steps.source_change.outputs.run_browser_gate == 'true'
+        shell: bash
+        run: |
+          set +e
+
+          npx playwright test --project=chromium-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test --project=webkit-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          echo "Chromium full exit: $chromium_code"
+          echo "WebKit full exit: $webkit_code"
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload cross-browser diagnostics
+        if: always() && steps.source_change.outputs.run_browser_gate == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: epohi-autonomous-cross-browser-results
+          path: |
+            focused-chromium.txt
+            focused-webkit.txt
+            full-chromium.txt
+            full-webkit.txt
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+# Temporary PR-only autonomy gate for PR #84.
+# The branch-level paths list is the intended durable source/test/runtime trigger policy,
+# but pull_request trigger selection is controlled by the base-side workflow until this
+# workflow is merged/replaced. The in-job detector therefore remains the effective guard
+# for status/docs-only synchronize events on this Draft PR. Such runs are cheap and, with
+# cancel-in-progress disabled, cannot invalidate an in-flight source/test checkpoint.
+# Pull-request checkout is pinned to the exact PR head SHA, so HEAD^..HEAD means the latest branch commit,
+# not GitHub's synthetic merge ref. Remove this temporary workflow before final merge into prototype/humans-v1.

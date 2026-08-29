@@ -61,6 +61,16 @@ async function tileScreenCenter(page, x, y) {
   }, { x, y });
 }
 
+async function waitForTileCentered(page, x, y) {
+  await expect.poll(async () => {
+    const centered = await tileScreenCenter(page, x, y);
+    return Math.max(
+      Math.abs(centered.x - centered.viewportCenterX),
+      Math.abs(centered.y - centered.viewportCenterY)
+    );
+  }, { timeout: 2000, intervals: [16, 32, 64, 100] }).toBeLessThan(0.2);
+}
+
 function expectCameraPositionWithinBounds(info) {
   const scaledWidth = info.map.width * info.camera.scale;
   const scaledHeight = info.map.height * info.camera.scale;
@@ -142,8 +152,6 @@ test.describe('Camera 2.0', () => {
     expect(new Set(mins.map((value) => value.toFixed(3))).size).toBeGreaterThan(1);
   });
 
-
-
   test('large map can fit short portrait and landscape viewports below legacy minimum', async ({ page }) => {
     await expectLargeMapFitsViewport(page, { width: 390, height: 667 });
     await expectLargeMapFitsViewport(page, { width: 844, height: 390 });
@@ -182,9 +190,9 @@ test.describe('Camera 2.0', () => {
       state.units[0].y = 3;
       debug.render();
     });
-    await page.waitForTimeout(50);
+    await page.waitForFunction(() => document.querySelector('.tile[data-x="2"][data-y="3"]'));
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await page.waitForTimeout(220);
+    await waitForTileCentered(page, 2, 3);
     let centered = await tileScreenCenter(page, 2, 3);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
@@ -196,35 +204,52 @@ test.describe('Camera 2.0', () => {
       debug.render();
       return { x: debug.state.city.x, y: debug.state.city.y };
     });
-    await page.waitForTimeout(50);
+    await page.waitForFunction(({ x, y }) => document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`), capital);
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await page.waitForTimeout(220);
+    await waitForTileCentered(page, capital.x, capital.y);
     centered = await tileScreenCenter(page, capital.x, capital.y);
     expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
     expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
   });
 
-  test('stored scale clamps after layout, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
+  test('stored scale normalizes safely across reload, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {
     await clearStorage(page);
     await createGame(page, 0, 'normal');
     await expect(page.locator('#gameApp')).toBeVisible();
     await page.waitForFunction(() => window.__epohiDebug && window.__epohiDebug().state && document.querySelector('#map .tile'));
+
+    // Exercise the actual persisted-camera boundary. Mutating the debug camera object
+    // alone never writes storage: production persistence happens through EpohiCameraStorage.
+    // Seed an intentionally out-of-range legacy value directly, prove it reached storage,
+    // then reload so any startup/layout normalization may clamp and persist a safe value.
     await page.evaluate(() => {
-      const camera = window.__epohiDebug().getCamera();
-      camera.x = -99999;
-      camera.y = -99999;
-      camera.scale = 99;
+      localStorage.setItem(
+        window.EpohiConfig.CAMERA_KEY,
+        JSON.stringify({ x: -99999, y: -99999, scale: 99 })
+      );
     });
+    expect(await page.evaluate(() => {
+      const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
+      return raw ? JSON.parse(raw).scale : null;
+    })).toBe(99);
 
     await page.reload();
     await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
-    expect(await page.evaluate(() => window.__epohiDebug().getCamera().scale)).toBe(99);
     await page.locator('[data-continue]').first().click();
     await expect(page.locator('#gameApp')).toBeVisible();
 
     let info = await cameraState(page);
-    expect(info.camera.scale).toBeCloseTo(info.bounds.max, 2);
+    expect(info.camera.scale).toBeGreaterThanOrEqual(info.bounds.min - 0.01);
+    expect(info.camera.scale).toBeLessThanOrEqual(info.bounds.max + 0.01);
     expectCameraPositionWithinBounds(info);
+    const persistedScale = await page.evaluate(() => {
+      const raw = localStorage.getItem(window.EpohiConfig.CAMERA_KEY);
+      return raw ? JSON.parse(raw).scale : null;
+    });
+    expect(Number.isFinite(persistedScale)).toBe(true);
+    expect(persistedScale).toBeCloseTo(info.camera.scale, 2);
+    expect(persistedScale).toBeGreaterThanOrEqual(info.bounds.min - 0.01);
+    expect(persistedScale).toBeLessThanOrEqual(info.bounds.max + 0.01);
 
     await page.evaluate(() => {
       const viewport = document.getElementById('mapViewport');

@@ -1,10 +1,28 @@
 const { test, expect } = require('@playwright/test');
 const { clearStorage, createGame } = require('./helpers');
 
-async function ready(page, rivals = 1) {
+async function ready(page, rivals = 1, mapSize = 'normal') {
   await clearStorage(page);
-  await createGame(page, rivals);
+  await createGame(page, rivals, mapSize);
   await page.waitForFunction(() => window.EpohiCombatWorldStability && window.__epohiDebug().state);
+}
+
+async function clickMapTileDom(page, x, y) {
+  await page.evaluate(({ x, y }) => {
+    const tile = document.querySelector(`#map .tile[data-x="${x}"][data-y="${y}"]`);
+    if (!tile) throw new Error(`Map tile ${x},${y} not found`);
+    tile.click();
+  }, { x, y });
+}
+
+async function clickMapUnitSemanticDom(page, x, y) {
+  await page.evaluate(({ x, y }) => {
+    const tile = document.querySelector(`#map .tile[data-x="${x}"][data-y="${y}"]`);
+    if (!tile) throw new Error(`Map tile ${x},${y} not found`);
+    const marker = tile.querySelector('.piece.unit') || tile.querySelector('.unit-count');
+    if (!marker) throw new Error(`Own-unit marker ${x},${y} not found`);
+    marker.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+  }, { x, y });
 }
 
 test.describe('Combat, AI and world stability', () => {
@@ -34,31 +52,45 @@ test.describe('Combat, AI and world stability', () => {
     expect(rules.water.impassableReason).toContain('воду');
   });
 
-  test('visible city attack collapses a rival and transfers all cities', async ({ page }) => {
+  test('visible capital attack opens capture choice and only annexes the defeated city', async ({ page }) => {
     await ready(page, 2);
     const setup = await page.evaluate(() => {
-      const gs=window.__epohiDebug().state, loser=gs.rivals[0], observer=gs.rivals[1];
+      const gs=window.__epohiDebug().state, loser=gs.rivals[0];
       const attacker=gs.units.find(unit=>unit.type==='warrior')||gs.units[0], capital=loser.cities[0];
       attacker.type='warrior'; attacker.x=5; attacker.y=5; attacker.moves=1; attacker.acted=false; attacker.hp=100; attacker.maxHp=100;
-      Object.assign(capital,{x:6,y:5,hp:1,maxHp:180,capital:true}); loser.units=[]; loser.relation='war'; loser.met=true;
+      Object.assign(capital,{x:6,y:5,hp:1,maxHp:180,capital:true,population:4,specialization:'production',buildings:['granary']});
+      loser.units=[]; loser.relation='war'; loser.met=true;
       gs.map[5][5].terrain='plains'; gs.map[5][6].terrain='plains'; gs.map[5][5].revealed=true; gs.map[5][6].revealed=true;
-      loser.cities.push({id:'captured-second',name:'Второй',x:8,y:8,population:2,hp:150,maxHp:150,buildings:[],queue:null});
-      observer.diplomacy[loser.civilizationId]='war';
-      gs.diplomaticProposals=[{id:'collapse-proposal',type:'peace',civId:loser.civilizationId,status:'pending'}];
-      gs.tradeRoutes=[{id:'collapse-trade',civId:loser.civilizationId,status:'active',remainingTurns:4}];
-      window.__epohiDebug().render(); return {civId:loser.civilizationId,transferred:loser.cities.length};
+      loser.cities.push({id:'surviving-second',name:'Второй',x:8,y:8,population:2,hp:150,maxHp:150,capital:false,buildings:[],queue:null});
+      gs.diplomaticProposals=[]; gs.tradeRoutes=[];
+      window.__epohiDebug().render();
+      return {civId:loser.civilizationId,capitalId:capital.id,secondId:'surviving-second'};
     });
     await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
     await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
     await page.locator('[data-context-action="attack"]').click();
-    const result=await page.evaluate(({civId})=>{const gs=window.__epohiDebug().state,loser=gs.rivals.find(c=>c.civilizationId===civId);return{defeated:loser.defeated,cities:gs.cities.filter(c=>c.formerCivilizationId===civId).length,proposal:gs.diplomaticProposals[0].status,trade:gs.tradeRoutes[0].status,event:gs.eventLog[0].eventType};},setup);
-    expect(result).toMatchObject({defeated:true,cities:setup.transferred,proposal:'cancelled',trade:'cancelled',event:'capital-fallen'});
-    await expect(page.locator('#stabilityMajorModal')).toHaveClass(/show/);
-    await page.locator('[data-stability-close="major"]').click();
+    await expect(page.locator('#captureChoiceModal')).toHaveClass(/show/);
+    await expect(page.locator(`[data-capture-choice="annex"][data-city-id="${setup.capitalId}"]`)).toBeVisible();
+    await page.locator(`[data-capture-choice="annex"][data-city-id="${setup.capitalId}"]`).click();
+    const result=await page.evaluate(({civId,capitalId,secondId})=>{
+      const gs=window.__epohiDebug().state,loser=gs.rivals.find(c=>c.civilizationId===civId);
+      const captured=gs.cities.find(c=>String(c.id)===String(capitalId));
+      const survivor=loser.cities.find(c=>String(c.id)===String(secondId));
+      return{
+        defeated:loser.defeated,
+        remaining:loser.cities.length,
+        newCapital:!!(survivor&&survivor.capital),
+        captured:!!captured,
+        specialization:captured&&captured.specialization,
+        cityCaptured:gs.eventLog.some(event=>event.eventType==='city-captured'),
+        relocated:gs.eventLog.some(event=>event.eventType==='capital-relocated')
+      };
+    },setup);
+    expect(result).toMatchObject({defeated:false,remaining:1,newCapital:true,captured:true,specialization:'production',cityCaptured:true,relocated:true});
     await expect(page.locator('#stabilityMajorModal')).not.toHaveClass(/show/);
   });
 
-  test('turn-driven era decision is immediate, persistent when closed, and city-bound', async ({ page }) => {
+  test('turn-driven era decision is immediate, mandatory and city-bound', async ({ page }) => {
     await ready(page, 0);
     const ids = await page.evaluate(() => {
       const gs=window.__epohiDebug().state, city=gs.cities[0]; city.production=0; gs.resources.gold=20; gs.turn=5;
@@ -66,9 +98,8 @@ test.describe('Combat, AI and world stability', () => {
       return {city:city.id};
     });
     await expect(page.locator('#stabilityDecisionModal')).toHaveClass(/show/);
-    await page.locator('[data-stability-close="decision"]').click();
-    await expect(page.locator('#urgentDecisionIndicator')).toHaveClass(/show/);
-    await page.locator('#urgentDecisionIndicator').click();
+    await expect(page.locator('[data-stability-close="decision"]')).toBeHidden();
+    await expect(page.locator('#urgentDecisionIndicator')).toBeHidden();
     await page.locator('[data-option-id="hire"]').click();
     const resolved = await page.evaluate(({city}) => { const gs=window.__epohiDebug().state; return {production:gs.cities.find(c=>c.id===city).production,status:gs.urgentDecisions[0].status}; }, ids);
     expect(resolved).toEqual({production:18,status:'resolved'});
@@ -76,11 +107,18 @@ test.describe('Combat, AI and world stability', () => {
 
   test('enemy selected from the map exposes and resolves a visible unit attack', async ({ page }) => {
     await ready(page, 1);
-    const enemyId=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return enemy.id;});
-    await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
-    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атаковать');
-    await page.locator('[data-context-action="attack"]').click();
-    expect(await page.evaluate(id=>window.__epohiDebug().state.rivals[0].units.some(unit=>unit.id===id),enemyId)).toBe(false);
+    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return{enemyId:enemy.id,attackerId:attacker.id};});
+    await clickMapTileDom(page,5,5);
+    expect(await page.evaluate(()=>window.__epohiDebug().getSelectedUnitId())).toBe(setup.attackerId);
+    await clickMapTileDom(page,6,5);
+    await expect(page.locator('[data-context-action="attack"]')).toContainText('Атак');
+    await page.evaluate(() => {
+      const attack = document.querySelector('[data-context-action="attack"]');
+      if (!attack) throw new Error('Visible attack action disappeared before click');
+      attack.click();
+    });
+    expect(await page.evaluate(id=>window.__epohiDebug().state.rivals[0].units.some(unit=>unit.id===id),setup.enemyId)).toBe(false);
+    expect(await page.evaluate(id=>{const u=window.__epohiDebug().state.units.find(unit=>unit.id===id);return !!u&&u.acted&&u.moves===0&&!u.travelOrder;},setup.attackerId)).toBe(true);
   });
 
   test('Treasury visibly expands administration with an escalating price', async ({ page }) => {
@@ -121,16 +159,45 @@ test.describe('Combat, AI and world stability', () => {
 
   test('AI claims a known finite POI first and the player cannot collect it twice', async ({ page }) => {
     await ready(page,1);
-    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],ai=civ.units[0],player=gs.units[0];ai.type='scout';ai.x=5;ai.y=5;ai.moves=2;ai.acted=false;player.x=8;player.y=5;const tile=gs.map[5][6];tile.terrain='plains';tile.revealed=true;tile.poi={type:'depot',used:false};civ.explored['6,5']=true;gs.barbarians=[{id:'unrelated-raider',x:12,y:12,hp:75,maxHp:75,homeX:12,homeY:12}];window.__epohiDebug().render();return{x:6,y:5,before:civ.resources.science+civ.resources.gold+civ.resources.production};});
+    const setup=await page.evaluate(()=>{
+      const gs=window.__epohiDebug().state,civ=gs.rivals[0],ai=civ.units[0],player=gs.units[0],capital=civ.cities[0],target=gs.map[5][6],competitor=gs.map[6][5];
+      ai.type='scout'; ai.x=5; ai.y=5; ai.moves=2; ai.acted=false; civ.units=[ai]; civ.relation='neutral';
+      Object.assign(capital,{x:2,y:2}); Object.assign(gs.map[2][2],{terrain:'plains',camp:null,poi:null,feature:null,improvement:null});
+      player.x=8; player.y=5;
+      Object.assign(target,{terrain:'plains',revealed:true,camp:null,feature:null,improvement:null,poi:{type:'depot',used:false}});
+      Object.assign(competitor,{terrain:'plains',camp:null,feature:null,improvement:null,poi:null});
+      civ.explored={'6,5':true}; civ.visible={};
+      gs.barbarians=[{id:'unrelated-raider',x:12,y:12,hp:75,maxHp:75,homeX:12,homeY:12}];
+      window.__epohiDebug().render();
+      return{x:6,y:5,aiId:ai.id,before:civ.resources.science+civ.resources.gold+civ.resources.production};
+    });
     await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
-    const claimed=await page.evaluate(({x,y,before})=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],tile=gs.map[y][x],target=window.EpohiHumansPathing.targetFromTile(gs,x,y);return{used:tile.poi.used,targetKind:target.targetKind,gain:civ.resources.science+civ.resources.gold+civ.resources.production-before,events:gs.eventLog.map(e=>e.eventType)};},setup);
+    const claimed=await page.evaluate(({x,y,aiId,before})=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],tile=gs.map[y][x],target=window.EpohiHumansPathing.targetFromTile(gs,x,y),ai=civ.units.find(unit=>unit.id===aiId);return{used:tile.poi.used,targetKind:target.targetKind,gain:civ.resources.science+civ.resources.gold+civ.resources.production-before,events:gs.eventLog.map(e=>e.eventType),aiPosition:ai&&{x:ai.x,y:ai.y}};},setup);
+    expect(claimed.aiPosition).toEqual({x:setup.x,y:setup.y});
     expect(claimed.used).toBe(true); expect(claimed.targetKind).not.toBe('poi'); expect(claimed.gain).toBeGreaterThan(0); expect(claimed.events).toContain('point-of-interest-resolved');
   });
 
   test('three same-type stacked units keep distinct selection and orders', async ({ page }) => {
     await ready(page,0);
-    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,base=gs.units[0],def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
-    for(const [x,y] of [[6,5],[5,6],[4,5]]){await page.locator('#map .tile[data-x="5"][data-y="5"]').click();await page.locator(`#map .tile[data-x="${x}"][data-y="${y}"]`).click();await page.locator('[data-context-action="move"]').click();}
+    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
+    await clickMapUnitSemanticDom(page,5,5);
+    await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(3);
+    const targets=[[6,5],[5,6],[4,5]];
+    for(let index=0;index<ids.length;index+=1){
+      const id=ids[index], [x,y]=targets[index], remaining=ids.length-index;
+      if(index>0){
+        await clickMapUnitSemanticDom(page,5,5);
+      }
+      if(remaining>1){
+        await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(remaining);
+        await page.locator(`[data-context-stack-picker] [data-unit-id="${id}"]`).click();
+      }
+      await expect.poll(()=>page.evaluate(()=>window.__epohiDebug().getSelectedUnitId())).toBe(id);
+      await page.locator('#contextActions [data-path-action="start"]').click();
+      await expect(page.locator('body')).toHaveAttribute('data-route-unit-id',id);
+      await clickMapTileDom(page,x,y);
+      await expect.poll(()=>page.evaluate(unitId=>{const u=window.__epohiDebug().state.units.find(item=>item.id===unitId);return u&&[u.x,u.y];},id)).toEqual([x,y]);
+    }
     const positions=await page.evaluate(ids=>ids.map(id=>{const u=window.__epohiDebug().state.units.find(item=>item.id===id);return[u.x,u.y];}),ids);
     expect(new Set(positions.map(String)).size).toBe(3);
     await expect(page.locator('#contextActions [data-path-action="cancel"]')).toHaveCount(0);
@@ -150,9 +217,10 @@ test.describe('Combat, AI and world stability', () => {
   });
 
   test('allied joint-war proposal is generated by a real turn only before either side joins', async ({ page }) => {
-    await ready(page,2);
-    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,[ally,target]=gs.rivals;ally.met=target.met=true;ally.relation='ally';target.relation='neutral';ally.diplomacy[target.civilizationId]='neutral';ally.diplomacy.grievances=0;ally.diplomacy.trust=80;gs.diplomaticProposals=[];const modulo=(Number(String(ally.civilizationId).replace(/\D/g,''))||0)%4;gs.turn=(modulo||4)-1;return{ally:ally.civilizationId,target:target.civilizationId};});
-    await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
+    await ready(page,2,'small');
+    const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,[ally,target]=gs.rivals;ally.met=target.met=true;ally.relation='ally';target.relation='neutral';ally.diplomacy[target.civilizationId]='neutral';ally.diplomacy.grievances=0;ally.diplomacy.trust=80;ally.units=[];target.units=[];gs.barbarians=[];gs.diplomaticProposals=[];const modulo=(Number(String(ally.civilizationId).replace(/\D/g,''))||0)%4;gs.turn=(modulo||4)-1;return{ally:ally.civilizationId,target:target.civilizationId,beforeTurn:gs.turn};});
+    await page.getByRole('button',{name:/Завершить ход/i}).click();
+    await page.waitForFunction(beforeTurn=>window.__epohiDebug().state.turn>beforeTurn&&!window.__epohiDebug().isTurnProcessing(),setup.beforeTurn);
     const proposal=await page.evaluate(({ally,target})=>window.__epohiDebug().state.diplomaticProposals.find(item=>item.type==='jointWar'&&item.civId===ally&&item.targetId===target),setup);
     expect(proposal).toMatchObject({type:'jointWar',status:'pending'});
     const invalid=await page.evaluate(({ally,target})=>{const gs=window.__epohiDebug().state,civ=gs.rivals.find(item=>item.civilizationId===ally);civ.diplomacy[target]='war';return window.EpohiLivingCivilizations.createProposal(gs,civ,'jointWar','Повтор',target);},setup);

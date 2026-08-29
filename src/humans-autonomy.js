@@ -720,6 +720,12 @@
       observer.observe(context, { childList: true, subtree: true, characterData: true });
     }
 
+    // Explicit render lifecycle: a fresh game can settle without mutating the context
+    // panel (for example when the already-selected starting unit is clicked). Keep the
+    // autonomy controls attached to the canonical settled signal instead of relying on
+    // an incidental observer mutation to create the map report control.
+    document.addEventListener("epohi:humans-ui-settled", scheduleRefreshControls);
+
     const endTurnButton = document.getElementById("endTurnBtn");
     if (endTurnButton) {
       endTurnButton.addEventListener("click", function () {

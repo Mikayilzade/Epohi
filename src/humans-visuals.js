@@ -3,7 +3,6 @@
 
   const CACHE = new Map();
   const previousPositions = new Map();
-  let frame = null;
 
   function svg(body, viewBox) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (viewBox || '0 0 64 64') + '">' +
@@ -174,7 +173,6 @@
   }
 
   function decorate() {
-    frame = null;
     setBrand();
     const debug = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
     const gs = debug && debug.state;
@@ -258,22 +256,12 @@
     document.body.classList.add("painted-world-ready");
   }
 
-  function schedule() {
-    if (frame) return;
-    frame = window.requestAnimationFrame(decorate);
-  }
-
   function install() {
-    const map = document.getElementById("map");
-    if (map) new MutationObserver(schedule).observe(map, { childList: true });
-    const screen = document.getElementById("screenRoot");
-    if (screen) new MutationObserver(schedule).observe(screen, { childList: true, subtree: true });
-    document.addEventListener("click", function () { window.setTimeout(schedule, 20); }, true);
-    schedule();
+    decorate();
   }
 
   window.EpohiHumansVisuals = {
-    version: 1,
+    version: 2,
     decorate: decorate,
     unitSprites: Object.keys(UNIT),
     terrainSprites: Object.keys(TERRAIN),

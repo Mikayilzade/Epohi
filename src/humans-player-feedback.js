@@ -890,22 +890,7 @@
       blockStaleContextAction(event);
       handleOutcomeButtons(event);
       preparePostOutcomeTurn(event);
-      window.setTimeout(refresh, 0);
     }, true);
-    const context = document.getElementById("contextPanel");
-    if (context) new MutationObserver(refresh).observe(context, { childList: true, subtree: true, characterData: true });
-    const menu = document.getElementById("menuModal");
-    if (menu) new MutationObserver(refresh).observe(menu, { attributes: true, attributeFilter: ["class"] });
-    const menuContent = document.getElementById("menuContent");
-    if (menuContent) new MutationObserver(refresh).observe(menuContent, { childList: true });
-    const wiki = document.getElementById("wikiModal");
-    if (wiki) new MutationObserver(refresh).observe(wiki, { attributes: true, attributeFilter: ["class"] });
-    const wikiContent = document.getElementById("wikiContent");
-    if (wikiContent) new MutationObserver(refresh).observe(wikiContent, { childList: true });
-    const victory = document.getElementById("victoryModal");
-    if (victory) new MutationObserver(refresh).observe(victory, { attributes: true, attributeFilter: ["class"] });
-    const map = document.getElementById("map");
-    if (map) new MutationObserver(refresh).observe(map, { childList: true, subtree: true });
     refresh();
   }
 
