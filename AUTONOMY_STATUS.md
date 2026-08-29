@@ -11,29 +11,30 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `40bc5ab1eef97ee5e9fae1c366870dacdd3b1d03`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `3c57672258b2c8c87b1b907b159e71f086858066`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
 
-Exact implementation head: `49bab29dc899e53077d14389fb0e0d71ad1f108b` (`Stabilize camp destruction regression fixture`). This bounded package addresses only the first factual Chromium full-suite failure retained by run #220. No runtime/source behavior was changed.
+Exact implementation head: `09500af25148929a65f90c0153b772138b350eff` (`Harden new-game map-size regression fixture`). This bounded package addresses only the first remaining Chromium failure retained by run #222 after the camp-destruction regression became green. No production runtime/source file was changed.
 
 ## Exact CI / factual blocker inspected
-- Workflow run `33217629039` (#220) validated implementation head `c6bb622a4d163fe18d4a1c2a65b33ee61c900515` and completed **failure**, not cancelled. This confirms the previous CI orchestration package worked: the later status-only synchronize checkpoint did not invalidate the in-flight code run.
-- #220 static gate: **green**.
-- #220 focused Chromium + WebKit gate: **green**.
-- #220 full Chromium: **160 passed / 179 total, 19 failed**.
-- #220 full WebKit: **161 passed / 179 total, 18 failed**.
-- The first factual Chromium failure was `tests/barbarian-review-fixes.spec.js:93` (`player and AI camp destruction paths record last destroyed camp and preserve existing barbarians`). Exact assertion: expected `r.player.count === 0`, received `3`.
-- Artifact inspection showed the test intended to exercise destruction of one initial camp but used a randomly generated world without removing additional generated camps. Therefore `campReward` correctly removed the selected camp while unrelated camps remained; the failure was a nondeterministic regression-fixture defect, not evidence of a runtime camp-destruction defect.
+- Workflow run `33221559792` (#222) validated implementation head `49bab29dc899e53077d14389fb0e0d71ad1f108b` and completed **failure**, not cancelled.
+- #222 static gate: **green**.
+- #222 focused Chromium + WebKit gate: **green**.
+- The strengthened camp-destruction regression from `49bab29d…` passed; it is no longer the first failure.
+- #222 full Chromium: **161 passed / 179 total, 18 failed**.
+- #222 full WebKit: **161 passed / 179 total, 18 failed**.
+- First Chromium failure: `tests/browser.spec.js:93` (`creates a new game with 0 AI and starts the map`). Exact assertion expected 400 `#map .tile` nodes but received 784, i.e. the requested `small` setup rendered a 28×28 map in that run.
+- The same 0-AI small-map smoke passed in WebKit in #222, and repository config still defines `small: 20`, `normal: 28`, `large: 36`; therefore no speculative production fix was made from one Chromium-only occurrence.
 
 ## Bounded package completed
-- Strengthened the existing camp-destruction regression fixture so it snapshots the generated active camps, retains the selected first camp, and explicitly removes all other generated camps before executing the player-destruction path.
-- The assertion `r.player.count === 0` is preserved unchanged, so the regression still proves that the tested camp is removed; it no longer accidentally asserts a random world-generation camp count.
-- Existing assertions for replacement timing, `lastDestroyedCamp`, preservation of an existing barbarian, and the AI destruction path remain intact.
-- Exactly one test file changed; no production runtime/source file was touched.
+- Strengthened shared `createGame` setup so the selected `partySize` and `rivalCount` are explicitly verified before pressing `Создать мир`, removing ambiguity about a stale/replaced setup form.
+- Added post-creation assertions against the debug game state: requested map size must equal the configured dimension and the backing map row count must match it before any synthetic fixture mutation.
+- Existing browser smoke still asserts the rendered tile count, so the regression now distinguishes setup-selection loss from backing-state generation/render defects instead of reporting only the final DOM count.
+- Exactly one test helper changed; no production runtime/source file was touched.
 
 ## Validation state
-- Exact prior CI #220 on `c6bb622a4d163fe18d4a1c2a65b33ee61c900515`: static green; focused Chromium + WebKit green; full Chromium 160/179; full WebKit 161/179; overall **failure**.
-- Exact implementation head `49bab29dc899e53077d14389fb0e0d71ad1f108b`: new PR CI had not appeared yet at status-write time immediately after push. Do not make another source/test/runtime fix until this checkpoint has an exact CI result.
-- Current blocker: cross-browser full regression is not green; the next factual blocker must come only from the retained logs/artifact for implementation head `49bab29dc899e53077d14389fb0e0d71ad1f108b`.
+- Exact prior CI #222 on `49bab29dc899e53077d14389fb0e0d71ad1f108b`: static green; focused Chromium + WebKit green; full Chromium 161/179; full WebKit 161/179; overall **failure**.
+- Exact implementation head `09500af25148929a65f90c0153b772138b350eff`: no PR workflow run had appeared yet when this status was written immediately after push. Do not make another source/test/runtime change until this checkpoint has an exact CI result.
+- Current blocker: cross-browser full regression is not green; the next package must use the exact retained CI/artifact for `09500af25148929a65f90c0153b772138b350eff` and take only its first factual failure.
 - No physical-device test is requested.
 
 ## Phase plan
@@ -46,7 +47,7 @@ Exact implementation head: `49bab29dc899e53077d14389fb0e0d71ad1f108b` (`Stabiliz
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the exact CI run for implementation head `49bab29dc899e53077d14389fb0e0d71ad1f108b`; verify the strengthened camp-destruction regression first, then take only the first remaining factual full-suite failure from that run as the next bounded package.
+Inspect the exact CI run for implementation head `09500af25148929a65f90c0153b772138b350eff`; use the new map-size assertions to classify the first failure precisely, then take only that first factual full-suite failure as the next bounded package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
