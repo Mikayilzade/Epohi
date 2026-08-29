@@ -139,6 +139,35 @@ async function promoteSmallFixtureRivals(page, rivals) {
   }, rivals);
 }
 
+async function configureNewGameSetup(page, rivals, mapSize, partyName) {
+  const expected = { mapSize, rivals: String(rivals), partyName };
+  let observed = null;
+
+  for (let setupAttempt = 0; setupAttempt < 4; setupAttempt += 1) {
+    await page.locator('#partySize').selectOption(mapSize);
+    await page.locator('#rivalCount').selectOption(String(rivals));
+    await page.locator('#partyName').fill(partyName);
+
+    // Read all fields from the current live document after both selects have fired.
+    // Run #224 proved that checking each select independently can miss a transient
+    // screen replacement: changing the second field may replace/reset the first one.
+    // A short stability boundary makes the fixture follow the same final form a user
+    // would submit, while retrying only when that live form was actually replaced.
+    await page.waitForTimeout(20);
+    observed = await page.evaluate(() => ({
+      mapSize: document.getElementById('partySize')?.value || null,
+      rivals: document.getElementById('rivalCount')?.value || null,
+      partyName: document.getElementById('partyName')?.value || null
+    }));
+
+    if (observed.mapSize === expected.mapSize &&
+        observed.rivals === expected.rivals &&
+        observed.partyName === expected.partyName) return;
+  }
+
+  throw new Error(`New-game setup did not stabilize: expected ${JSON.stringify(expected)}, observed ${JSON.stringify(observed)}`);
+}
+
 async function createGame(page, rivals, mapSize = 'normal') {
   const needsSyntheticSmallRivals = mapSize === 'small' && rivals > 1;
   const maxAttempts = rivals > 1 && !needsSyntheticSmallRivals ? 4 : 1;
@@ -147,11 +176,8 @@ async function createGame(page, rivals, mapSize = 'normal') {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
     await page.getByRole('button', { name: 'Новая игра' }).click();
-    await page.locator('#partySize').selectOption(mapSize);
-    await expect(page.locator('#partySize')).toHaveValue(mapSize);
-    await page.locator('#rivalCount').selectOption(String(rivals));
-    await expect(page.locator('#rivalCount')).toHaveValue(String(rivals));
-    await page.locator('#partyName').fill(`Smoke ${rivals} AI ${Date.now()} ${attempt}`);
+    const partyName = `Smoke ${rivals} AI ${Date.now()} ${attempt}`;
+    await configureNewGameSetup(page, rivals, mapSize, partyName);
     await page.getByRole('button', { name: 'Создать мир' }).click();
     await expect(page.locator('#gameApp')).toBeVisible();
     await expect(page.locator('#map .tile').first()).toBeVisible();
