@@ -11,31 +11,32 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `372a67e0499090df7a7756d8e7d776a8f247a6b5`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `9b56b28309138339bf515d1230c09b2d5e4f3164`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
 
-Exact implementation head: `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b` (`Exercise stacked units through semantic unit click`). This bounded package changes only regression interaction semantics; no production runtime/source file was changed.
+Exact implementation head: `c6dec095ee2160ddd720d893760e2445c52c19c7` (`Reopen stacked unit context after each move`). This bounded package changes only regression interaction semantics; no production runtime/source file was changed.
 
 ## Exact CI / factual blocker inspected
-- Workflow run `33231928852` (#230) validated implementation head `d80a91f26442909f5615acb96875c2356a9f5c9b` and completed **failure**, not cancelled.
-- #230 static gate: **green**.
-- #230 did **not** reach the full-suite gate because the focused gate failed first on both engines.
-- #230 focused Chromium: **59 passed / 60 total, 1 failed**.
-- #230 focused WebKit: **59 passed / 60 total, 1 failed**.
-- Exact artifact: `9708810720` (`epohi-autonomous-cross-browser-results`).
-- The sole focused failure on both engines was `tests/combat-world-stability.spec.js:170` (`three same-type stacked units keep distinct selection and orders`).
-- Exact failure: after the regression invoked a raw `.tile.click()` at the stacked coordinate, `[data-context-stack-picker] .context-stack-unit` remained at count 0. The current context-review contract derives the semantic inspection layer from the clicked DOM target; a raw tile target intentionally selects the `tile` layer, while the stack picker is rendered only in an own-unit `unit` context.
+- Workflow run `33234302587` (#232) validated implementation head `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b` and completed **failure**, not cancelled.
+- #232 static gate: **green**.
+- #232 did **not** reach the full-suite gate because the focused gate failed first on both engines.
+- #232 focused Chromium: **59 passed / 60 total, 1 failed**.
+- #232 focused WebKit: **59 passed / 60 total, 1 failed**.
+- Exact artifact: `9709498957` (`epohi-autonomous-cross-browser-results`).
+- The sole focused failure on both engines remained `tests/combat-world-stability.spec.js:170` (`three same-type stacked units keep distinct selection and orders`).
+- Exact failure: the first stacked scout moved successfully, which correctly rerendered/followed the moved unit context. The regression then tried to click `stack-scout-1` through the old stack-picker context without reopening the original stack tile. Chromium waited for an element that was no longer present; WebKit briefly resolved the old button and then reported it detached from the DOM. This is a stale multi-step test interaction, not evidence of a runtime gameplay defect.
 
 ## Bounded package completed
-- Kept the accepted stacked-unit product/runtime behavior unchanged.
-- Corrected the regression entry point to click the rendered unit semantic target (`.piece.unit` / `.unit-count`) on the stacked tile instead of bypassing semantic targeting with a raw tile click.
-- Preserved the strengthened assertions from the prior checkpoint: all three stack entries must appear; each exact unit ID must become selected; canonical `Идти` route ownership must match that unit; each unit must reach its distinct target; no stale cancel action remains.
-- No production code was changed because #230 exposed a stale regression interaction, not a runtime defect.
+- Kept accepted stacked-unit/runtime behavior unchanged.
+- Strengthened the regression so every subsequent unit is selected through a fresh semantic click on the original stacked tile after the previous unit moves away.
+- Asserted the stack picker shrinks from 3 to 2 entries after the first move; the final remaining unit is selected directly from its semantic map target rather than relying on a non-existent one-item stack picker.
+- Preserved exact unit-selection, canonical `Идти` route ownership, distinct destination, and stale-cancel assertions for all three scouts.
+- No production code was changed because #232 exposed stale test state after a legitimate rerender.
 
 ## Validation state
-- Exact prior CI #230 on `d80a91f26442909f5615acb96875c2356a9f5c9b`: static green; focused Chromium 59/60; focused WebKit 59/60; full suite not entered; overall **failure**.
-- Exact implementation head `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b`: pushed.
-- Exact workflow run `33234302587` (#232) for `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b` was **queued** at the immediate post-push check. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
-- Current blocker: cross-browser validation for the corrected semantic stacked-unit regression is pending in #232; full regression is not yet green.
+- Exact prior CI #232 on `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b`: static green; focused Chromium 59/60; focused WebKit 59/60; full suite not entered; overall **failure**.
+- Exact implementation head `c6dec095ee2160ddd720d893760e2445c52c19c7`: pushed.
+- Exact workflow run `33236602471` (#234) for `c6dec095ee2160ddd720d893760e2445c52c19c7` is **in progress**. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
+- Current blocker: cross-browser validation for the refreshed stacked-unit interaction is pending in #234; full regression is not yet green.
 - No physical-device test is requested.
 
 ## Phase plan
@@ -48,7 +49,7 @@ Exact implementation head: `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b` (`Exercise
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the completed exact CI/artifact for implementation head `13ef90c1b9bb8eb3a62e9681707f4481c7b7268b`, then take only its first factual failure as the next bounded package.
+Inspect the completed exact CI/artifact for implementation head `c6dec095ee2160ddd720d893760e2445c52c19c7`, then take only its first factual failure as the next bounded package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
