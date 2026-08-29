@@ -48,7 +48,18 @@ The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Execute Stage 0 of `CODEX_STABILIZATION_SPRINT.md`: inspect the complete latest full Chromium + WebKit failure set, group every failure by root cause, then continue through the runbook stages without stopping after the first bounded package unless a documented stop condition is reached.
+Restore authenticated GitHub and package-repository access, install the missing Playwright system libraries, and resume Stage 0 by downloading and classifying the complete latest Chromium + WebKit failure set.
+
+## Codex stabilization sprint checkpoint — 2026-08-29
+- Starting/base SHA: `eb54903009cb248515d83731e06915862f18a399` (the locally fetched `codex/coherence-capture-learning-v1` tip recorded in `.git/FETCH_HEAD`).
+- Implementation head: unchanged; no runtime or test changes were made because Stage 0 could not obtain or execute the authoritative failure set.
+- Stage reached: Stage 0 diagnostics, blocked before failure classification by external infrastructure.
+- GitHub verification: `git fetch https://github.com/Mikayilzade/Epohi.git codex/coherence-capture-learning-v1:refs/remotes/origin/codex/coherence-capture-learning-v1` failed with proxy HTTP 403; `gh pr view 84` and `gh run view 33243697618` could not run because this environment has no GitHub authentication.
+- Local Chromium result: `npx playwright test --project=chromium-mobile --reporter=line` discovered 180 tests, but the browser could not start because `libatk-1.0.so.0` is absent. This is an `INFRA` result, not a product/test failure inventory.
+- Dependency remediation: `npx playwright install-deps chromium webkit` failed because every configured Ubuntu/package endpoint was rejected by the environment proxy with HTTP 403.
+- WebKit was not run because the same unavailable system-dependency installation blocks a valid cross-browser result.
+- Remaining blocker: the authoritative CI artifact/logs are inaccessible and neither local browser engine can be validated until external access or a browser-ready runner is provided. The runbook's infrastructure stop condition therefore applies.
+- Next action: restore authenticated GitHub and package-repository access, install Playwright dependencies, then resume Stage 0 from this exact checkpoint and continue sequentially through the remaining stages.
 
 ## Completion signal
 Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone test is the user's gate.
