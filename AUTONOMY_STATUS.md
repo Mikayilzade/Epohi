@@ -11,29 +11,30 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `af8e7938dc9638b36a3c21b427beb41c997212c5`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `7b66013e1dd002f2021985704c0a4d316ccd058c`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
 
-Exact implementation head: `766e66a94126f967f0e668d16044619929fd2659` (`Stabilize new-game setup selection across rerenders`). This bounded package changes only the shared browser test fixture; no production runtime/source file was changed.
+Exact implementation head: `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` (`Align diplomacy regressions with canonical proposal modal`). This bounded package changes only regression coverage; no production runtime/source file was changed.
 
 ## Exact CI / factual blocker inspected
-- Workflow run `33223946771` (#224) validated implementation head `09500af25148929a65f90c0153b772138b350eff` and completed **failure**, not cancelled.
-- #224 static gate: **green**.
-- #224 focused Chromium + WebKit gate: **green**.
-- #224 full Chromium: **161 passed / 179 total, 18 failed**.
-- #224 full WebKit: **159 passed / 179 total, 20 failed**.
-- The original 0-AI `small` browser smoke that had rendered 28×28 in #222 passed in #224, so that exact occurrence was not reproduced.
-- The new setup assertions did expose the same class of fixture instability more precisely in WebKit camera coverage: `tests/camera-2.spec.js:140` requested `rivalCount=0`, but the live `#rivalCount` had returned to `1`; `tests/camera-2.spec.js:155` requested `large`, but the created backing state was 28×28. Repository code has no secondary writer for `partySize` / `rivalCount` after the new-game form is rendered, so this checkpoint hardens the test fixture against transient document/form replacement instead of making a speculative gameplay change.
+- Workflow run `33226981642` (#226) validated implementation head `766e66a94126f967f0e668d16044619929fd2659` and completed **failure**, not cancelled.
+- #226 static gate: **green**.
+- #226 focused Chromium + WebKit gate: **green**.
+- #226 full Chromium: **162 passed / 179 total, 17 failed**.
+- #226 full WebKit: **161 passed / 179 total, 18 failed**.
+- Exact artifact: `9707744469` (`epohi-autonomous-cross-browser-results`).
+- First Chromium full-suite failure: `tests/living-civilizations.spec.js:37` timed out clicking `[data-proposal=...][data-answer=yes]`. The selector resolved the legacy `#livingProposals` action, which is intentionally hidden while the canonical `#coherenceProposalModal` was visibly presenting the same proposal. The artifact screenshot and Playwright accessibility snapshot both show the central proposal modal visible with its `Принять` / `Отклонить` controls.
+- This was a stale regression interaction path, not evidence for a speculative gameplay/runtime change.
 
 ## Bounded package completed
-- Added `configureNewGameSetup` to set `partySize`, `rivalCount`, and party name as one coherent setup operation.
-- The fixture now re-reads all three fields from the current live document after both selects have fired and crosses a short stability boundary before submitting.
-- If the form was replaced/reset, the fixture retries the setup on the current DOM up to a bounded four attempts; if it still does not stabilize, it fails with the exact expected/observed setup instead of silently creating the default world.
-- Existing post-creation map-size/backing-row assertions remain strict, so the regression still fails if the submitted setup genuinely produces the wrong world.
+- Added `acceptCentralProposal(page, id)` to exercise the canonical `#coherenceProposalModal` action identified by exact proposal id.
+- The helper asserts the canonical modal is shown, the legacy `#livingProposals` surface is not visible, and the central action is visible before clicking.
+- Updated both trade-accept and joint-war-accept regressions to use that canonical path, covering the exact failure class while retaining all state/effect assertions.
+- No production code was changed.
 
 ## Validation state
-- Exact prior CI #224 on `09500af25148929a65f90c0153b772138b350eff`: static green; focused Chromium + WebKit green; full Chromium 161/179; full WebKit 159/179; overall **failure**.
-- Exact implementation head `766e66a94126f967f0e668d16044619929fd2659`: workflow run `33226981642` (#226) is **queued**. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
-- Current blocker: cross-browser full regression is not green, and the implementation checkpoint is still awaiting its exact CI verdict.
+- Exact prior CI #226 on `766e66a94126f967f0e668d16044619929fd2659`: static green; focused Chromium + WebKit green; full Chromium 162/179; full WebKit 161/179; overall **failure**.
+- Exact implementation head `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09`: pushed; no PR workflow run was visible yet at the immediate post-push check. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
+- Current blocker: cross-browser full regression is not green; the next package must use the completed exact CI/artifact for `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` and take only its first factual failure.
 - No physical-device test is requested.
 
 ## Phase plan
@@ -46,7 +47,7 @@ Exact implementation head: `766e66a94126f967f0e668d16044619929fd2659` (`Stabiliz
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the completed exact CI/artifact for implementation head `766e66a94126f967f0e668d16044619929fd2659` (#226), then take only its first factual full-suite failure as the next bounded package.
+Inspect the completed exact CI/artifact for implementation head `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09`, then take only its first factual full-suite failure as the next bounded package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
