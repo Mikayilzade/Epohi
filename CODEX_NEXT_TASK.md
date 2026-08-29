@@ -1,56 +1,53 @@
 # CODEX NEXT TASK
 
 ## Task ID
-`MOBILE_RUNTIME_ARCHITECTURE_HARDENING_V1`
+`MANUAL_STABILIZATION_SPRINT_2026_08_29`
 
 ## Goal
-Eliminate the mobile UI feedback-loop architecture that causes heat, flicker, frozen interactions and city-modal instability. Do not merely add another global observer patch.
+Execute `CODEX_STABILIZATION_SPRINT.md` from the exact current Humans v1 integration head and advance through its stages sequentially. The immediate priority is to audit and repair stale full-regression test debt using real canonical user flows, then close the remaining automated quality gates toward a Release Candidate.
 
-## Context
-The latest physical iPhone smoke failed even after observer coalescing:
-- phone heated quickly;
-- UI froze/intermittently flickered;
-- events could be accepted;
-- opening a city repeatedly appeared to start and cancel until the game became unusable.
+## Mode
+This is an explicitly user-started Codex sprint, not the slow hourly autonomous loop. The one-bounded-package-per-run rule in `AUTONOMY_START_HERE.md` is overridden for this session only: each stage/root-cause family is still a bounded coherent package, but Codex should continue automatically to the next stage until a documented stop condition is reached or the session ends.
 
-Current work branch: `codex/coherence-capture-learning-v1`, Draft PR #84, base `prototype/humans-v1`.
+## Mandatory source of truth
+Read, in order:
+1. `AUTONOMY_START_HERE.md`
+2. `AUTONOMY_STATUS.md`
+3. `QUALITY_GATES.md`
+4. this file
+5. `CODEX_STABILIZATION_SPRINT.md`
+6. Draft PR #84 and latest exact CI/logs/artifacts
 
-## Required engineering work
-1. Inventory all `MutationObserver`, `ResizeObserver`, recurring `requestAnimationFrame`, `setInterval`, and broad DOM-decorator loops in the loaded Humans runtime. Record the result in `RUNTIME_OBSERVER_MAP.md` with owner module, observed root, mutations it performs, scheduling behavior, and whether it is retained/refactored/removed.
-2. Identify observer/decorator cycles involving at least map rendering, context panel, readiness UI, city modal, diplomacy/event overlays and worker UI.
-3. Replace broad reactive DOM watching with explicit invalidation/render hooks where practical. Prefer one bounded UI scheduler/event bus over multiple modules observing and rewriting each other.
-4. Remove or sharply narrow whole-`body`, whole-map subtree and modal-subtree observers that are only being used as polling substitutes.
-5. Treat the current global `MutationObserver` safety wrapper as temporary scaffolding. The target is an architecture that remains bounded without depending on monkey-patching the browser API. Do not remove the safety layer until regression tests prove the replacement stable.
-6. Keep accepted gameplay semantics unchanged. This is runtime architecture/performance work, not a balance/design rewrite.
-7. Preserve debug APIs and save compatibility used by the existing suite.
+Repository state wins over chat/history.
 
-## Required regression coverage
-Strengthen `tests/mobile-performance-stability.spec.js` or add a dedicated runtime test file to cover at least:
-- open/close the city sheet 30 times; it must stay open when requested and close only when requested;
-- assign/reassign routes and switch selected units repeatedly; top readiness indicators must settle correctly;
-- accept/decline event and diplomacy overlays repeatedly without dead input;
-- idle for several seconds after heavy interaction and prove DOM/observer/scheduler activity settles to a bounded level;
-- repeated action cycles must not show monotonically increasing callback/frame activity;
-- no console errors/unhandled rejections.
+## Branch / PR boundary
+- Integration branch: `codex/coherence-capture-learning-v1`.
+- Existing integration Draft PR: #84 -> `prototype/humans-v1`.
+- Do not touch `main`.
+- Do not merge #84 or `prototype/humans-v1`.
+- Prefer a child Codex branch from the exact integration head. If creating a review Draft PR, target `codex/coherence-capture-learning-v1` as its BASE.
 
-Tests must run on both `chromium-mobile` and `webkit-mobile`.
+## Immediate start
+Latest known baseline when this file was authored:
+- integration head `071bd1b05f4e0a837b624fa39b991b8322a0ca45`;
+- implementation checkpoint `5b21f1b2cb7fd6d7d3020552ba38fb7bc7bcd863`;
+- workflow #240 / run `33243697618` completed **failure**;
+- static integrity and focused Chromium+WebKit stages were green;
+- full Chromium+WebKit regression was red;
+- artifact `9712557281` contains cross-browser diagnostics.
 
-## Acceptance criteria
-- Static checks green.
-- Focused mobile runtime suite green on Chromium and WebKit.
-- Existing coherence/capture/diplomacy/context/combat suites remain green on Chromium and WebKit.
-- City sheet no longer flickers in automated repeated-open scenarios.
-- Idle UI reaches quiescence after interaction.
-- `RUNTIME_OBSERVER_MAP.md` exists and clearly identifies any remaining broad observer as an explicit temporary debt item.
-- `AUTONOMY_STATUS.md` updated with exact head SHA, exact CI/test results, what was structurally changed, and exactly one next action.
+Verify all of that against current GitHub state before acting. If newer, use newer state.
 
-## Do not
-- do not ask the user for another phone smoke;
-- do not merge PR #84;
-- do not touch `main`;
-- do not disable valid tests to obtain green CI;
-- do not hide a WebKit failure behind Chromium success;
-- do not add another permanent observer monkey-patch as the primary fix.
+Start at Stage 0 of `CODEX_STABILIZATION_SPRINT.md`: inspect the COMPLETE current full-suite failure set and group every failure by root cause before modifying runtime code.
 
-## Next task after success
-The orchestrator should advance to full cross-browser regression, then autonomous soak-player construction per `QUALITY_GATES.md`. Do not start unrelated feature expansion before runtime hardening is genuinely green.
+## Non-negotiable rules
+- stale tests must be migrated to current canonical user flows, not silenced;
+- no `force: true`, synthetic clicks, arbitrary sleeps, hidden legacy UI, or direct production-function calls as substitutes for a real user flow, except explicitly documented internal-compatibility tests;
+- production/runtime changes require a proven current-flow defect and regression coverage;
+- test both Chromium mobile and WebKit mobile;
+- batch related fixes and avoid CI/source-push spam;
+- no new features, balance rewrites, or unrelated cleanup before RC gates are green;
+- do not request an intermediate physical-device test.
+
+## Completion
+Follow the runbook through Gates D/E/F/G/H/I as far as possible. When done, leave a reviewable Draft PR/branch and an exact factual handoff for independent ChatGPT review. Do not merge.
