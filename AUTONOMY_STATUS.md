@@ -11,30 +11,29 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `3c57672258b2c8c87b1b907b159e71f086858066`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `af8e7938dc9638b36a3c21b427beb41c997212c5`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
 
-Exact implementation head: `09500af25148929a65f90c0153b772138b350eff` (`Harden new-game map-size regression fixture`). This bounded package addresses only the first remaining Chromium failure retained by run #222 after the camp-destruction regression became green. No production runtime/source file was changed.
+Exact implementation head: `766e66a94126f967f0e668d16044619929fd2659` (`Stabilize new-game setup selection across rerenders`). This bounded package changes only the shared browser test fixture; no production runtime/source file was changed.
 
 ## Exact CI / factual blocker inspected
-- Workflow run `33221559792` (#222) validated implementation head `49bab29dc899e53077d14389fb0e0d71ad1f108b` and completed **failure**, not cancelled.
-- #222 static gate: **green**.
-- #222 focused Chromium + WebKit gate: **green**.
-- The strengthened camp-destruction regression from `49bab29d…` passed; it is no longer the first failure.
-- #222 full Chromium: **161 passed / 179 total, 18 failed**.
-- #222 full WebKit: **161 passed / 179 total, 18 failed**.
-- First Chromium failure: `tests/browser.spec.js:93` (`creates a new game with 0 AI and starts the map`). Exact assertion expected 400 `#map .tile` nodes but received 784, i.e. the requested `small` setup rendered a 28×28 map in that run.
-- The same 0-AI small-map smoke passed in WebKit in #222, and repository config still defines `small: 20`, `normal: 28`, `large: 36`; therefore no speculative production fix was made from one Chromium-only occurrence.
+- Workflow run `33223946771` (#224) validated implementation head `09500af25148929a65f90c0153b772138b350eff` and completed **failure**, not cancelled.
+- #224 static gate: **green**.
+- #224 focused Chromium + WebKit gate: **green**.
+- #224 full Chromium: **161 passed / 179 total, 18 failed**.
+- #224 full WebKit: **159 passed / 179 total, 20 failed**.
+- The original 0-AI `small` browser smoke that had rendered 28×28 in #222 passed in #224, so that exact occurrence was not reproduced.
+- The new setup assertions did expose the same class of fixture instability more precisely in WebKit camera coverage: `tests/camera-2.spec.js:140` requested `rivalCount=0`, but the live `#rivalCount` had returned to `1`; `tests/camera-2.spec.js:155` requested `large`, but the created backing state was 28×28. Repository code has no secondary writer for `partySize` / `rivalCount` after the new-game form is rendered, so this checkpoint hardens the test fixture against transient document/form replacement instead of making a speculative gameplay change.
 
 ## Bounded package completed
-- Strengthened shared `createGame` setup so the selected `partySize` and `rivalCount` are explicitly verified before pressing `Создать мир`, removing ambiguity about a stale/replaced setup form.
-- Added post-creation assertions against the debug game state: requested map size must equal the configured dimension and the backing map row count must match it before any synthetic fixture mutation.
-- Existing browser smoke still asserts the rendered tile count, so the regression now distinguishes setup-selection loss from backing-state generation/render defects instead of reporting only the final DOM count.
-- Exactly one test helper changed; no production runtime/source file was touched.
+- Added `configureNewGameSetup` to set `partySize`, `rivalCount`, and party name as one coherent setup operation.
+- The fixture now re-reads all three fields from the current live document after both selects have fired and crosses a short stability boundary before submitting.
+- If the form was replaced/reset, the fixture retries the setup on the current DOM up to a bounded four attempts; if it still does not stabilize, it fails with the exact expected/observed setup instead of silently creating the default world.
+- Existing post-creation map-size/backing-row assertions remain strict, so the regression still fails if the submitted setup genuinely produces the wrong world.
 
 ## Validation state
-- Exact prior CI #222 on `49bab29dc899e53077d14389fb0e0d71ad1f108b`: static green; focused Chromium + WebKit green; full Chromium 161/179; full WebKit 161/179; overall **failure**.
-- Exact implementation head `09500af25148929a65f90c0153b772138b350eff`: no PR workflow run had appeared yet when this status was written immediately after push. Do not make another source/test/runtime change until this checkpoint has an exact CI result.
-- Current blocker: cross-browser full regression is not green; the next package must use the exact retained CI/artifact for `09500af25148929a65f90c0153b772138b350eff` and take only its first factual failure.
+- Exact prior CI #224 on `09500af25148929a65f90c0153b772138b350eff`: static green; focused Chromium + WebKit green; full Chromium 161/179; full WebKit 159/179; overall **failure**.
+- Exact implementation head `766e66a94126f967f0e668d16044619929fd2659`: workflow run `33226981642` (#226) is **queued**. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
+- Current blocker: cross-browser full regression is not green, and the implementation checkpoint is still awaiting its exact CI verdict.
 - No physical-device test is requested.
 
 ## Phase plan
@@ -47,7 +46,7 @@ Exact implementation head: `09500af25148929a65f90c0153b772138b350eff` (`Harden n
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the exact CI run for implementation head `09500af25148929a65f90c0153b772138b350eff`; use the new map-size assertions to classify the first failure precisely, then take only that first factual full-suite failure as the next bounded package.
+Inspect the completed exact CI/artifact for implementation head `766e66a94126f967f0e668d16044619929fd2659` (#226), then take only its first factual full-suite failure as the next bounded package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
