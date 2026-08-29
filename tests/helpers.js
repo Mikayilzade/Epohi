@@ -142,16 +142,28 @@ async function promoteSmallFixtureRivals(page, rivals) {
 async function createGame(page, rivals, mapSize = 'normal') {
   const needsSyntheticSmallRivals = mapSize === 'small' && rivals > 1;
   const maxAttempts = rivals > 1 && !needsSyntheticSmallRivals ? 4 : 1;
+  const expectedMapSize = mapSize === 'small' ? 20 : mapSize === 'large' ? 36 : 28;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'ЭПОХИ' })).toBeVisible();
     await page.getByRole('button', { name: 'Новая игра' }).click();
     await page.locator('#partySize').selectOption(mapSize);
+    await expect(page.locator('#partySize')).toHaveValue(mapSize);
     await page.locator('#rivalCount').selectOption(String(rivals));
+    await expect(page.locator('#rivalCount')).toHaveValue(String(rivals));
     await page.locator('#partyName').fill(`Smoke ${rivals} AI ${Date.now()} ${attempt}`);
     await page.getByRole('button', { name: 'Создать мир' }).click();
     await expect(page.locator('#gameApp')).toBeVisible();
     await expect(page.locator('#map .tile').first()).toBeVisible();
+
+    const createdMap = await page.evaluate(() => {
+      const debug = window.__epohiDebug && window.__epohiDebug();
+      const gs = debug && debug.state;
+      return gs ? { mapSize: Number(gs.mapSize), rows: Array.isArray(gs.map) ? gs.map.length : 0 } : null;
+    });
+    expect(createdMap, 'new-game fixture must expose the created game state').not.toBeNull();
+    expect(createdMap.mapSize, `requested ${mapSize} map must create ${expectedMapSize}×${expectedMapSize} state`).toBe(expectedMapSize);
+    expect(createdMap.rows, `requested ${mapSize} map must render from a ${expectedMapSize}-row backing map`).toBe(expectedMapSize);
 
     if (needsSyntheticSmallRivals) await promoteSmallFixtureRivals(page, rivals);
     const actualRivals = await page.evaluate(() => {
