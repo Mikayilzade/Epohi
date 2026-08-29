@@ -11,30 +11,32 @@
 - `main`: DO NOT TOUCH
 
 ## Current checkpoint
-Exact PR head inspected at the start of this run: `7b66013e1dd002f2021985704c0a4d316ccd058c`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
+Exact PR head inspected at the start of this run: `6f8c7b27142ecd0d19a42c781b03316cdd47ea16`. PR #84 was open/draft, unmerged, on `codex/coherence-capture-learning-v1`, targeting `prototype/humans-v1`.
 
-Exact implementation head: `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` (`Align diplomacy regressions with canonical proposal modal`). This bounded package changes only regression coverage; no production runtime/source file was changed.
+Exact implementation head: `d80a91f26442909f5615acb96875c2356a9f5c9b` (`Align stacked-unit regression with canonical route flow`). This bounded package changes only regression coverage; no production runtime/source file was changed.
 
 ## Exact CI / factual blocker inspected
-- Workflow run `33226981642` (#226) validated implementation head `766e66a94126f967f0e668d16044619929fd2659` and completed **failure**, not cancelled.
-- #226 static gate: **green**.
-- #226 focused Chromium + WebKit gate: **green**.
-- #226 full Chromium: **162 passed / 179 total, 17 failed**.
-- #226 full WebKit: **161 passed / 179 total, 18 failed**.
-- Exact artifact: `9707744469` (`epohi-autonomous-cross-browser-results`).
-- First Chromium full-suite failure: `tests/living-civilizations.spec.js:37` timed out clicking `[data-proposal=...][data-answer=yes]`. The selector resolved the legacy `#livingProposals` action, which is intentionally hidden while the canonical `#coherenceProposalModal` was visibly presenting the same proposal. The artifact screenshot and Playwright accessibility snapshot both show the central proposal modal visible with its `Принять` / `Отклонить` controls.
-- This was a stale regression interaction path, not evidence for a speculative gameplay/runtime change.
+- Workflow run `33229538674` (#228) validated implementation head `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` and completed **failure**, not cancelled.
+- #228 static gate: **green**.
+- #228 focused Chromium + WebKit gate: **green**.
+- #228 full Chromium: **162 passed / 179 total, 17 failed**.
+- #228 full WebKit: **162 passed / 179 total, 17 failed**.
+- Exact artifact: `9708448169` (`epohi-autonomous-cross-browser-results`).
+- First Chromium full-suite failure: `tests/combat-world-stability.spec.js:170` timed out waiting for legacy `[data-context-action="move"]` while exercising three same-type stacked units.
+- Current accepted route UI is `#contextActions [data-path-action="start"]` (`Идти`) followed by target selection; `EpohiContextReviewCleanup` exposes the explicit stack picker and `selectStackUnit` flow. The stale regression was still depending on the superseded destination-then-`move` interaction.
 
 ## Bounded package completed
-- Added `acceptCentralProposal(page, id)` to exercise the canonical `#coherenceProposalModal` action identified by exact proposal id.
-- The helper asserts the canonical modal is shown, the legacy `#livingProposals` surface is not visible, and the central action is visible before clicking.
-- Updated both trade-accept and joint-war-accept regressions to use that canonical path, covering the exact failure class while retaining all state/effect assertions.
+- Reworked the stacked-unit regression to assert all three stack-picker entries are present.
+- Each unit is now selected explicitly by its `data-unit-id`, with an assertion that `getSelectedUnitId()` matches the intended stack member before routing.
+- The regression uses the canonical `data-path-action="start"` route flow, asserts `data-route-unit-id` ownership, selects the destination, and verifies the exact intended unit moved to its distinct target.
+- Existing final uniqueness and no-stale-cancel assertions remain.
 - No production code was changed.
 
 ## Validation state
-- Exact prior CI #226 on `766e66a94126f967f0e668d16044619929fd2659`: static green; focused Chromium + WebKit green; full Chromium 162/179; full WebKit 161/179; overall **failure**.
-- Exact implementation head `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09`: pushed; no PR workflow run was visible yet at the immediate post-push check. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
-- Current blocker: cross-browser full regression is not green; the next package must use the completed exact CI/artifact for `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` and take only its first factual failure.
+- Exact prior CI #228 on `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09`: static green; focused Chromium + WebKit green; full Chromium 162/179; full WebKit 162/179; overall **failure**.
+- Exact implementation head `d80a91f26442909f5615acb96875c2356a9f5c9b`: pushed.
+- Exact workflow run `33231928852` (#230) for `d80a91f26442909f5615acb96875c2356a9f5c9b` was **queued** at the immediate post-push check. Do not make another source/test/runtime change until this exact checkpoint has a completed CI result.
+- Current blocker: cross-browser full regression is not green; factual validation for the new stacked-unit regression is pending in #230.
 - No physical-device test is requested.
 
 ## Phase plan
@@ -47,7 +49,7 @@ Exact implementation head: `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09` (`Align di
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Inspect the completed exact CI/artifact for implementation head `6e5fa316551cdc6523f4aa6c6ab82c79b9a99e09`, then take only its first factual full-suite failure as the next bounded package.
+Inspect the completed exact CI/artifact for implementation head `d80a91f26442909f5615acb96875c2356a9f5c9b`, then take only its first factual full-suite failure as the next bounded package.
 
 ## Completion signal
 Change state to `READY_FOR_FINAL_DEVICE_TEST` only after every applicable gate in `QUALITY_GATES.md` is green and the branch has been cleaned into a Release Candidate. Do not merge automatically.
