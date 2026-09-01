@@ -19,20 +19,21 @@ The user is no longer the routine QA loop. Do not ask for manual testing after s
 1. Latest code/Git history on the active branch.
 2. `AUTONOMY_STATUS.md`.
 3. `QUALITY_GATES.md`.
-4. `CODEX_NEXT_TASK.md`.
-5. PR #84 description/comments.
-6. `PROJECT_HANDOFF.md`.
+4. `AGENT_TESTING_POLICY.md`.
+5. `CODEX_NEXT_TASK.md`.
+6. PR #84 description/comments.
+7. `PROJECT_HANDOFF.md`.
 
 If an older handoff or chat memory disagrees with current repository state, the repository wins.
 
 ## Autonomous loop
 Every run must:
-1. Read this file, `AUTONOMY_STATUS.md`, `QUALITY_GATES.md`, and `CODEX_NEXT_TASK.md`.
+1. Read this file, `AUTONOMY_STATUS.md`, `QUALITY_GATES.md`, `AGENT_TESTING_POLICY.md`, and `CODEX_NEXT_TASK.md`.
 2. Fetch PR #84 and verify the current branch head before writing.
 3. Inspect the latest relevant CI result/logs. Never guess why CI failed.
 4. Execute **one meaningful bounded package** from `NEXT ACTION` / `CODEX_NEXT_TASK.md` (target 30–60 minutes of engineering work, not a cosmetic micro-commit).
 5. Add or strengthen regression coverage for every defect fixed.
-6. Run the strongest available local/browser checks; push only coherent work.
+6. Run the strongest checks available in the current environment and follow `AGENT_TESTING_POLICY.md`. Missing local Linux/browser dependencies are infrastructure limitations, not automatic game-code failures; use GitHub Actions for authoritative Chromium/WebKit browser gates when the local container cannot run them.
 7. Update `AUTONOMY_STATUS.md` with exact SHA/results/blocker and a single next action.
 8. Keep the user-facing report short: `в процессе`, `нужен ответ: ...`, or `готово к финальному тесту` plus one sentence of substance.
 
@@ -42,9 +43,9 @@ Stop autonomous implementation only when one of these is true:
 - a destructive migration or data-loss risk needs approval;
 - credentials, payment, legal acceptance, or an unavailable external service is required;
 - the project reached `READY_FOR_FINAL_DEVICE_TEST`;
-- an infrastructure failure cannot be bypassed after a reasonable retry/diagnostic attempt.
+- an infrastructure failure cannot be bypassed after applying `AGENT_TESTING_POLICY.md` and the next meaningful engineering action genuinely cannot continue safely.
 
-Ordinary test failures, browser differences, refactors, flaky CI, and implementation choices are **not** reasons to ask the user to test or decide.
+Ordinary test failures, browser differences, refactors, flaky CI, local Playwright dependency failures, and implementation choices are **not** reasons to ask the user to test or decide when a safe CI/platform path exists.
 
 ## Physical-device policy
 A physical iPhone test happens only at the final RC gate. Every issue discovered there must first become an automated regression before another device build is offered.
