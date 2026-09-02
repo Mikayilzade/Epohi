@@ -58,7 +58,9 @@ test.describe('Player feedback stabilization and treasury', () => {
       window.__epohiDebug().render();
       return { id: proposal.id, gold: gs.resources.gold, trust: civ.diplomacy.trust, civId: civ.civilizationId };
     });
-    await page.locator(`[data-proposal="${setup.id}"][data-answer="yes"]`).click();
+    const accept = page.locator(`#coherenceProposalModal [data-coherence-proposal-answer="yes"][data-proposal-id="${setup.id}"]`);
+    await expect(accept).toBeVisible();
+    await accept.click();
     const accepted = await page.evaluate((civId) => {
       const gs = window.__epohiDebug().state;
       const civ = gs.rivals.find(item => item.civilizationId === civId);
@@ -204,6 +206,7 @@ test.describe('Player feedback stabilization and treasury', () => {
       return gs.turn;
     });
     await expect(page.locator('#victoryModal')).toHaveClass(/show/);
+    await expect(page.locator('#outcomeMapBtn')).toHaveCount(1);
     await page.locator('#outcomeMapBtn').click();
     await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
     const continued = await page.evaluate(() => window.__epohiDebug().state.continueAfterOutcome);
