@@ -18,6 +18,19 @@ on:
       - tests/**
       - index.html
       - sw.js
+  push:
+    branches:
+      - codex/-codex_stabilization_sprint
+      - codex/-run_240_regression_family_repair
+    paths:
+      - .github/workflows/diplomacy-activity-events-temp.yml
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
+      - index.html
+      - sw.js
   workflow_dispatch:
 
 concurrency:
@@ -168,11 +181,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-# Temporary PR-only autonomy gate for PR #84 and its stabilization child PRs.
-# The branch-level paths list is the intended durable source/test/runtime trigger policy,
-# but pull_request trigger selection is controlled by the base-side workflow until this
-# workflow is merged/replaced. The in-job detector therefore remains the effective guard
-# for status/docs-only synchronize events on these Draft PRs. Such runs are cheap and, with
-# cancel-in-progress disabled, cannot invalidate an in-flight source/test checkpoint.
+# Temporary autonomy gate for PR #84 and its stabilization child branches/PRs.
+# Pull-request trigger selection is base-side; the narrow push trigger keeps exact child
+# checkpoints testable without touching main or merging an unvalidated child first.
 # Pull-request checkout is pinned to the exact PR head SHA, so HEAD^..HEAD means the latest branch commit,
 # not GitHub's synthetic merge ref. Remove this temporary workflow before final merge into prototype/humans-v1.
