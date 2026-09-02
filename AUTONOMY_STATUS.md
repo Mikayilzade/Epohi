@@ -3,84 +3,78 @@
 ## State
 `IN_PROGRESS_MANUAL_CODEX_SPRINT`
 
-Hourly ChatGPT autonomy was explicitly disabled by the user on 2026-08-29. Current execution mode is a user-started Codex sprint followed by independent ChatGPT review.
+Hourly ChatGPT autonomy remains disabled by the user. Current execution mode is a user-started Codex sprint followed by independent ChatGPT review.
 
-## Integration
+## Integration / safety boundary
 - Repository: `Mikayilzade/Epohi`
-- Integration branch: `codex/coherence-capture-learning-v1`
-- Existing integration Draft PR: #84
-- Base: `prototype/humans-v1`
-- `main`: DO NOT TOUCH
-- Codex should preferably work on a child branch and, if creating a review Draft PR, target `codex/coherence-capture-learning-v1` as its base. Do not merge automatically.
+- Integration Draft PR: #84 (`codex/coherence-capture-learning-v1` -> `prototype/humans-v1`)
+- Current repair/review Draft PR: **#86**
+- Current task branch: `codex/-run_240_regression_family_repair`
+- PR #86 base: `codex/-codex_stabilization_sprint`
+- `main`: **DO NOT TOUCH**
+- Do not merge #86, #84, or `prototype/humans-v1` automatically.
 
-## Current checkpoint
-Exact integration head recorded before the previous Codex sprint: `071bd1b05f4e0a837b624fa39b991b8322a0ca45` (`Record run 238 diagnosis and checkpoint 240`).
+## Latest authoritative checkpoint — run #246
+Workflow: `Epohi Autonomous Cross-Browser Gate`
 
-Exact implementation checkpoint validated by CI run #240: `5b21f1b2cb7fd6d7d3020552ba38fb7bc7bcd863` (`Use semantic inspect-layer activation in legacy map regression`). The integration head differs because of status/documentation-only history.
-
-PR #84 is open, Draft, unmerged, head `codex/coherence-capture-learning-v1`, base `prototype/humans-v1`.
-
-The current task/inventory documentation lives on child branch `codex/-codex_stabilization_sprint`; verify exact current branch heads before writing code.
-
-## Latest exact CI baseline inventoried
-- Workflow: `Epohi Autonomous Cross-Browser Gate`
-- Run number: #240
-- Run ID: `33243697618`
-- Exact implementation SHA: `5b21f1b2cb7fd6d7d3020552ba38fb7bc7bcd863`
+- Run number: **#246**
+- Run ID: `33631089383`
+- Head SHA: `592e42aefe1e0c42b387868390127764d46305f5`
+- Branch: `codex/-run_240_regression_family_repair`
+- PR: #86
 - Status: **completed / failure**
+- Dependency + browser installation: **green**
 - Static integrity: **green**
 - Focused mobile runtime Chromium + WebKit: **green**
-- Full Chromium regression: **165 passed / 15 failed**
-- Full WebKit regression: **165 passed / 15 failed**
-- Unique failing scenarios across engines: **16** (14 shared, one Chromium-only stack scenario, one WebKit-only camera scenario)
-- Diagnostics artifact: `9712557281` (`epohi-autonomous-cross-browser-results`)
+- Focused Chromium: **60/60 passed**
+- Focused WebKit: **60/60 passed**
+- Full Chromium regression: **174 passed / 6 failed**
+- Full WebKit regression: **175 passed / 5 failed**
+- Unique residual failing scenarios: **7**
+- Diagnostics artifact: `9848289407` (`epohi-autonomous-cross-browser-results`)
 
-This authoritative failure set has now been recovered and inspected. Stage 0 is no longer blocked by lack of local Chromium/WebKit libraries. `AGENT_TESTING_POLICY.md` applies: local missing `libatk`, package-manager/proxy 403, or an equivalent browser-container limitation is `INFRA`; GitHub Actions is the authoritative browser-ready validation environment and local browser absence by itself must not stop coherent engineering work.
+This supersedes run #240 as the current CI source of truth.
 
-## Run #240 grouped inventory
-Detailed test names, evidence, repair order, and guardrails are in `CODEX_NEXT_TASK.md` task `RUN_240_REGRESSION_FAMILY_REPAIR`.
+## Progress since run #240
+Run #240 baseline was 165 passed / 15 failed in Chromium and 165 passed / 15 failed in WebKit: 30 engine-failures across 16 unique scenarios.
 
-Current root-cause families:
-1. **Legacy inspection controls** — expected `STALE_TEST`: hidden/obsolete inspect tabs used by `mobile-context` and `resource-worker` tests.
-2. **Legacy city/science toolbar controls** — expected `STALE_TEST`: tests click hidden `#cityBtn` / old `#scienceBtn` instead of canonical visible flows.
-3. **Old diplomacy proposal surface** — expected `STALE_TEST` unless canonical central proposal accept flow proves broken.
-4. **Stack navigation/selection** — mixed/needs factual classification: old selectors may be stale, but a canonical visible stack re-entry failure would be a real runtime defect.
-5. **Context CSS/layout implementation assertions** — expected `STALE_TEST`/deterministic assertion update: preserve collapse/usability behavior, not obsolete exact CSS values.
-6. **Worker resource accounting** — confirmed `STALE_TEST`: old test expects worker construction to spend city production; current accepted mechanics use worker time and do not spend city production.
-7. **Foreign-unit context keeps `Идти`** — `RUNTIME_DEFECT_CANDIDATE`: determine whether this is a legitimate current enemy action or leaked own-unit movement command.
-8. **Two `#outcomeMapBtn` elements** — `RUNTIME_DEFECT_CANDIDATE`: duplicate DOM ID/control should be investigated rather than hidden with `.first()`.
-9. **WebKit camera center delta ~6.5px vs `<0.2` expectation** — `FIXTURE_NONDETERMINISM` / cross-browser assertion candidate until screenshot/runtime semantics prove a true centering defect.
+Run #246 leaves 11 engine-failures across 7 unique scenarios. Therefore the RUN_240 repair removed **19 of 30 engine-failures** and reduced the unique failure inventory from **16 to 7**, while keeping the focused cross-browser runtime gate fully green.
+
+The previous local `libatk-1.0.so.0` / package-manager proxy limitation is not the current project blocker. `AGENT_TESTING_POLICY.md` remains authoritative: if a Codex container lacks browser system libraries, that is local infrastructure; GitHub Actions is the authoritative browser-ready validator.
+
+## Residual run #246 inventory
+Concrete details and execution contract are now in `CODEX_NEXT_TASK.md` task `RUN_246_RESIDUAL_REGRESSION_CLOSEOUT`.
+
+1. **Chromium-only stacked-unit distinct order** — one of three same-type stacked units does not reach its separately assigned destination. `RUNTIME_DEFECT_CANDIDATE`.
+2. **Camp description scroll assertion, both engines** — readable/no-clamp checks pass, but mandatory `scrollTop` movement does not. Likely stale behavior assertion unless content is actually clipped.
+3. **Empty context tabs container, both engines** — actions collapse to zero, tabs retain area 240. Determine whether this is real visible spacing or an obsolete exact-area assertion.
+4. **Chromium-only major world event visibility** — event signature exists but `#feedbackWorldEvents` remains `aria-hidden=true` without `.show`. `RUNTIME_DEFECT_CANDIDATE`.
+5. **Rival/barbarian inspection, both engines** — fixture expects a barbarian marker at coordinates that never renders. Determine fixture drift vs runtime rendering defect.
+6. **Stack re-entry, both engines** — Chromium rebases selection but canonical stack picker has zero entries; WebKit has `routePoiModal` intercepting the re-entry tap. `RUNTIME_DEFECT_CANDIDATE` with likely shared lifecycle root cause.
+7. **WebKit-only camera centering** — exact `<0.2px` assertion settles at about `6.5px`; classify real visible centering defect vs deterministic cross-browser geometry before changing tolerance.
 
 ## Current engineering policy
-Do not repair the full suite one red line at a time. Finish classification by root-cause family, migrate stale tests to current user-reachable flows, and make production changes only for proven current-flow defects with regression coverage. Validate related families together and avoid CI/source-push spam.
-
-The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`. The concrete next package is `CODEX_NEXT_TASK.md`.
+- Work the seven residual scenarios as root-cause families, not one failure / one push.
+- R1/R4/R6 are the highest-priority runtime candidates.
+- Change a test only when current product behavior is correct and the assertion/fixture is proven stale or nondeterministic.
+- Do not weaken behavior coverage for green CI.
+- Do not use force-clicks, arbitrary sleeps, hidden legacy UI, or direct production calls to bypass canonical user interactions.
+- Preserve the already-green focused mobile runtime gate.
 
 ## Phase plan
 - [x] Phase 0A — autonomous control plane and quality gates.
 - [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 — focused runtime architecture hardening; focused cross-browser gate green in #240.
+- [x] Phase 1 — focused runtime architecture hardening; focused cross-browser gate green.
 - [ ] Phase 2 — close complete cross-browser regression and save/migration coverage.
 - [ ] Phase 3 — deterministic autonomous soak player.
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Push implementation checkpoint `edbf74a55e7786f02a0ee5b6eb1436aeb35fba09` and inspect the resulting authoritative Chromium + WebKit CI once; repair only the remaining factually reproduced families from that run.
+Continue **in existing PR #86** with `CODEX_NEXT_TASK.md` task `RUN_246_RESIDUAL_REGRESSION_CLOSEOUT`: classify and repair the seven run #246 residual scenarios as one coherent package, then run/inspect one authoritative full Chromium + WebKit CI. Do not create a replacement PR and do not merge.
 
-## RUN_240_REGRESSION_FAMILY_REPAIR checkpoint — 2026-09-01
-- Starting task-branch SHA: `f0fb25e2de01e2f485e890ac49e756ab605e6ff9`; implementation checkpoint: `edbf74a55e7786f02a0ee5b6eb1436aeb35fba09`.
-- GitHub CLI was unauthenticated, so no newer workflow could be queried from this shell; run #240 remains the latest exact CI evidence available here and newer-CI verification is pending the platform/GitHub integration.
-- Final classification: A/B/C/E/F are `STALE_TEST`; D is `STALE_TEST` for hidden previous/next controls while the visible stack picker is the canonical flow; G and H are confirmed `RUNTIME_DEFECT`; I remains `FIXTURE_NONDETERMINISM` pending authoritative WebKit geometry evidence.
-- Repaired A/B/C/E/F tests as coherent canonical-flow migrations: visible map pieces for inspection, visible readiness/city actions, the central proposal modal, behavior-level collapse/scroll assertions, and the worker-time project lifecycle without city-production spending.
-- Migrated the remaining mobile stack navigation assertion in D to the visible stack picker. Existing `stack-reentry-selection` and combat stack coverage already use the canonical picker on this branch.
-- Fixed G by preventing route UI from identifying a foreign same-type unit as the selected player's unit; the existing foreign-inspection regression now covers the leaked `Идти` command.
-- Fixed H by removing duplicate outcome IDs from transient outcome markup while retaining the single stable visible `#outcomeMapBtn`; strengthened the regression with a uniqueness assertion.
-- Static checks passed: `find src tests -name '*.js' -print0 | xargs -0 -n1 node --check`, `node --check sw.js`, `node --check playwright.config.js`, and `git diff --check`.
-- Focused Chromium execution was attempted for 27 affected tests but every browser launch hit missing `libatk-1.0.so.0`; classified `LOCAL_TEST_INFRA_BLOCKER` under `AGENT_TESTING_POLICY.md`. No browser result is claimed, and Chromium/WebKit validation remains pending CI.
-
-## Historical Codex infrastructure checkpoint — 2026-08-29
-The previous Codex container could not fetch GitHub through its shell or install Playwright system libraries because of proxy/auth limitations; local Chromium failed at browser launch due missing `libatk-1.0.so.0`. No runtime/test changes were made in that blocked sprint. This remains useful diagnostic history but is **not the current project blocker**: run #240 logs/artifact are now inventoried externally and browser validation can proceed through GitHub Actions under `AGENT_TESTING_POLICY.md`.
+## Historical checkpoint — RUN_240_REGRESSION_FAMILY_REPAIR
+The prior sprint migrated stale legacy-control tests to current visible flows, updated worker-time mechanics coverage, fixed foreign-unit action leakage and duplicate victory return controls, and reached implementation checkpoint later validated through PR #86 CI. Local browser execution in the Codex shell was blocked by missing `libatk-1.0.so.0`, but static checks passed and the work was correctly moved to GitHub Actions for authoritative browser validation.
 
 ## Completion signal
-Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone test is the user's gate.
+Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone playthrough remains the user's gate.
