@@ -491,14 +491,14 @@
       '<div class="summary-card"><strong>' + cityCount + '</strong><small>живых городов</small></div>' +
       '<div class="summary-card"><strong>' + population + '</strong><small>население</small></div>' +
       '</div><div class="menu-actions" style="margin-top:14px">' +
-      '<button id="outcomeGoalsBtn" class="wide-btn secondary">Посмотреть цели</button>' +
-      '<button id="outcomeMapBtn" class="wide-btn">Вернуться к карте</button></div>';
+      '<button data-outcome-goals-action class="wide-btn secondary">Посмотреть цели</button>' +
+      '<button data-outcome-map-action class="wide-btn">Вернуться к карте</button></div>';
 
-    content.querySelector("#outcomeGoalsBtn").addEventListener("click", function () {
+    content.querySelector("[data-outcome-goals-action]").addEventListener("click", function () {
       modal.classList.remove("show");
       openGoals();
     });
-    content.querySelector("#outcomeMapBtn").addEventListener("click", function () {
+    content.querySelector("[data-outcome-map-action]").addEventListener("click", function () {
       modal.classList.remove("show");
     });
     modal.classList.add("show");

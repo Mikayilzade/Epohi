@@ -66,7 +66,27 @@ The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`. The concrete
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Run `RUN_240_REGRESSION_FAMILY_REPAIR` from `CODEX_NEXT_TASK.md`: verify no newer relevant CI, finish factual classification of the nine run #240 root-cause families, repair confirmed stale-test families in coherent batches, fix production only for proven canonical-flow defects, and use GitHub Actions for Chromium+WebKit validation if the local Codex environment cannot launch browsers.
+Push the RUN_246 closeout checkpoint to existing PR #86 and inspect its complete Chromium + WebKit run once; if Gate D is green, begin Gate E save/load/migration coverage.
+
+## RUN_246_RESIDUAL_REGRESSION_CLOSEOUT checkpoint — 2026-09-02
+- Implementation checkpoint: `a7bd902fddc3d14606572df1d789f0d443d73c3f` (`Close residual run 246 regression causes`) on task branch `work`; `main` was not checked out or modified.
+- The task is the seven-residual closeout reported for CI #246. The current shell cannot fetch GitHub or PR #86 (`CONNECT tunnel failed, response 403`), so it cannot truthfully reproduce the remote log, push, or claim an authoritative browser result.
+- Classified the WebKit camera residual as a runtime geometry defect: deriving every tile center from the first grid track accumulates engine-specific fractional-track rounding. Camera focus now uses the target tile's rendered offset geometry, while retaining the computed fallback before tiles exist.
+- Hardened the foreign-unit fix around the canonical context ownership text. Coordinate-only rival detection could incorrectly suppress movement for an own-unit context when units share a coordinate.
+- Removed the arbitrary wait from the foreign inspection regression: it now clicks the visible rival piece and waits for the ownership contract before asserting that own-unit route commands do not leak.
+- Migrated the affected city-content helpers from the conditional readiness shortcut to the visible capital map piece and canonical `open-city` action. The readiness bar remains covered independently.
+- Local browser launch remains blocked by missing Linux libraries; dependency installation also returned proxy HTTP 403. Per `AGENT_TESTING_POLICY.md`, this is `LOCAL_TEST_INFRA_BLOCKER`, and no Chromium/WebKit pass is claimed.
+
+## RUN_240_REGRESSION_FAMILY_REPAIR checkpoint — 2026-09-01
+- Starting task-branch SHA: `f0fb25e2de01e2f485e890ac49e756ab605e6ff9`; implementation checkpoint: `edbf74a55e7786f02a0ee5b6eb1436aeb35fba09`.
+- GitHub CLI was unauthenticated, so no newer workflow could be queried from this shell; run #240 remains the latest exact CI evidence available here and newer-CI verification is pending the platform/GitHub integration.
+- Final classification: A/B/C/E/F are `STALE_TEST`; D is `STALE_TEST` for hidden previous/next controls while the visible stack picker is the canonical flow; G and H are confirmed `RUNTIME_DEFECT`; I remains `FIXTURE_NONDETERMINISM` pending authoritative WebKit geometry evidence.
+- Repaired A/B/C/E/F tests as coherent canonical-flow migrations: visible map pieces for inspection, visible readiness/city actions, the central proposal modal, behavior-level collapse/scroll assertions, and the worker-time project lifecycle without city-production spending.
+- Migrated the remaining mobile stack navigation assertion in D to the visible stack picker. Existing `stack-reentry-selection` and combat stack coverage already use the canonical picker on this branch.
+- Fixed G by preventing route UI from identifying a foreign same-type unit as the selected player's unit; the existing foreign-inspection regression now covers the leaked `Идти` command.
+- Fixed H by removing duplicate outcome IDs from transient outcome markup while retaining the single stable visible `#outcomeMapBtn`; strengthened the regression with a uniqueness assertion.
+- Static checks passed: `find src tests -name '*.js' -print0 | xargs -0 -n1 node --check`, `node --check sw.js`, `node --check playwright.config.js`, and `git diff --check`.
+- Focused Chromium execution was attempted for 27 affected tests but every browser launch hit missing `libatk-1.0.so.0`; classified `LOCAL_TEST_INFRA_BLOCKER` under `AGENT_TESTING_POLICY.md`. No browser result is claimed, and Chromium/WebKit validation remains pending CI.
 
 ## Historical Codex infrastructure checkpoint — 2026-08-29
 The previous Codex container could not fetch GitHub through its shell or install Playwright system libraries because of proxy/auth limitations; local Chromium failed at browser launch due missing `libatk-1.0.so.0`. No runtime/test changes were made in that blocked sprint. This remains useful diagnostic history but is **not the current project blocker**: run #240 logs/artifact are now inventoried externally and browser validation can proceed through GitHub Actions under `AGENT_TESTING_POLICY.md`.
