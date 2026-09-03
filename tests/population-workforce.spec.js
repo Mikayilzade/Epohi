@@ -18,6 +18,15 @@ async function openFreshGame(page) {
   return consoleProblems;
 }
 
+async function openCapital(page) {
+  const capital = page.locator('#map .piece.city.player-capital');
+  await expect(capital).toBeVisible();
+  await capital.click();
+  const openCity = page.locator('#contextActions [data-context-action="open-city"]');
+  await expect(openCity).toBeVisible();
+  await openCity.click();
+}
+
 test.describe('Население и рабочая сила', () => {
   test('каждая община после первой получает занятие и видна в городе', async ({ page }) => {
     const consoleProblems = await openFreshGame(page);
@@ -35,7 +44,7 @@ test.describe('Население и рабочая сила', () => {
       debug.render();
     });
 
-    await page.locator('#cityBtn').click();
+    await openCapital(page);
     const panel = page.locator('[data-population-workforce-panel]');
     await expect(panel).toBeVisible();
     await expect(panel).toContainText('1/1 общин');
@@ -60,7 +69,7 @@ test.describe('Население и рабочая сила', () => {
       debug.render();
     });
 
-    await page.locator('#cityBtn').click();
+    await openCapital(page);
     await page.locator('[data-workforce-focus="food"]').click();
     await page.evaluate(() => {
       const debug = window.__epohiDebug();
