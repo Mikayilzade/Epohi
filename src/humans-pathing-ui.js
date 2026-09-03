@@ -53,9 +53,22 @@
     }) || null;
   }
 
-  function inspectsForeignUnit(text) {
-    return Boolean(text && text.textContent.indexOf("Владелец: Ардена") === -1 &&
-      text.textContent.indexOf("Владелец:") !== -1);
+  function inspectsForeignUnit(gs) {
+    const value = debug();
+    const layer = value && typeof value.getInspectLayer === "function" ? value.getInspectLayer() : null;
+    const tile = document.querySelector("#map .tile.inspect-tile");
+    if (!gs || !tile || layer !== "unit") return false;
+    const x = Number(tile.dataset.x);
+    const y = Number(tile.dataset.y);
+    const ownsUnit = (gs.units || []).some(function (unit) {
+      return unit.hp > 0 && unit.x === x && unit.y === y;
+    });
+    if (ownsUnit) return false;
+    return (gs.rivals || []).some(function (civ) {
+      return (civ.units || []).some(function (unit) {
+        return unit.hp > 0 && unit.x === x && unit.y === y;
+      });
+    });
   }
 
   function notify(text) {
@@ -265,7 +278,7 @@
     // Unit type names are not unique between civilizations. In particular, an
     // inspected rival warrior must not inherit the selected player's "Идти"
     // command merely because both context titles contain "Воин".
-    const showsUnit = !inspectsForeignUnit(text) &&
+    const showsUnit = !inspectsForeignUnit(gs) &&
       (title.textContent.includes(unit.name || "") || title.textContent.includes(def.name));
     const selectedHasRoute = Boolean(selected && selected.travelOrder);
     const actionUnit = showsUnit ? unit : selected;

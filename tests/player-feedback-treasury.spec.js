@@ -165,6 +165,19 @@ test.describe('Player feedback stabilization and treasury', () => {
     await expect(page.locator('#contextActions')).not.toContainText('Охранять');
     await expect(page.locator('#contextActions')).not.toContainText('Отменить');
     await expect(page.locator('#contextActions')).not.toContainText('Идти');
+
+    await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const own = gs.units[0];
+      const rival = gs.rivals[0].units[0];
+      own.travelOrder = null;
+      rival.x = own.x;
+      rival.y = own.y;
+      window.__epohiDebug().render();
+    });
+    await page.locator('#map .tile[data-x="5"][data-y="5"] .piece.unit').click();
+    await expect(page.locator('#contextText')).toContainText('Владелец: Ардена');
+    await expect(page.locator('#contextActions [data-path-action="start"]')).toBeVisible();
   });
 
   test('казна нанимает отряд без городской очереди', async ({ page }) => {
