@@ -20,6 +20,8 @@
 - Full focused Chromium/WebKit gate: NOT RUN because the required stack prerequisite was red. Full Chromium/WebKit regression: NOT RUN. No green gate or aggregate full-suite counts are claimed.
 - Static verification: node --check for the changed runtime and git diff --check passed. Temporary instrumentation is excluded from the commit.
 
+- Publication correction: the first API commit da83af8 preserved Windows CRLF from the checkout, causing committed-diff whitespace failures. A follow-up commit normalizes these two files to LF without runtime changes. This required a second non-force branch update, deviating from the requested single push; no history rewrite or merge was used.
+
 ## Remaining failures and validation limits
 - Existing stack picker failure blocks the requested local verification chain in both engines.
 - One local small-map setup failure was observed and is retained above, not hidden by the successful repeat.
