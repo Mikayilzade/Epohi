@@ -1,3 +1,36 @@
+# PR #89 — narrow immediate pathing refresh — 2026-09-05
+
+## Current scope and evidence
+- Existing PR: Mikayilzade/Epohi#89; branch: codex/-run_240_regression_family_repair-2mvfa1. Baseline head: e3b9cb2f45748b3caa4815dff9b37eeabe2c3d53.
+- Authoritative baseline: Actions run 33983712540, job 101353359808: Chromium focused 60 passed / 0 failed, exit 0; WebKit focused 59 passed / 1 failed, exit 1. Full regression skipped by focused gate. Sole CI failure: diplomacy-activity-events.spec.js:28, total test timeout 20000ms, without a semantic assertion failure.
+- Confirmed runtime overhead: refreshPathingNow synchronously called the entire EpohiRuntimeInvalidation.flush pipeline after canonical unit inspection. Instrumenting only the existing readiness scenario on Windows WebKit 26.6 (Playwright 1.63.0) recorded three explicit global flush calls of 84ms, 117ms and 90ms (291ms total); nested pathing work took 2ms, 0ms and 1ms. Call stacks show diplomacy-event-flow.focusUnit -> tile/piece click -> context-review-cleanup -> refreshPathingNow -> global flush. This scenario uses the diplomacy-event-flow interceptor, not strategy-ux.focusUnit's stack loop.
+- Evidence limit: the baseline 20s CI timeout did not reproduce locally: original scenario passed (16.9s runner total with trace); instrumented baseline passed (13.0s runner total). These measurements prove avoidable synchronous global work, but do NOT establish that those 291ms alone explain the CI timeout, or prove a repeatable end-to-end speedup. Authoritative timeout closure remains unverified.
+
+## Change
+- refreshPathingNow now immediately calls EpohiHumansPathingUI.refresh after canonical context installation. It does not call global flush and adds no observer/rAF dependency or delayed workaround.
+- Post-change timing recorded three immediate pathing calls, each 0ms at browser clock resolution, with no explicit global flush calls from selection. Normal scheduled global invalidation remains available.
+- Only runtime file changed: src/humans-context-review-cleanup.js. No tests, assertions, timeouts, route targeting checks, layer cycling, camera behavior or legacy controls changed.
+
+## Exact local verification (Windows; one worker)
+- diplomacy:28, WebKit, strict 20000ms: initial post-change attempt 0 passed / 1 failed BEFORE readiness flow (small-map fixture created 28x28 instead of 20x20); repeat with trace 1 passed / 0 failed (14.5s runner total). Separate post-change timing run: 1 passed / 0 failed (18.3s runner total; overlapped the tail of stack diagnostics, so not a speed comparison).
+- diplomacy:28, Chromium, strict 20000ms: 1 passed / 0 failed (8.9s runner total).
+- humans-pathing-performance:89, Chromium + WebKit: 2 passed / 0 failed (15.1s runner total). Existing <=1000ms start-action visibility and measured actionability assertion passed in both engines; visible route assignment and subsequent turn assertions passed.
+- stack-reentry-selection:10, Chromium + WebKit: 0 passed / 2 failed. Selected unit rebased correctly; canonical picker expected 2 entries, received 0 (line 46).
+- Baseline comparison for that stack failure: restored original runtime from exact head e3b9cb2 and ran the same scenario on both browsers: 0 passed / 2 failed at the identical picker assertion. Then restored the narrow fix. This failure predates this change; no broader stack repair was made under the residual-only scope.
+- Full focused Chromium/WebKit gate: NOT RUN because the required stack prerequisite was red. Full Chromium/WebKit regression: NOT RUN. No green gate or aggregate full-suite counts are claimed.
+- Static verification: node --check for the changed runtime and git diff --check passed. Temporary instrumentation is excluded from the commit.
+
+## Remaining failures and validation limits
+- Existing stack picker failure blocks the requested local verification chain in both engines.
+- One local small-map setup failure was observed and is retained above, not hidden by the successful repeat.
+- CI diplomacy timeout closure is still pending; exact total-budget root cause is not claimed beyond the measured global-flush overhead.
+
+## NEXT ACTION
+Inspect the PR #89 CI result for this narrow refresh commit and reconcile the baseline stack-picker failure before resuming the gated full focused and full regression checks.
+
+---
+Historical checkpoints below are superseded by the current report above.
+
 # AUTONOMY STATUS — «Эпохи» Humans v1
 
 ## State
@@ -65,7 +98,7 @@ The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`. The concrete
 - [ ] Phase 4 — automated UX/layout/balance pass.
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
-## NEXT ACTION
+## Historical next action (superseded)
 Push the RUN_253 eight-residual closeout as one coherent commit to existing PR #89, then inspect its complete Chromium + WebKit Actions run once and classify any remaining exact assertion before further changes.
 
 ## RUN_246_RESIDUAL_REGRESSION_CLOSEOUT checkpoint — 2026-09-02
@@ -101,7 +134,7 @@ Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I i
 - Classified runtime defects: `.piece.enemy` was missing from semantic unit-layer detection; and a visible remaining-own-stack tap needed an explicit unit-inspection transition after the prior selected unit left the stack.
 - The coherent patch preserves full camp text, strict camera tolerance, visible piece interactions, actual barbarian context, canonical stack picker, stable incomplete-statehood reconciliation, and the existing one-second invalidation requirement. It adds no force click, sleep, hidden-control revival, or weakened product rule.
 - Local cross-browser execution remains subject to `AGENT_TESTING_POLICY.md`: installed Chromium lacks `libatk-1.0.so.0`, and WebKit is not installed. Static checks are the strongest locally available gate; authoritative browser verification remains the next PR #89 Actions run.
-- NEXT ACTION: push this single closeout commit to PR #89 and inspect the resulting complete Chromium + WebKit run once; if anything fails, record exact scenario + assertion + root cause before another change.
+- Historical next action (superseded): push this single closeout commit to PR #89 and inspect the resulting complete Chromium + WebKit run once; if anything fails, record exact scenario + assertion + root cause before another change.
 - Local verification result: all JavaScript syntax checks and `git diff --check` passed. The seven affected spec files (covering all eight residual scenarios) were attempted on both `chromium-mobile` and `webkit-mobile`; Chromium could not load `libatk-1.0.so.0`, and the WebKit executable is absent. The full suite was therefore not run locally and no browser-green claim is made.
 
 ## RUN_254_FOUR_RESIDUAL_CLOSEOUT — 2026-09-05
@@ -110,5 +143,5 @@ Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I i
 - `mobile-context` visibility was a stale matcher assumption: the compatibility surface remains empty, `aria-hidden`, fully transparent, pointer-inert, and at most 2px high, without requiring Playwright to call its nonzero geometry invisible.
 - `camera-2` was classified as a fixture/layout-settle race: the large-map helper now waits for stable map viewport, context, and map geometry across consecutive animation frames before Show Entire Map. Strict scale, fit, and centering assertions remain unchanged.
 - Confirmed runtime defects were own-stack re-entry and pathing invalidation latency. A newly inspected tile containing a live own unit now enters unit inspection even when CSS retargets the piece tap to the tile, while route targeting and repeated layer cycling retain ownership of their clicks. Canonical inspection immediately invokes the central runtime invalidation flush so path actions do not depend on delayed observer/rAF convergence.
-- NEXT ACTION: push the coherent RUN_254 commit to PR #89 and inspect its complete Chromium + WebKit Actions run once; if failures remain, record the exact scenario, assertion, and root cause before any further change.
+- Historical next action (superseded): push the coherent RUN_254 commit to PR #89 and inspect its complete Chromium + WebKit Actions run once; if failures remain, record the exact scenario, assertion, and root cause before any further change.
 - Local RUN_254 verification: static integrity passed. All four focused scenarios were attempted on both mobile projects; Chromium launches were blocked by missing `libatk-1.0.so.0`, and WebKit launches by the absent `webkit-2359` executable. Per testing policy these are `LOCAL_TEST_INFRA_BLOCKER` results, not scenario failures. Focused green and full-suite results remain pending authoritative PR #89 CI.

@@ -347,11 +347,9 @@
   }
 
   function refreshPathingNow() {
-    const invalidation = window.EpohiRuntimeInvalidation;
-    if (invalidation && typeof invalidation.flush === "function") {
-      invalidation.flush();
-      return;
-    }
+    // Canonical inspection has already rendered the unit context. Restore its
+    // path action immediately without running the global refresh pipeline for
+    // every tile click made by readiness/stack selection.
     const pathing = window.EpohiHumansPathingUI;
     if (pathing && typeof pathing.refresh === "function") pathing.refresh();
   }
