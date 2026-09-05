@@ -93,3 +93,11 @@ The previous Codex container could not fetch GitHub through its shell or install
 
 ## Completion signal
 Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone test is the user's gate.
+
+## PR #87 failed-run follow-up — 2026-09-05
+- Scope is restricted by the user to existing PR #87; PRs #88/#89 and `main` were not touched.
+- GitHub Actions logs and PR comments are not reachable from this environment: no remote or GitHub credentials are configured, the GitHub connector returned HTTP 401, and direct GitHub access through the proxy returned HTTP 403. Consequently the complete remote failure list cannot be reported or guessed from this shell.
+- The locally available PR #87 checkpoint exposed a confirmed ownership-context defect in `player-feedback-treasury`: an intercepted rival-piece click did not update the core inspected tile/layer, so coordinate-derived ownership could describe the previously selected player unit and allow its route controls to be injected. This is a runtime defect, not a stale-test failure.
+- The context action surface now carries a semantic `data-unit-owner` contract from both core player/rival rendering and the intercepted rival context. Path controls and route summaries are suppressed in a rival context, including when player and rival units share a coordinate. The stack picker and regression use the same semantic contract instead of localized owner text.
+- Static integrity is green. Focused local Chromium is an authoritative `LOCAL_TEST_INFRA_BLOCKER` because the installed browser cannot load `libatk-1.0.so.0`; WebKit and the full suite remain pending and are not claimed green.
+- NEXT ACTION: push this checkpoint to existing PR #87, inspect the complete Chromium + WebKit Actions run, and leave the single requested PR comment with every remote failure/root cause/result; do not open or merge another PR.

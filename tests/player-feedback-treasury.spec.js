@@ -160,7 +160,7 @@ test.describe('Player feedback stabilization and treasury', () => {
       window.__epohiDebug().render();
     });
     await page.locator('#map .tile[data-x="7"][data-y="5"] .piece.ai-unit').click();
-    await expect(page.locator('#contextText')).toContainText('Владелец:');
+    await expect(page.locator('#contextActions')).toHaveAttribute('data-unit-owner', 'rival');
     await expect(page.locator('#contextActions')).toContainText('Дипломатия');
     await expect(page.locator('#contextActions')).not.toContainText('Охранять');
     await expect(page.locator('#contextActions')).not.toContainText('Отменить');
@@ -176,7 +176,7 @@ test.describe('Player feedback stabilization and treasury', () => {
       window.__epohiDebug().render();
     });
     await page.locator('#map .tile[data-x="5"][data-y="5"] .piece.unit').click();
-    await expect(page.locator('#contextText')).toContainText('Владелец: Ардена');
+    await expect(page.locator('#contextActions')).toHaveAttribute('data-unit-owner', 'player');
     await expect(page.locator('#contextActions [data-path-action="start"]')).toBeVisible();
   });
 

@@ -54,21 +54,8 @@
   }
 
   function inspectsForeignUnit(gs) {
-    const value = debug();
-    const layer = value && typeof value.getInspectLayer === "function" ? value.getInspectLayer() : null;
-    const tile = document.querySelector("#map .tile.inspect-tile");
-    if (!gs || !tile || layer !== "unit") return false;
-    const x = Number(tile.dataset.x);
-    const y = Number(tile.dataset.y);
-    const ownsUnit = (gs.units || []).some(function (unit) {
-      return unit.hp > 0 && unit.x === x && unit.y === y;
-    });
-    if (ownsUnit) return false;
-    return (gs.rivals || []).some(function (civ) {
-      return (civ.units || []).some(function (unit) {
-        return unit.hp > 0 && unit.x === x && unit.y === y;
-      });
-    });
+    const actions = document.getElementById("contextActions");
+    return Boolean(gs && actions && actions.dataset.unitOwner === "rival");
   }
 
   function notify(text) {
@@ -278,7 +265,8 @@
     // Unit type names are not unique between civilizations. In particular, an
     // inspected rival warrior must not inherit the selected player's "Идти"
     // command merely because both context titles contain "Воин".
-    const showsUnit = !inspectsForeignUnit(gs) &&
+    const foreignUnitContext = inspectsForeignUnit(gs);
+    const showsUnit = !foreignUnitContext &&
       (title.textContent.includes(unit.name || "") || title.textContent.includes(def.name));
     const selectedHasRoute = Boolean(selected && selected.travelOrder);
     const actionUnit = showsUnit ? unit : selected;
@@ -287,7 +275,7 @@
     // A route therefore remains the selected unit's route even when the context
     // card is temporarily showing the destination cell. Keep route controls and
     // ETA visible in that case; new-route/worker controls still require unit view.
-    if ((showsUnit || selectedHasRoute) && actionUnit && !actions.querySelector("[data-path-action]")) {
+    if (!foreignUnitContext && (showsUnit || selectedHasRoute) && actionUnit && !actions.querySelector("[data-path-action]")) {
       if (actionUnit.travelOrder) {
         if (actionUnit.travelOrder.status === "awaiting-choice") {
           actions.appendChild(makeButton("✨<br>Решить судьбу находки", "poi-choice", function () {
@@ -310,7 +298,7 @@
 
     if (showsUnit) injectWorkerPicker(unit, actions);
 
-    if (selected && selected.travelOrder && route) {
+    if (!foreignUnitContext && selected && selected.travelOrder && route) {
       const description = routeDescription(selected, route);
       let element = summary;
       if (!element) {

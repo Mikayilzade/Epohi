@@ -159,7 +159,7 @@
     const selectedId = value && value.getSelectedUnitId ? value.getSelectedUnitId() : null;
     const layer = value && value.getInspectLayer ? value.getInspectLayer() : null;
     const selectedUnit = selectedPlayerUnit(gs, selectedId);
-    const isOwnUnitContext = layer === "unit" && contextText && contextText.textContent.indexOf("Владелец: Ардена") !== -1;
+    const isOwnUnitContext = layer === "unit" && contextActions.dataset.unitOwner === "player";
     const units = isOwnUnitContext && selectedUnit ? ownUnitsAt(gs, selectedUnit.x, selectedUnit.y) : [];
 
     if (units.length <= 1) {
