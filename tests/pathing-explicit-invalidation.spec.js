@@ -49,7 +49,7 @@ test.describe('Pathing explicit invalidation bridge', () => {
     // Do not call EpohiHumansPathingUI.refresh() here. The real mobile gesture must
     // restore pathing controls through the explicit invalidation lifecycle.
     const routeStart = page.locator('[data-path-action="start"]');
-    await page.locator(`.tile[data-x="${fixture.x}"][data-y="${fixture.y}"]`).click();
+    await page.locator(`.tile[data-x="${fixture.x}"][data-y="${fixture.y}"] .piece.unit`).click();
     const actionabilityStartedAt = Date.now();
     await expect(routeStart).toBeVisible({ timeout: 1000 });
     expect(Date.now() - actionabilityStartedAt).toBeLessThanOrEqual(1000);

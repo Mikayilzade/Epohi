@@ -106,7 +106,7 @@
     if (!target || !target.closest) return "tile";
     if (target.closest(".piece.city, .piece.ai-city, .city-pop")) return "city";
     if (target.closest(".piece.camp, .camp-marker, .camp-hp")) return "camp";
-    if (target.closest(".piece.unit, .piece.ai-unit, .unit-count, .barbarian-marker")) return "unit";
+    if (target.closest(".piece.unit, .piece.ai-unit, .piece.enemy, .unit-count, .barbarian-marker")) return "unit";
     return "tile";
   }
 
@@ -159,7 +159,7 @@
     const selectedId = value && value.getSelectedUnitId ? value.getSelectedUnitId() : null;
     const layer = value && value.getInspectLayer ? value.getInspectLayer() : null;
     const selectedUnit = selectedPlayerUnit(gs, selectedId);
-    const isOwnUnitContext = layer === "unit" && contextText && contextText.textContent.indexOf("Владелец: Ардена") !== -1;
+    const isOwnUnitContext = layer === "unit" && contextActions.dataset.unitOwner === "player";
     const units = isOwnUnitContext && selectedUnit ? ownUnitsAt(gs, selectedUnit.x, selectedUnit.y) : [];
 
     if (units.length <= 1) {
@@ -346,6 +346,14 @@
     window.requestAnimationFrame(syncUi);
   }
 
+  function refreshPathingNow() {
+    // Canonical inspection has already rendered the unit context. Restore its
+    // path action immediately without running the global refresh pipeline for
+    // every tile click made by readiness/stack selection.
+    const pathing = window.EpohiHumansPathingUI;
+    if (pathing && typeof pathing.refresh === "function") pathing.refresh();
+  }
+
   map.addEventListener("click", function (event) {
     if (replayingTileClick) return;
     const tile = event.target.closest && event.target.closest(".tile");
@@ -360,6 +368,12 @@
     const selectedUnit = selectedPlayerUnit(gs, selectedId);
     const unitsHere = ownUnitsAt(gs, x, y);
     const selectedAlreadyHere = !!selectedUnit && Number(selectedUnit.x) === x && Number(selectedUnit.y) === y;
+    const inspectedTile = map.querySelector(".tile.inspect-tile");
+    const repeatsInspectedTile = !!inspectedTile && Number(inspectedTile.dataset.x) === x && Number(inspectedTile.dataset.y) === y;
+
+    // Route targeting owns every map tap, including occupied destination tiles.
+    // Do not reinterpret that action as a context-selection change.
+    if (document.body.classList.contains("route-targeting") || document.body.dataset.routeUnitId) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -369,6 +383,18 @@
       if (city && before && typeof before.setActiveCity === "function") before.setActiveCity(city.id);
     }
 
+    // Map pieces intentionally have pointer-events:none, so a real visible-piece
+    // tap is delivered with the tile as event.target. A newly inspected occupied
+    // own tile is nevertheless an unambiguous unit tap; only a repeated tap keeps
+    // the core layer-cycling behavior.
+    if (unitsHere.length && (!repeatsInspectedTile || layer === "unit") && before && typeof before.inspectOwnUnitAt === "function") {
+      const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
+      before.inspectOwnUnitAt(x, y, targetId);
+      queueSync();
+      refreshPathingNow();
+      return;
+    }
+
     replayCoreTileClick(tile);
     if (layer === "unit" && unitsHere.length) {
       const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
@@ -376,6 +402,8 @@
     }
     clickLayer(layer);
     queueSync();
+    const after = debug();
+    if (after && after.getInspectLayer && after.getInspectLayer() === "unit") refreshPathingNow();
   }, true);
 
   document.addEventListener("click", function (event) {

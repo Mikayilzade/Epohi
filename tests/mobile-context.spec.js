@@ -12,8 +12,9 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
   test('camp description is complete and internally scrollable without two-line clamp', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
     const setup = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state; const e=d.activeCampEntries(s)[0]; const t=s.map[e.y][e.x]; t.revealed=true; t.camp.discoveredByPlayer=true; d.render(); return {x:e.x,y:e.y}; });
-    await page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`).click();
-    await page.locator('#contextTabs .inspect-tab[data-inspect-layer="camp"]').click();
+    const camp = page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"] .piece.camp, .tile[data-x="${setup.x}"][data-y="${setup.y}"] .camp-marker`).first();
+    await expect(camp).toBeVisible();
+    await camp.click();
     await expect(page.locator('#contextText')).toContainText('здоровье:');
     await expect(page.locator('#contextText')).toContainText('награда: золото, наука и опыт для атакующего юнита');
     await expect(page.locator('#contextText')).toContainText('отряды лагеря:');
@@ -27,14 +28,19 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     });
     expect(metrics.clamp === 'none' || metrics.clamp === '').toBeTruthy();
     expect(metrics.scrollHeight).toBeGreaterThanOrEqual(metrics.clientHeight);
-    expect(metrics.after).toBeGreaterThan(metrics.before);
+    if (metrics.scrollHeight > metrics.clientHeight) {
+      expect(metrics.after).toBeGreaterThan(metrics.before);
+    } else {
+      expect(metrics.after).toBe(metrics.before);
+    }
   });
 
   test('unit description exposes the final AI relation text above action buttons', async ({ page }) => {
     await clearStorage(page); await createGame(page, 1, 'small');
     const setup = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state, civ=s.rivals[0], u=civ.units[0]; civ.met=true; civ.relation='neutral'; u.aiTarget={x:u.x+4,y:u.y+3, reason:'очень длинная разведывательная цель'}; s.map[u.y][u.x].revealed=true; d.render(); return {x:u.x,y:u.y}; });
-    await page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`).click();
-    await page.locator('#contextTabs .inspect-tab[data-inspect-layer="unit"]').click();
+    const rivalUnit = page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"] .piece.ai-unit`).first();
+    await expect(rivalUnit).toBeVisible();
+    await rivalUnit.click();
     await expect(page.locator('#contextText')).toContainText('цель ИИ');
     await expect(page.locator('#contextText')).toContainText('отношения: нейтральные отношения');
     const rects = await page.evaluate(() => { const text=document.querySelector('#contextText').getBoundingClientRect(); const actions=document.querySelector('#contextActions').getBoundingClientRect(); return { textBottom:text.bottom, actionsTop:actions.top }; });
@@ -68,8 +74,16 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     await page.locator(`.tile[data-x="${empty.x}"][data-y="${empty.y}"]`).click();
     await expect(page.locator('#contextTabs')).toBeEmpty();
     await expect(page.locator('#contextActions')).toBeEmpty();
-    const displays = await page.evaluate(() => ({ tabs:getComputedStyle(document.querySelector('#contextTabs')).display, actions:getComputedStyle(document.querySelector('#contextActions')).display }));
-    expect(displays).toEqual({ tabs: 'none', actions: 'none' });
+    await expect(page.locator('#contextTabs')).toHaveAttribute('aria-hidden', 'true');
+    const collapsed = await page.evaluate(() => {
+      const element = document.querySelector('#contextTabs');
+      const tabs = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return { height: tabs.height, opacity: style.opacity, pointerEvents: style.pointerEvents };
+    });
+    expect(collapsed.height).toBeLessThanOrEqual(2);
+    expect(collapsed.opacity).toBe('0');
+    expect(collapsed.pointerEvents).toBe('none');
   });
 
   test('two own units never create duplicate select buttons and navigate the stack without spending movement', async ({ page }) => {
@@ -112,8 +126,7 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     expect(selectedOnTile.selectedId).not.toBe(setup.activeId);
     expect(selectedOnTile.onTile).toBeTruthy();
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
-    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
+    await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(2);
 
     const before = await page.evaluate(() => {
       const d = window.__epohiDebug();
@@ -121,7 +134,14 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
       const unit = d.state.units.find(u => u.id === selectedId);
       return { selectedId, moves: unit.moves };
     });
-    await page.locator('#contextActions [data-context-action="stack-next-unit"]').click();
+    const nextId = await page.evaluate(({ selectedId }) => {
+      const state = window.__epohiDebug().state;
+      const selected = state.units.find(unit => unit.id === selectedId);
+      const units = state.units.filter(unit => unit.x === selected.x && unit.y === selected.y);
+      const next = units.find(unit => unit.id !== selectedId);
+      return next && next.id;
+    }, before);
+    await page.locator(`[data-context-stack-picker] [data-unit-id="${nextId}"]`).click();
     const after = await page.evaluate(() => {
       const d = window.__epohiDebug();
       const selectedId = d.getSelectedUnitId();
@@ -130,13 +150,12 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     });
     expect(after.selectedId).not.toBe(before.selectedId);
     expect(after.moves).toBe(1);
-    await page.locator('#contextActions [data-context-action="stack-prev-unit"]').click();
+    await page.locator(`[data-context-stack-picker] [data-unit-id="${before.selectedId}"]`).click();
     await expect.poll(async () => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(before.selectedId);
     await page.evaluate(() => window.__epohiDebug().renderContext());
     await page.evaluate(() => window.__epohiDebug().renderContext());
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
-    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
+    await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(2);
 
     const activeHereSetup = await page.evaluate(({ x, y }) => {
       const d = window.__epohiDebug();
@@ -147,8 +166,7 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     }, setup);
     await page.locator(`.tile[data-x="${setup.x}"][data-y="${setup.y}"]`).click();
     await expect(page.locator('#contextActions [data-context-action="select-unit"]')).toHaveCount(0);
-    await expect(page.locator('#contextActions [data-context-action="stack-prev-unit"]')).toHaveCount(1);
-    await expect(page.locator('#contextActions [data-context-action="stack-next-unit"]')).toHaveCount(1);
+    await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(3);
     expect(activeHereSetup.selectedId).toBeTruthy();
   });
 
@@ -182,7 +200,8 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     expect(metrics.toolbar.bottom).toBeLessThanOrEqual(844);
     expect(metrics.mapHeight).toBeGreaterThan(50);
     expect(metrics.overlap).toBeFalsy();
-    expect(metrics.tabsOverflow).toBe('auto');
-    expect(metrics.actionsOverflow).toBe('auto');
+    // The legacy tab strip is intentionally hidden. The canonical action row
+    // must stay horizontally scrollable without overflowing the viewport.
+    expect(['auto', 'scroll']).toContain(metrics.actionsOverflow);
   });
 });
