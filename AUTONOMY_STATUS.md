@@ -1,10 +1,23 @@
 # PR #89 — narrow immediate pathing refresh — 2026-09-05
 
+## Authoritative CI closeout — run 33986349605
+- Tested runtime head: cf7abe3050b1364f570ffef511d55e4ad248dc61; job 101360465162; artifact 9975598433. Workflow completed / failure.
+- Static integrity: PASS.
+- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
+- Focused WebKit: 60 passed / 0 failed (4.0m), exit 0. diplomacy-activity-events.spec.js:28 passed with the unchanged 20000ms gate budget.
+- Full Chromium: 178 passed / 2 failed (3.9m), exit 1.
+- Full WebKit: 179 passed / 1 failed (12.4m), exit 1.
+- humans-pathing-performance.spec.js:89 passed in both full suites, retaining the <=1000ms actionability assertion.
+- Remaining unique failures: (1) stack-reentry-selection.spec.js:10 in both engines: line 46 expected 2 canonical picker entries, received 0; same failure reproduced locally on the original e3b9cb2 head and the patch. (2) prototype-baseline.spec.js:59 in Chromium only: line 73 expected mapSize 20, received 28; other scenario values matched. Its root cause was not audited or changed under this residual-only task.
+- The requested diplomacy timeout did not recur in either focused or full CI. The measured synchronous global-flush overhead is removed; a claim that it was the sole contributor to the original total-budget timeout would exceed the evidence.
+- Existing CI workflow automatically ran full regression after its focused gate passed, despite the earlier local stack prerequisite failure. No workflow or test gate was changed.
+- This final status-only checkpoint records the results of the tested runtime head above; it adds a third normal branch update after the runtime and line-ending correction commits. The requested single-push constraint was not achieved. No force update, new PR, merge, main change, or changes to PR #87/#88 occurred.
+
 ## Current scope and evidence
 - Existing PR: Mikayilzade/Epohi#89; branch: codex/-run_240_regression_family_repair-2mvfa1. Baseline head: e3b9cb2f45748b3caa4815dff9b37eeabe2c3d53.
 - Authoritative baseline: Actions run 33983712540, job 101353359808: Chromium focused 60 passed / 0 failed, exit 0; WebKit focused 59 passed / 1 failed, exit 1. Full regression skipped by focused gate. Sole CI failure: diplomacy-activity-events.spec.js:28, total test timeout 20000ms, without a semantic assertion failure.
 - Confirmed runtime overhead: refreshPathingNow synchronously called the entire EpohiRuntimeInvalidation.flush pipeline after canonical unit inspection. Instrumenting only the existing readiness scenario on Windows WebKit 26.6 (Playwright 1.63.0) recorded three explicit global flush calls of 84ms, 117ms and 90ms (291ms total); nested pathing work took 2ms, 0ms and 1ms. Call stacks show diplomacy-event-flow.focusUnit -> tile/piece click -> context-review-cleanup -> refreshPathingNow -> global flush. This scenario uses the diplomacy-event-flow interceptor, not strategy-ux.focusUnit's stack loop.
-- Evidence limit: the baseline 20s CI timeout did not reproduce locally: original scenario passed (16.9s runner total with trace); instrumented baseline passed (13.0s runner total). These measurements prove avoidable synchronous global work, but do NOT establish that those 291ms alone explain the CI timeout, or prove a repeatable end-to-end speedup. Authoritative timeout closure remains unverified.
+- Evidence limit: the baseline 20s CI timeout did not reproduce locally: original scenario passed (16.9s runner total with trace); instrumented baseline passed (13.0s runner total). These measurements prove avoidable synchronous global work, but do NOT establish that those 291ms alone explain the CI timeout, or prove a repeatable end-to-end speedup. At that local checkpoint, authoritative timeout closure remained unverified; see CI closeout above for the subsequent green diplomacy result.
 
 ## Change
 - refreshPathingNow now immediately calls EpohiHumansPathingUI.refresh after canonical context installation. It does not call global flush and adds no observer/rAF dependency or delayed workaround.
@@ -25,10 +38,10 @@
 ## Remaining failures and validation limits
 - Existing stack picker failure blocks the requested local verification chain in both engines.
 - One local small-map setup failure was observed and is retained above, not hidden by the successful repeat.
-- CI diplomacy timeout closure is still pending; exact total-budget root cause is not claimed beyond the measured global-flush overhead.
+- Diplomacy is now green in focused and full CI; the exact total-budget attribution is not claimed beyond the measured global-flush overhead.
 
 ## NEXT ACTION
-Inspect the PR #89 CI result for this narrow refresh commit and reconcile the baseline stack-picker failure before resuming the gated full focused and full regression checks.
+In a separately scoped PR #89 follow-up, diagnose the two remaining full-regression scenarios (canonical stack picker and small-map setup), preserving current assertions and budgets.
 
 ---
 Historical checkpoints below are superseded by the current report above.
