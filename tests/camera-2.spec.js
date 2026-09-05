@@ -42,6 +42,23 @@ async function zoomAboveFit(page) {
   });
 }
 
+async function waitForStableMapLayout(page) {
+  await page.waitForFunction(async () => {
+    const sample = () => {
+      const viewport = document.getElementById('mapViewport').getBoundingClientRect();
+      const context = document.getElementById('contextPanel').getBoundingClientRect();
+      const map = document.getElementById('map').getBoundingClientRect();
+      return [viewport.x, viewport.y, viewport.width, viewport.height, context.height, map.width, map.height];
+    };
+    const equal = (a, b) => a.every((value, index) => Math.abs(value - b[index]) < 0.01);
+    const first = sample();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const second = sample();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    return equal(first, second) && equal(second, sample());
+  });
+}
+
 async function tileScreenCenter(page, x, y) {
   return page.evaluate(({ x, y }) => {
     const viewport = document.getElementById('mapViewport');
@@ -126,6 +143,7 @@ async function expectLargeMapFitsViewport(page, viewportSize) {
   await page.setViewportSize(viewportSize);
   await clearStorage(page);
   await createGame(page, 0, 'large');
+  await waitForStableMapLayout(page);
   await page.locator('#showMapBtn').click();
   const info = await cameraState(page);
   const requiredFitScale = Math.min(info.viewport.width / info.map.width, info.viewport.height / info.map.height);

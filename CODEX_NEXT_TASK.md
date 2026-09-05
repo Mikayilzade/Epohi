@@ -1,26 +1,20 @@
 # CODEX NEXT TASK
 
 ## Task ID
-`RUN_253_EIGHT_RESIDUAL_CLOSEOUT`
+`RUN_254_FOUR_RESIDUAL_CLOSEOUT`
 
 ## Goal
-Close the eight unique residual scenarios from authoritative GitHub Actions run #253 in existing PR #89. Focused Chromium and WebKit were green; the full regression result was Chromium 175 passed / 5 failed and WebKit 172 passed / 8 failed.
+Close the four unique residual scenarios from authoritative GitHub Actions run #254 in existing PR #89. Full regression baseline: Chromium 178 passed / 2 failed; WebKit 176 passed / 4 failed.
 
 ## Boundaries
-- Continue existing PR #89 only; do not create another PR, merge, or touch `main`.
-- Treat PR #87 and PR #88 as closed duplicates.
-- Preserve visible canonical interaction flows, strict camera centering, meaningful outcome requirements, and the explicit invalidation deadline.
-- Do not force-click, add arbitrary sleeps, revive hidden stack navigation, or change runtime code for stale assertions.
+- Continue PR #89 only. Do not create or merge another PR, touch `main`, or touch closed duplicate PRs #87/#88.
+- No force clicks, arbitrary sleeps, timeout increases, synthetic substitutes for visible flows, legacy-control revival, or weakened behavior coverage.
 
-## Classified closeout package
-1. `mobile-context` camp scrolling — `STALE_TEST`: only require positive scrolling when content actually overflows; always retain full-text and unclamped readability checks.
-2. `mobile-context` empty compatibility containers — `BRITTLE_TEST`: assert visual/inert containment and negligible height rather than exact zero geometry.
-3. `camera-2` viewport helper — `STALE_TEST`: calculate content dimensions from computed CSS padding and retain the strict centering tolerance.
-4. `player-feedback-treasury` ownership restore — `BRITTLE_FIXTURE`: replace artificial shared-coordinate state with rival inspection followed by a visible own-unit inspection.
-5. `resource-worker` barbarian inspection — `STALE_SELECTOR` plus `RUNTIME_DEFECT`: tap `.piece.enemy` and make semantic layer detection classify it as a unit.
-6. `stack-reentry-selection` — `RUNTIME_DEFECT`: a visible own-stack tap explicitly establishes own-unit inspection before the canonical stack picker is rendered.
-7. `humans-outcomes` blocked palace victory — `SEMANTIC_SETTLE_RACE`: wait for completed turn processing and the stable reconciliation notice/state, without a timer or weaker victory rules.
-8. `pathing-explicit-invalidation` — `BRITTLE_HIT_TARGET`: start with the visible `.piece.unit`; preserve the viewport-retarget assertion and one-second actionability bound.
+## Classified package
+1. `mobile-context` empty compatibility container — `STALE_TEST`: retain empty, `aria-hidden`, opacity, pointer-events, and height checks without Playwright's geometry-based visibility matcher.
+2. `stack-reentry-selection` — `RUNTIME_DEFECT`: infer a new own-unit inspection from an occupied tile even though `.piece` has `pointer-events:none`, except during route targeting; preserve repeated layer cycling.
+3. `humans-pathing-performance` — `RUNTIME_DEFECT`: synchronously run the central UI invalidation path after canonical unit inspection rather than waiting only for observer/rAF convergence.
+4. `camera-2` large-map fit — `FIXTURE_LAYOUT_RACE`: wait for stable viewport/context/map geometry across animation frames before invoking Show Entire Map; keep all strict fit and centering assertions.
 
 ## Completion rule
-Run static integrity, then the eight affected specs in Chromium and WebKit. Push one coherent commit to PR #89 and inspect its complete Actions run once. If failures remain, record the exact scenario, assertion, and classified root cause before another change.
+Run static integrity and the four focused scenarios on Chromium and WebKit. If focused gates are green, run each complete regression suite once. Push one coherent commit to PR #89, inspect the resulting Actions run once, and classify any remaining exact failure before another change.

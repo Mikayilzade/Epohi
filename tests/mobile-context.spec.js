@@ -74,7 +74,7 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     await page.locator(`.tile[data-x="${empty.x}"][data-y="${empty.y}"]`).click();
     await expect(page.locator('#contextTabs')).toBeEmpty();
     await expect(page.locator('#contextActions')).toBeEmpty();
-    await expect(page.locator('#contextTabs')).not.toBeVisible();
+    await expect(page.locator('#contextTabs')).toHaveAttribute('aria-hidden', 'true');
     const collapsed = await page.evaluate(() => {
       const element = document.querySelector('#contextTabs');
       const tabs = element.getBoundingClientRect();

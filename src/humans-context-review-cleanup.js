@@ -346,6 +346,16 @@
     window.requestAnimationFrame(syncUi);
   }
 
+  function refreshPathingNow() {
+    const invalidation = window.EpohiRuntimeInvalidation;
+    if (invalidation && typeof invalidation.flush === "function") {
+      invalidation.flush();
+      return;
+    }
+    const pathing = window.EpohiHumansPathingUI;
+    if (pathing && typeof pathing.refresh === "function") pathing.refresh();
+  }
+
   map.addEventListener("click", function (event) {
     if (replayingTileClick) return;
     const tile = event.target.closest && event.target.closest(".tile");
@@ -360,6 +370,12 @@
     const selectedUnit = selectedPlayerUnit(gs, selectedId);
     const unitsHere = ownUnitsAt(gs, x, y);
     const selectedAlreadyHere = !!selectedUnit && Number(selectedUnit.x) === x && Number(selectedUnit.y) === y;
+    const inspectedTile = map.querySelector(".tile.inspect-tile");
+    const repeatsInspectedTile = !!inspectedTile && Number(inspectedTile.dataset.x) === x && Number(inspectedTile.dataset.y) === y;
+
+    // Route targeting owns every map tap, including occupied destination tiles.
+    // Do not reinterpret that action as a context-selection change.
+    if (document.body.classList.contains("route-targeting") || document.body.dataset.routeUnitId) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -369,10 +385,15 @@
       if (city && before && typeof before.setActiveCity === "function") before.setActiveCity(city.id);
     }
 
-    if (layer === "unit" && unitsHere.length && before && typeof before.inspectOwnUnitAt === "function") {
+    // Map pieces intentionally have pointer-events:none, so a real visible-piece
+    // tap is delivered with the tile as event.target. A newly inspected occupied
+    // own tile is nevertheless an unambiguous unit tap; only a repeated tap keeps
+    // the core layer-cycling behavior.
+    if (unitsHere.length && (!repeatsInspectedTile || layer === "unit") && before && typeof before.inspectOwnUnitAt === "function") {
       const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
       before.inspectOwnUnitAt(x, y, targetId);
       queueSync();
+      refreshPathingNow();
       return;
     }
 
@@ -383,6 +404,8 @@
     }
     clickLayer(layer);
     queueSync();
+    const after = debug();
+    if (after && after.getInspectLayer && after.getInspectLayer() === "unit") refreshPathingNow();
   }, true);
 
   document.addEventListener("click", function (event) {
