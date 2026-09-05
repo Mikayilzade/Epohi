@@ -8,7 +8,7 @@ Hourly ChatGPT autonomy was explicitly disabled by the user on 2026-08-29. Curre
 ## Integration
 - Repository: `Mikayilzade/Epohi`
 - Integration branch: `codex/coherence-capture-learning-v1`
-- Existing integration Draft PR: #84
+- Active continuation PR: #89 (PR #87 and PR #88 are closed duplicates)
 - Base: `prototype/humans-v1`
 - `main`: DO NOT TOUCH
 - Codex should preferably work on a child branch and, if creating a review Draft PR, target `codex/coherence-capture-learning-v1` as its base. Do not merge automatically.
@@ -66,11 +66,11 @@ The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`. The concrete
 - [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
 
 ## NEXT ACTION
-Push the RUN_246 closeout checkpoint to existing PR #86 and inspect its complete Chromium + WebKit run once; if Gate D is green, begin Gate E save/load/migration coverage.
+Push the RUN_253 eight-residual closeout as one coherent commit to existing PR #89, then inspect its complete Chromium + WebKit Actions run once and classify any remaining exact assertion before further changes.
 
 ## RUN_246_RESIDUAL_REGRESSION_CLOSEOUT checkpoint — 2026-09-02
 - Implementation checkpoint: `a7bd902fddc3d14606572df1d789f0d443d73c3f` (`Close residual run 246 regression causes`) on task branch `work`; `main` was not checked out or modified.
-- The task is the seven-residual closeout reported for CI #246. The current shell cannot fetch GitHub or PR #86 (`CONNECT tunnel failed, response 403`), so it cannot truthfully reproduce the remote log, push, or claim an authoritative browser result.
+- The task is the seven-residual closeout reported for CI #246. The current shell could not fetch GitHub or the then-active PR (`CONNECT tunnel failed, response 403`), so it cannot truthfully reproduce the remote log, push, or claim an authoritative browser result.
 - Classified the WebKit camera residual as a runtime geometry defect: deriving every tile center from the first grid track accumulates engine-specific fractional-track rounding. Camera focus now uses the target tile's rendered offset geometry, while retaining the computed fallback before tiles exist.
 - Hardened the foreign-unit fix around the canonical context ownership text. Coordinate-only rival detection could incorrectly suppress movement for an own-unit context when units share a coordinate.
 - Removed the arbitrary wait from the foreign inspection regression: it now clicks the visible rival piece and waits for the ownership contract before asserting that own-unit route commands do not leak.
@@ -94,10 +94,12 @@ The previous Codex container could not fetch GitHub through its shell or install
 ## Completion signal
 Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone test is the user's gate.
 
-## PR #87 failed-run follow-up — 2026-09-05
-- Scope is restricted by the user to existing PR #87; PRs #88/#89 and `main` were not touched.
-- GitHub Actions logs and PR comments are not reachable from this environment: no remote or GitHub credentials are configured, the GitHub connector returned HTTP 401, and direct GitHub access through the proxy returned HTTP 403. Consequently the complete remote failure list cannot be reported or guessed from this shell.
-- The locally available PR #87 checkpoint exposed a confirmed ownership-context defect in `player-feedback-treasury`: an intercepted rival-piece click did not update the core inspected tile/layer, so coordinate-derived ownership could describe the previously selected player unit and allow its route controls to be injected. This is a runtime defect, not a stale-test failure.
-- The context action surface now carries a semantic `data-unit-owner` contract from both core player/rival rendering and the intercepted rival context. Path controls and route summaries are suppressed in a rival context, including when player and rival units share a coordinate. The stack picker and regression use the same semantic contract instead of localized owner text.
-- Static integrity is green. Focused local Chromium is an authoritative `LOCAL_TEST_INFRA_BLOCKER` because the installed browser cannot load `libatk-1.0.so.0`; WebKit and the full suite remain pending and are not claimed green.
-- NEXT ACTION: push this checkpoint to existing PR #87, inspect the complete Chromium + WebKit Actions run, and leave the single requested PR comment with every remote failure/root cause/result; do not open or merge another PR.
+## RUN_253_EIGHT_RESIDUAL_CLOSEOUT — 2026-09-05
+- Active continuation is existing PR #89; PR #87 and PR #88 are closed duplicates. The user-provided remote head before this package is `8fb45dfc077545590a16148563a9900f1bfcf267`; `main` is out of scope.
+- Authoritative run #253 evidence: focused Chromium + WebKit green; full Chromium 175 passed / 5 failed; full WebKit 172 passed / 8 failed; eight unique residual scenarios.
+- Classified test-only causes: conditional camp overflow, exact-zero compatibility-container geometry, hard-coded camera padding, artificial shared-coordinate ownership fixture, obsolete barbarian selector, outcome reconciliation settle timing, and raw-tile initial pathing hit target.
+- Classified runtime defects: `.piece.enemy` was missing from semantic unit-layer detection; and a visible remaining-own-stack tap needed an explicit unit-inspection transition after the prior selected unit left the stack.
+- The coherent patch preserves full camp text, strict camera tolerance, visible piece interactions, actual barbarian context, canonical stack picker, stable incomplete-statehood reconciliation, and the existing one-second invalidation requirement. It adds no force click, sleep, hidden-control revival, or weakened product rule.
+- Local cross-browser execution remains subject to `AGENT_TESTING_POLICY.md`: installed Chromium lacks `libatk-1.0.so.0`, and WebKit is not installed. Static checks are the strongest locally available gate; authoritative browser verification remains the next PR #89 Actions run.
+- NEXT ACTION: push this single closeout commit to PR #89 and inspect the resulting complete Chromium + WebKit run once; if anything fails, record exact scenario + assertion + root cause before another change.
+- Local verification result: all JavaScript syntax checks and `git diff --check` passed. The seven affected spec files (covering all eight residual scenarios) were attempted on both `chromium-mobile` and `webkit-mobile`; Chromium could not load `libatk-1.0.so.0`, and the WebKit executable is absent. The full suite was therefore not run locally and no browser-green claim is made.

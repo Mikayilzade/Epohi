@@ -66,7 +66,9 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"]`).click({ position: { x: 4, y: 4 } });
     await expect(page.locator('#contextText')).toContainText(`X ${setup.campX}, Y ${setup.campY}`);
     await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .piece.camp, .tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .camp-marker`).first().click();
-    await page.locator(`.tile[data-x="${setup.barbX}"][data-y="${setup.barbY}"] .barbarian-marker, .tile[data-x="${setup.barbX}"][data-y="${setup.barbY}"] .piece.unit`).first().click();
+    const barbarian = page.locator(`.tile[data-x="${setup.barbX}"][data-y="${setup.barbY}"] .piece.enemy`);
+    await expect(barbarian).toBeVisible();
+    await barbarian.click();
     await expect(page.locator('#contextText')).toContainText('здоровье');
     const ownStillExists = await page.evaluate((id) => window.__epohiDebug().state.units.some(u => u.id === id), setup.ownId);
     expect(ownStillExists).toBeTruthy();

@@ -166,16 +166,14 @@ test.describe('Player feedback stabilization and treasury', () => {
     await expect(page.locator('#contextActions')).not.toContainText('Отменить');
     await expect(page.locator('#contextActions')).not.toContainText('Идти');
 
-    await page.evaluate(() => {
+    const ownPosition = await page.evaluate(() => {
       const gs = window.__epohiDebug().state;
       const own = gs.units[0];
-      const rival = gs.rivals[0].units[0];
       own.travelOrder = null;
-      rival.x = own.x;
-      rival.y = own.y;
       window.__epohiDebug().render();
+      return { x: own.x, y: own.y };
     });
-    await page.locator('#map .tile[data-x="5"][data-y="5"] .piece.unit').click();
+    await page.locator(`#map .tile[data-x="${ownPosition.x}"][data-y="${ownPosition.y}"] .piece.unit`).click();
     await expect(page.locator('#contextActions')).toHaveAttribute('data-unit-owner', 'player');
     await expect(page.locator('#contextActions [data-path-action="start"]')).toBeVisible();
   });

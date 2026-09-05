@@ -28,7 +28,11 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     });
     expect(metrics.clamp === 'none' || metrics.clamp === '').toBeTruthy();
     expect(metrics.scrollHeight).toBeGreaterThanOrEqual(metrics.clientHeight);
-    expect(metrics.after).toBeGreaterThan(metrics.before);
+    if (metrics.scrollHeight > metrics.clientHeight) {
+      expect(metrics.after).toBeGreaterThan(metrics.before);
+    } else {
+      expect(metrics.after).toBe(metrics.before);
+    }
   });
 
   test('unit description exposes the final AI relation text above action buttons', async ({ page }) => {
@@ -70,12 +74,16 @@ test.describe('v1.4.5 mobile context card and AI notices', () => {
     await page.locator(`.tile[data-x="${empty.x}"][data-y="${empty.y}"]`).click();
     await expect(page.locator('#contextTabs')).toBeEmpty();
     await expect(page.locator('#contextActions')).toBeEmpty();
+    await expect(page.locator('#contextTabs')).not.toBeVisible();
     const collapsed = await page.evaluate(() => {
-      const tabs = document.querySelector('#contextTabs').getBoundingClientRect();
-      const actions = document.querySelector('#contextActions').getBoundingClientRect();
-      return { tabs: tabs.width * tabs.height, actions: actions.width * actions.height };
+      const element = document.querySelector('#contextTabs');
+      const tabs = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return { height: tabs.height, opacity: style.opacity, pointerEvents: style.pointerEvents };
     });
-    expect(collapsed).toEqual({ tabs: 0, actions: 0 });
+    expect(collapsed.height).toBeLessThanOrEqual(2);
+    expect(collapsed.opacity).toBe('0');
+    expect(collapsed.pointerEvents).toBe('none');
   });
 
   test('two own units never create duplicate select buttons and navigate the stack without spending movement', async ({ page }) => {

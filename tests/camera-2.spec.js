@@ -8,10 +8,13 @@ async function cameraState(page) {
     const bounds = debug.getCameraScaleBounds();
     const viewport = document.getElementById('mapViewport');
     const map = document.getElementById('map');
+    const style = getComputedStyle(viewport);
+    const horizontalPadding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    const verticalPadding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
     return {
       camera: { x: camera.x, y: camera.y, scale: camera.scale },
       bounds,
-      viewport: { width: viewport.clientWidth - 10, height: viewport.clientHeight - 10 },
+      viewport: { width: viewport.clientWidth - horizontalPadding, height: viewport.clientHeight - verticalPadding },
       map: { width: map.offsetWidth, height: map.offsetHeight },
       zoomInDisabled: document.getElementById('zoomInBtn').disabled,
       zoomOutDisabled: document.getElementById('zoomOutBtn').disabled,

@@ -106,7 +106,7 @@
     if (!target || !target.closest) return "tile";
     if (target.closest(".piece.city, .piece.ai-city, .city-pop")) return "city";
     if (target.closest(".piece.camp, .camp-marker, .camp-hp")) return "camp";
-    if (target.closest(".piece.unit, .piece.ai-unit, .unit-count, .barbarian-marker")) return "unit";
+    if (target.closest(".piece.unit, .piece.ai-unit, .piece.enemy, .unit-count, .barbarian-marker")) return "unit";
     return "tile";
   }
 
@@ -367,6 +367,13 @@
     if (layer === "city") {
       const city = playerCityAt(gs, x, y);
       if (city && before && typeof before.setActiveCity === "function") before.setActiveCity(city.id);
+    }
+
+    if (layer === "unit" && unitsHere.length && before && typeof before.inspectOwnUnitAt === "function") {
+      const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
+      before.inspectOwnUnitAt(x, y, targetId);
+      queueSync();
+      return;
     }
 
     replayCoreTileClick(tile);

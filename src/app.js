@@ -2151,6 +2151,17 @@
     renderContext();
   }
 
+  function inspectOwnUnitAt(x, y, unitId) {
+    const unit = getUnit(unitId);
+    if (!unit || unit.hp <= 0 || unit.x !== x || unit.y !== y) return false;
+    selectedUnitId = unit.id;
+    selected = { x: x, y: y };
+    inspectedTile = selected;
+    inspectLayer = "unit";
+    render();
+    return true;
+  }
+
   mapEl.addEventListener("click", function (event) {
     if (suppressNextMapClick) {
       suppressNextMapClick = false;
@@ -2406,7 +2417,7 @@
     saveCamera();
   });
 
-  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
+  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, inspectOwnUnitAt: inspectOwnUnitAt, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
   openDb().then(function(db){ db.close(); storageAvailable = true; return migrateOldSaveIfNeeded(); }).catch(function(error){ storageAvailable = false; storageWarning = "IndexedDB недоступна: " + error.message + ". Пять слотов отключены, старое localStorage-сохранение не изменяется."; }).finally(function(){
     openMainMenu();
     if (!safeGet(UPDATE_KEY)) { safeSet(UPDATE_KEY, "1"); setTimeout(function(){ showToast("v1.4.5.1-hotfix: мобильная карточка осмотра прокручивается, а летопись больше не спамит движениями ИИ", 3600); }, 350); }

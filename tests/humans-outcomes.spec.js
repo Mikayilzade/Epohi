@@ -115,8 +115,12 @@ test.describe('Победа, поражение и восстановление 
 
     await page.locator('#endTurnBtn').click();
     await page.waitForFunction(() => {
-      const state = window.__epohiDebug().state;
-      return state.cities[0].buildings.includes('palace') && state.outcome && state.outcome.status === 'active';
+      const debug = window.__epohiDebug();
+      const state = debug.state;
+      return !debug.isTurnProcessing() &&
+        state.cities[0].buildings.includes('palace') &&
+        state.outcome && state.outcome.status === 'active' &&
+        state.outcomeNotices.includes('palace-before-stable-state');
     });
 
     const result = await page.evaluate(() => {
