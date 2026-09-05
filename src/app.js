@@ -221,6 +221,7 @@
   let saveQueue = Promise.resolve();
   let selected = null;
   let inspectedTile = null;
+  let ownUnitInspection = null;
   let inspectLayer = "tile";
   let selectedUnitId = null;
   let resourceView = { type: "empire", cityId: null };
@@ -2130,6 +2131,24 @@
     }
   }
 
+  function ownUnitInspectionIdentity(x, y) {
+    return JSON.stringify([selectedUnitId, unitsAt(x, y).filter(function (unit) { return unit.hp > 0; })
+      .map(function (unit) { return String(unit.id); }).sort()]);
+  }
+
+  function isRepeatedOwnUnitInspection(x, y) {
+    return !!(inspectedTile && inspectedTile.x === x && inspectedTile.y === y &&
+      ownUnitInspection && ownUnitInspection.state === state &&
+      ownUnitInspection.x === x && ownUnitInspection.y === y &&
+      ownUnitInspection.identity === ownUnitInspectionIdentity(x, y));
+  }
+
+  function rememberOwnUnitInspection(x, y) {
+    ownUnitInspection = unitsAt(x, y).length
+      ? { state: state, x: x, y: y, identity: ownUnitInspectionIdentity(x, y) }
+      : null;
+  }
+
   function handleTileClick(tileEl) {
     const x = Number(tileEl.dataset.x);
     const y = Number(tileEl.dataset.y);
@@ -2139,16 +2158,25 @@
     const clickedDestination = active && !clickedActiveTile && !clickedUnits.length && isAdjacent(active.x, active.y, x, y);
 
     const sameTile = inspectedTile && inspectedTile.x === x && inspectedTile.y === y;
+    // A moved/rebased selection or changed stack starts a new unit inspection,
+    // even when the last inspected coordinates have not changed.
+    const repeatsOwnStack = isRepeatedOwnUnitInspection(x, y);
+    const repeatsInspection = sameTile && (!clickedUnits.length || repeatsOwnStack);
     const layers = inspectLayersAt(x, y);
     selected = { x: x, y: y }; inspectedTile = selected;
-    if (sameTile && layers.length > 1) inspectLayer = layers[(layers.indexOf(inspectLayer) + 1) % layers.length];
-    else inspectLayer = layers[0] || "tile";
+    const nextLayer = repeatsInspection && layers.length > 1
+      ? layers[(layers.indexOf(inspectLayer) + 1) % layers.length]
+      : layers[0] || "tile";
     if (clickedUnits.length && !clickedDestination) {
-      if (clickedActiveTile && clickedUnits.length > 1) cycleUnitAt(x, y);
-      else selectedUnitId = clickedUnits[0].id;
+      if (repeatsOwnStack && clickedActiveTile && clickedUnits.length > 1) cycleUnitAt(x, y);
+      else selectedUnitId = clickedActiveTile ? active.id : clickedUnits[0].id;
     }
+    // cycleUnitAt selects a unit layer for its direct picker callers. A map tap
+    // must retain the layer chosen by the repeated-inspection cycle above.
+    inspectLayer = nextLayer;
     renderMap();
     renderContext();
+    rememberOwnUnitInspection(x, y);
   }
 
   function inspectOwnUnitAt(x, y, unitId) {
@@ -2159,6 +2187,7 @@
     inspectedTile = selected;
     inspectLayer = "unit";
     render();
+    rememberOwnUnitInspection(x, y);
     return true;
   }
 
@@ -2417,7 +2446,7 @@
     saveCamera();
   });
 
-  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, inspectOwnUnitAt: inspectOwnUnitAt, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
+  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, inspectOwnUnitAt: inspectOwnUnitAt, isRepeatedOwnUnitInspection: isRepeatedOwnUnitInspection, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
   openDb().then(function(db){ db.close(); storageAvailable = true; return migrateOldSaveIfNeeded(); }).catch(function(error){ storageAvailable = false; storageWarning = "IndexedDB недоступна: " + error.message + ". Пять слотов отключены, старое localStorage-сохранение не изменяется."; }).finally(function(){
     openMainMenu();
     if (!safeGet(UPDATE_KEY)) { safeSet(UPDATE_KEY, "1"); setTimeout(function(){ showToast("v1.4.5.1-hotfix: мобильная карточка осмотра прокручивается, а летопись больше не спамит движениями ИИ", 3600); }, 350); }

@@ -1,3 +1,31 @@
+# PR #89 — semantic own-stack re-entry — 2026-09-06
+
+## Scope and proven root cause
+- Baseline head: 1655cc97079e2ba0f7287bbda8ac6e6091449f16; existing branch codex/-run_240_regression_family_repair-2mvfa1. Authoritative baseline run 33986349605: stack-reentry-selection.spec.js:10 failed in both full suites (expected 2 picker entries, received 0).
+- Real visible-flow instrumentation reproduced the failure in Chromium. Pointer capture retargeted pointerup to mapViewport; app.js handled the tap directly and no map click reached the cleanup interceptor. Before the return tap: selected scout-0 had moved from (5,5) to (6,5), inspect coordinates remained (5,5), layer was unit. After pointerup: selected scout-1 rebased correctly but layer became tile. Coordinate-only repetition in core and cleanup therefore cannot distinguish the changed stack.
+- app.js now records the semantic identity only at explicit inspection boundaries: game-state object, coordinates, selected unit ID and sorted living own-unit IDs. A changed identity starts canonical unit inspection and retains a valid current selection on that stack; unchanged identity preserves repeated layer cycling.
+- The same predicate is used by humans-context-review-cleanup.js for its click path. For repeated map taps the layer computed by the cycle is restored after cycleUnitAt, whose direct-picker behavior otherwise overwrites it with unit.
+- No changes to prototype-baseline, map-size setup, route-targeting handlers, global invalidation or the existing narrow immediate pathing refresh. No new sleep, timeout increase, force action, hidden control, or test-ID special case.
+
+## Regression coverage and exact local results
+- Original failing stack scenario, Chromium + WebKit: 2 passed / 0 failed after the initial semantic fix.
+- Final related checks: 8 passed / 0 failed (49.2s total; 4 per engine), using one worker:
+  - stack-reentry-selection.spec.js:10 retains all original assertions and additionally verifies unit -> tile -> unit cycling after re-entry, with 2 canonical entries restored.
+  - New occupied-destination visible route flow verifies the route belongs to the original selected unit, then normal own-unit inspection resumes after target mode ends.
+  - humans-pathing-performance.spec.js:89 passes the unchanged <=1000ms actionability assertion and visible route/turn flow.
+  - explicit-legacy-refresh-bridge.spec.js passes in both browsers.
+- Full local focused gate, unchanged 20000ms per test, one worker: Chromium 59 passed / 1 failed; WebKit 52 passed / 8 failed; total 111 passed / 9 failed (6.6m), exit 1.
+- Chromium failure: coherence-capture-learning.spec.js:216, console resource ERR_CONNECTION_REFUSED.
+- WebKit failures: small-map fixture produced 28 instead of 20 in coherence-capture-learning:239, context-review-cleanup:37, humans-strategy-ux:159, observer-startup-attribution:268 and :293, turn-label-idempotence:4; combat-world-stability:55 created 1 rival instead of 2; mobile-performance-stability:127 timed out on the existing 1000ms proposal-accept click. These are recorded without weakening or repairing unrelated tests. The proposal-click cause is not classified from this one local failure.
+- Full local regression NOT RUN because local focused gate was red. Existing GitHub Actions will run its unchanged focused gate first and full regression only if that gate succeeds.
+- Static checks: node --check for app.js, cleanup and the affected spec; git diff --check — PASS. prototype-baseline.spec.js remains unchanged.
+
+## NEXT ACTION
+Inspect the exact PR #89 Actions result for this runtime commit, record focused/full counts and any remaining failure, and leave the mapSize residual outside this repair.
+
+---
+Historical checkpoints below are superseded by this report.
+
 # PR #89 — narrow immediate pathing refresh — 2026-09-05
 
 ## Authoritative CI closeout — run 33986349605
@@ -40,7 +68,7 @@
 - One local small-map setup failure was observed and is retained above, not hidden by the successful repeat.
 - Diplomacy is now green in focused and full CI; the exact total-budget attribution is not claimed beyond the measured global-flush overhead.
 
-## NEXT ACTION
+## Historical next action (superseded)
 In a separately scoped PR #89 follow-up, diagnose the two remaining full-regression scenarios (canonical stack picker and small-map setup), preserving current assertions and budgets.
 
 ---

@@ -368,8 +368,8 @@
     const selectedUnit = selectedPlayerUnit(gs, selectedId);
     const unitsHere = ownUnitsAt(gs, x, y);
     const selectedAlreadyHere = !!selectedUnit && Number(selectedUnit.x) === x && Number(selectedUnit.y) === y;
-    const inspectedTile = map.querySelector(".tile.inspect-tile");
-    const repeatsInspectedTile = !!inspectedTile && Number(inspectedTile.dataset.x) === x && Number(inspectedTile.dataset.y) === y;
+    const repeatsOwnStack = before && typeof before.isRepeatedOwnUnitInspection === "function" &&
+      before.isRepeatedOwnUnitInspection(x, y);
 
     // Route targeting owns every map tap, including occupied destination tiles.
     // Do not reinterpret that action as a context-selection change.
@@ -385,9 +385,9 @@
 
     // Map pieces intentionally have pointer-events:none, so a real visible-piece
     // tap is delivered with the tile as event.target. A newly inspected occupied
-    // own tile is nevertheless an unambiguous unit tap; only a repeated tap keeps
-    // the core layer-cycling behavior.
-    if (unitsHere.length && (!repeatsInspectedTile || layer === "unit") && before && typeof before.inspectOwnUnitAt === "function") {
+    // own tile is nevertheless an unambiguous unit tap. Only an unchanged
+    // semantic stack inspection keeps the core layer-cycling behavior.
+    if (unitsHere.length && (!repeatsOwnStack || layer === "unit") && before && typeof before.inspectOwnUnitAt === "function") {
       const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
       before.inspectOwnUnitAt(x, y, targetId);
       queueSync();
@@ -400,7 +400,7 @@
       const targetId = selectedAlreadyHere ? selectedId : unitsHere[0].id;
       selectStackUnitNow(targetId);
     }
-    clickLayer(layer);
+    if (!unitsHere.length || layer !== "tile") clickLayer(layer);
     queueSync();
     const after = debug();
     if (after && after.getInspectLayer && after.getInspectLayer() === "unit") refreshPathingNow();
