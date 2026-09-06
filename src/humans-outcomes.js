@@ -497,6 +497,12 @@
     const content = document.getElementById("victoryContent");
     if (!modal || !title || !content) return;
 
+    const goals = document.getElementById("humansGoalsModal");
+    if (goals && goals.classList.contains("show")) {
+      hideLegacyOutcomeModal();
+      return;
+    }
+
     title.textContent = outcome.title;
     const cityCount = livingCities(state).length;
     const population = totalPopulation(state);
