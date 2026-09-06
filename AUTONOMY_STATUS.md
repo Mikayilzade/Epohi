@@ -1,3 +1,33 @@
+# PR #89 — deterministic stack-route fixture — 2026-09-06
+
+## Authoritative green closeout — run 34036961758
+- Tested commit: `7d5e818d9d0746a4c2b909776b2be1753a556656`; job `101496678704`; artifact `9990806826`. Workflow completed / success.
+- Static integrity: PASS.
+- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
+- Focused WebKit: 60 passed / 0 failed (4.1m), exit 0.
+- Full Chromium: 181 passed / 0 failed (3.9m), exit 0.
+- Full WebKit: 181 passed / 0 failed (12.6m), exit 0.
+- PR #89 is ready for final review / the next project gate. No new PR, merge, force update, main change, or changes to closed PR #87/#88 occurred.
+
+## Root cause and exact change
+- The sole baseline residual was `tests/combat-world-stability.spec.js:180`, “three same-type stacked units keep distinct selection and orders”. Its final assertion expected zero `#contextActions [data-path-action="cancel"]` controls and received one.
+- The test routes its three scouts from `(5,5)` to `(6,5)`, `(5,6)` and `(4,5)`. The failing WebKit artifact showed a “Разрушенный храм” POI on `(4,5)`, so production correctly changed the order to `awaiting-choice`, displayed “Решить судьбу находки”, and retained the cancel action.
+- The fixture previously forced only `terrain='plains'` and `revealed=true` on its controlled cells. Random map generation could therefore leave a POI, camp, feature or improvement on a destination intended to test ordinary movement.
+- The test now clears those four fixture-owned cells of `poi`, `camp`, `feature` and `improvement` while retaining the real route, selection, movement and world-state flow. Production POI behavior and the valid `awaiting-choice` transition are unchanged.
+
+## Exact verification
+- Exact scenario: WebKit 1/1; Chromium 1/1.
+- Repeated exact WebKit stability run: 10 passed / 0 failed (1.4m).
+- Entire `combat-world-stability.spec.js`: Chromium 15/15 plus WebKit 15/15, 30 passed / 0 failed (1.9m).
+- Local Chromium focused attempt: 57 passed / 3 failed because the local web server refused module requests; the affected combat scenario passed. No unrelated code or assertion was changed. The clean authoritative focused and full results are recorded above.
+- No `force`, sleep, timeout increase, assertion weakening or production change was added.
+
+## NEXT ACTION
+Perform the final review / next quality gate for existing PR #89; keep merge under explicit user control.
+
+---
+Historical checkpoints below are superseded by this report.
+
 # PR #89 — canonical context-ready pathing refresh — 2026-09-06
 
 ## Authoritative CI closeout — run 34034595905
