@@ -1,5 +1,17 @@
 # PR #89 — semantic own-stack re-entry — 2026-09-06
 
+## Authoritative CI closeout — run 34030507041
+- Tested runtime commit: `5e8811f4e838e7f053cfae4b437815fe2d7f22a5`; job `101479021365`. Workflow completed / failure after the focused gate passed.
+- Static integrity: PASS.
+- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
+- Focused WebKit: 60 passed / 0 failed (4.3m), exit 0.
+- Full Chromium: 180 passed / 1 failed (3.9m), exit 1.
+- Full WebKit: 178 passed / 3 failed (12.8m), exit 1.
+- `stack-reentry-selection.spec.js:10` passed in both full suites. The authoritative expected-2/received-0 residual is closed.
+- Chromium remaining failure: `prototype-baseline.spec.js:59`, expected mapSize 20, received 28. This file and its runtime fixture were intentionally unchanged.
+- WebKit remaining failures: `camera-2.spec.js:176` (fit scale 0.1865348981 vs bound 0.1785052502), `camera-2.spec.js:198` (vertical center 25.5 vs 19.0), and `humans-pathing-performance.spec.js:89` (`[data-path-action="start"]` absent within 1000ms). All three passed the focused gate or were outside it; none was changed under this stack-only task.
+- No new PR, merge, force update, main change, or changes to PR #87/#88 occurred.
+
 ## Scope and proven root cause
 - Baseline head: 1655cc97079e2ba0f7287bbda8ac6e6091449f16; existing branch codex/-run_240_regression_family_repair-2mvfa1. Authoritative baseline run 33986349605: stack-reentry-selection.spec.js:10 failed in both full suites (expected 2 picker entries, received 0).
 - Real visible-flow instrumentation reproduced the failure in Chromium. Pointer capture retargeted pointerup to mapViewport; app.js handled the tap directly and no map click reached the cleanup interceptor. Before the return tap: selected scout-0 had moved from (5,5) to (6,5), inspect coordinates remained (5,5), layer was unit. After pointerup: selected scout-1 rebased correctly but layer became tile. Coordinate-only repetition in core and cleanup therefore cannot distinguish the changed stack.
@@ -21,7 +33,7 @@
 - Static checks: node --check for app.js, cleanup and the affected spec; git diff --check — PASS. prototype-baseline.spec.js remains unchanged.
 
 ## NEXT ACTION
-Inspect the exact PR #89 Actions result for this runtime commit, record focused/full counts and any remaining failure, and leave the mapSize residual outside this repair.
+In a separately scoped PR #89 follow-up, diagnose the remaining authoritative residuals beginning with the explicitly deferred `prototype-baseline` mapSize failure; do not reopen the closed stack re-entry repair without new evidence.
 
 ---
 Historical checkpoints below are superseded by this report.
