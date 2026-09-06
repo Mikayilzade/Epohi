@@ -2149,6 +2149,13 @@
       : null;
   }
 
+  function signalOwnUnitContextReady(x, y) {
+    if (inspectLayer !== "unit") return;
+    document.dispatchEvent(new CustomEvent("epohi:own-unit-context-ready", {
+      detail: { x: x, y: y, unitId: selectedUnitId }
+    }));
+  }
+
   function handleTileClick(tileEl) {
     const x = Number(tileEl.dataset.x);
     const y = Number(tileEl.dataset.y);
@@ -2177,6 +2184,7 @@
     renderMap();
     renderContext();
     rememberOwnUnitInspection(x, y);
+    signalOwnUnitContextReady(x, y);
   }
 
   function inspectOwnUnitAt(x, y, unitId) {
@@ -2188,6 +2196,7 @@
     inspectLayer = "unit";
     render();
     rememberOwnUnitInspection(x, y);
+    signalOwnUnitContextReady(x, y);
     return true;
   }
 

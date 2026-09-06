@@ -64,7 +64,15 @@ test.describe('Pathing explicit invalidation bridge', () => {
     });
     expect(String(afterTap.selectedId)).toBe(String(fixture.id));
     expect(afterTap.tilePointerSignals).toBeGreaterThan(fixture.tilePointerSignals);
-    expect(afterTap.pathingSyncs).toBeGreaterThan(fixture.pathingSyncs);
+
+    // The narrow context-ready refresh is synchronous, so routeStart can become
+    // actionable before the scheduled global invalidation frame increments its
+    // own counter. Verify that lifecycle separately without making UI readiness
+    // depend on it.
+    await page.waitForFunction(({ pathingSyncs }) => {
+      return window.EpohiRuntimeInvalidation.stats().pathingSyncs > pathingSyncs;
+    }, { pathingSyncs: fixture.pathingSyncs }, { timeout: 1000 });
+    const afterInvalidation = await page.evaluate(() => window.EpohiRuntimeInvalidation.stats());
 
     // Pointer capture can retarget the same lifecycle to #mapViewport. Prove that
     // this target is still an owned map-action boundary and schedules pathing sync.
@@ -78,8 +86,8 @@ test.describe('Pathing explicit invalidation bridge', () => {
       const stats = window.EpohiRuntimeInvalidation.stats();
       return stats.tilePointerSignals > pointerSignals && stats.pathingSyncs > pathingSyncs;
     }, {
-      pointerSignals: afterTap.tilePointerSignals,
-      pathingSyncs: afterTap.pathingSyncs
+      pointerSignals: afterInvalidation.tilePointerSignals,
+      pathingSyncs: afterInvalidation.pathingSyncs
     }, { timeout: 1000 });
     await expect(routeStart).toBeVisible({ timeout: 1000 });
     await expectNoConsoleProblems(problems);

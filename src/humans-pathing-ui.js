@@ -396,6 +396,10 @@
 
     document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);
+    // app.js emits this only after the canonical own-unit context has finished
+    // rendering. Refresh pathing at that semantic boundary so a captured mobile
+    // tap does not depend on the later, throttled global invalidation frame.
+    document.addEventListener("epohi:own-unit-context-ready", refreshUi);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId != null) {
         stopTargetMode();
