@@ -1,3 +1,34 @@
+# PR #89 — canonical context-ready pathing refresh — 2026-09-06
+
+## Authoritative CI closeout — run 34034595905
+- Tested runtime commit: `061db3e8140f494098b08e1310b2161940bf7906`; job `101490250464`; artifact `9990099101`. Workflow completed / failure after both focused and full gates ran.
+- Static integrity: PASS.
+- Focused Chromium: 60 passed / 0 failed (1.3m), exit 0.
+- Focused WebKit: 60 passed / 0 failed (3.9m), exit 0. The workflow's 60-test list does not contain `humans-pathing-performance.spec.js:89`; its isolated WebKit verification is recorded below.
+- Full Chromium: 181 passed / 0 failed (3.8m), exit 0.
+- Full WebKit: 180 passed / 1 failed (13.3m), exit 1.
+- Exact residual under this task, `humans-pathing-performance.spec.js:89` — “кнопка Идти назначает маршрут, показывает шаги и переносит приказ между ходами” — passed at full-suite index 94 in both browsers. Its strict assertion remains `[data-path-action="start"]` visible within 1000ms.
+- The sole remaining WebKit failure is `combat-world-stability.spec.js:180`, expected zero cancel-route actions and received one. The artifact proves random fixture POI interference: target `(4,5)` contained a find, the unit correctly entered `awaiting-choice`, and the snapshot showed both “Решить судьбу находки” and the POI modal. Local repetition independently reproduced the same modal intercept. It was not changed in this pathing-only task.
+- Previously deferred `prototype-baseline.spec.js:59` and both `camera-2` scenarios did not fail in this run and remain unchanged. No new PR, merge, force update, main change, or changes to PR #87/#88 occurred.
+
+## Exact root cause and fix
+- Baseline run `34030507041` failed only the WebKit full instance of `humans-pathing-performance.spec.js:89` at line 96: `[data-path-action="start"]` was absent for the full 1000ms actionability budget. The same scenario passed Chromium full. The 60-test workflow-focused list did not include this exact spec; isolated focused WebKit checks passed.
+- A real mobile tile tap is completed by `app.js` on captured `pointerup`: `finishPointer()` calls `handleTileClick()`, rebuilds the canonical unit context, and suppresses the following map `click`. The existing narrow refresh lived in the cleanup click interceptor, so this real path could bypass it. It then depended on `EpohiRuntimeInvalidation.request("map-pointerup")`, its throttle and a later animation frame. Full-suite WebKit load exposed that scheduling dependency; no shared game state crosses Playwright's fresh test contexts.
+- `app.js` now emits `epohi:own-unit-context-ready` only after `renderContext()`/`render()` has installed the actual unit context and semantic inspection identity. `humans-pathing-ui.js` handles that boundary synchronously with its narrow `refreshUi()`. It does not call `EpohiRuntimeInvalidation.flush()`, alter global throttling, or add a timer.
+- The affected test now records the end of the real pointerup and proves that the inspect layer is `unit`, `selectedUnitId` is canonical, and the start action already exists at that boundary. `pathing-explicit-invalidation` separately verifies immediate actionability and the subsequent scheduled global invalidation instead of racing its counter.
+
+## Exact verification
+- Exact WebKit scenario: first attempt stopped before pathing on the explicitly deferred small-map fixture mismatch (20 expected / 28 received); the unchanged repeat then passed 6/6 (44.7s). Exact Chromium scenario passed 1/1 (6.2s).
+- Related `humans-pathing-performance:89`, `pathing-explicit-invalidation`, both `stack-reentry-selection` scenarios including occupied route ownership: Chromium + WebKit 8 passed / 0 failed (36.8s). No `force`, sleep, timeout increase, hidden control, or assertion weakening was added.
+- Local focused gate: Chromium 59 passed / 1 failed (console resource connection refusal); WebKit 53 passed / 7 failed (six deferred small-map 20/28 fixture mismatches and one unrelated strategy fixture timeout). These local failures were not changed. The clean authoritative focused gate is 60/60 in each engine as recorded above.
+- Authoritative full regression: Chromium 181/181; WebKit 180/181. The target pathing scenario, diplomacy readiness flow, stack re-entry, route ownership, camera scenarios and prototype baseline all passed in both applicable suites.
+
+## NEXT ACTION
+In a separately scoped PR #89 follow-up, make the three-unit stack-order fixture clear POIs from its chosen destination cells, then rerun the unchanged cross-browser gate; do not merge.
+
+---
+Historical checkpoints below are superseded by this report.
+
 # PR #89 — semantic own-stack re-entry — 2026-09-06
 
 ## Authoritative CI closeout — run 34030507041
