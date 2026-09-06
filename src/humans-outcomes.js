@@ -474,6 +474,23 @@
     if (modal) modal.classList.remove("show");
   }
 
+  function continueAfterOutcome(state) {
+    const feedback = window.EpohiPlayerFeedback;
+    if (feedback && typeof feedback.continueAfterOutcome === "function") {
+      feedback.continueAfterOutcome(state);
+      return;
+    }
+
+    // The outcomes module loads before player feedback. Keep an early click safe
+    // without requiring the stabilization pass or a second implementation later.
+    ensureOutcomeState(state);
+    state.continueAfterOutcome = true;
+    state.victory = false;
+    state.defeat = false;
+    if (state.outcome) state.outcome.status = "active";
+    hideLegacyOutcomeModal();
+  }
+
   function showOutcomeModal(state, outcome) {
     const modal = document.getElementById("victoryModal");
     const title = document.getElementById("victoryModalTitle");
@@ -499,7 +516,7 @@
       openGoals();
     });
     content.querySelector("[data-outcome-map-action]").addEventListener("click", function () {
-      modal.classList.remove("show");
+      continueAfterOutcome(state);
     });
     modal.classList.add("show");
   }
@@ -566,7 +583,11 @@
       }).observe(turnValue, { childList: true, characterData: true, subtree: true });
     }
 
-    document.addEventListener("click", function () {
+    document.addEventListener("click", function (event) {
+      const outcomeAction = event.target.closest && event.target.closest(
+        "#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]"
+      );
+      if (outcomeAction) return;
       scheduleSync({ announce: false, showGoalsOnBlockedVictory: true });
       window.setTimeout(function () {
         scheduleSync({ announce: true, showGoalsOnBlockedVictory: true });
