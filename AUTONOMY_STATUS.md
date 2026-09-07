@@ -1,263 +1,37 @@
-# PR #89 — deterministic stack-route fixture — 2026-09-06
+# AUTONOMY STATUS — CURRENT
 
-## Authoritative green closeout — run 34036961758
-- Tested commit: `7d5e818d9d0746a4c2b909776b2be1753a556656`; job `101496678704`; artifact `9990806826`. Workflow completed / success.
-- Static integrity: PASS.
-- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
-- Focused WebKit: 60 passed / 0 failed (4.1m), exit 0.
-- Full Chromium: 181 passed / 0 failed (3.9m), exit 0.
-- Full WebKit: 181 passed / 0 failed (12.6m), exit 0.
-- PR #89 is ready for final review / the next project gate. No new PR, merge, force update, main change, or changes to closed PR #87/#88 occurred.
+Updated: 2026-09-07 UTC.
 
-## Root cause and exact change
-- The sole baseline residual was `tests/combat-world-stability.spec.js:180`, “three same-type stacked units keep distinct selection and orders”. Its final assertion expected zero `#contextActions [data-path-action="cancel"]` controls and received one.
-- The test routes its three scouts from `(5,5)` to `(6,5)`, `(5,6)` and `(4,5)`. The failing WebKit artifact showed a “Разрушенный храм” POI on `(4,5)`, so production correctly changed the order to `awaiting-choice`, displayed “Решить судьбу находки”, and retained the cancel action.
-- The fixture previously forced only `terrain='plains'` and `revealed=true` on its controlled cells. Random map generation could therefore leave a POI, camp, feature or improvement on a destination intended to test ordinary movement.
-- The test now clears those four fixture-owned cells of `poi`, `camp`, `feature` and `improvement` while retaining the real route, selection, movement and world-state flow. Production POI behavior and the valid `awaiting-choice` transition are unchanged.
+Historical checkpoints were moved intact to `docs/archive/AUTONOMY_STATUS_through_2026-09-06.md`. Normal agents must not load that archive unless a concrete contradiction requires it.
 
-## Exact verification
-- Exact scenario: WebKit 1/1; Chromium 1/1.
-- Repeated exact WebKit stability run: 10 passed / 0 failed (1.4m).
-- Entire `combat-world-stability.spec.js`: Chromium 15/15 plus WebKit 15/15, 30 passed / 0 failed (1.9m).
-- Local Chromium focused attempt: 57 passed / 3 failed because the local web server refused module requests; the affected combat scenario passed. No unrelated code or assertion was changed. The clean authoritative focused and full results are recorded above.
-- No `force`, sleep, timeout increase, assertion weakening or production change was added.
+## Scope
 
-## NEXT ACTION
-Perform the final review / next quality gate for existing PR #89; keep merge under explicit user control.
+- Repository: `Mikayilzade/Epohi`.
+- Active PR: #89, branch `codex/-run_240_regression_family_repair-2mvfa1` -> base `codex/-codex_stabilization_sprint`.
+- Current PR head: `76c2db88077f0c54c2f6279851509a1e8376f93a` (docs-only harness optimization).
+- Last game-code/test head: `07b01517d8880d167419109ac83d5707fc5a66d1`.
+- No merge, protected/integration branch update, force update, or branch deletion has been authorized.
 
----
-Historical checkpoints below are superseded by this report.
+## Authoritative result
 
-# PR #89 — canonical context-ready pathing refresh — 2026-09-06
+- GitHub Actions run `34053192225`, attempt 4, completed SUCCESS on `07b0151`.
+- Static integrity passed.
+- Focused Chromium/WebKit gate passed: 60/60 in successful attempts.
+- Full Chromium passed: 182/182.
+- Full WebKit passed: 182/182.
+- The outcome/free-play regression is included and the next End Turn remains covered.
+- Harness-only head `76c2db8` received detector run `34085544114`: SUCCESS in 5 seconds; source setup and browser suites were skipped by design.
+- There are no known CI or gameplay residuals.
 
-## Authoritative CI closeout — run 34034595905
-- Tested runtime commit: `061db3e8140f494098b08e1310b2161940bf7906`; job `101490250464`; artifact `9990099101`. Workflow completed / failure after both focused and full gates ran.
-- Static integrity: PASS.
-- Focused Chromium: 60 passed / 0 failed (1.3m), exit 0.
-- Focused WebKit: 60 passed / 0 failed (3.9m), exit 0. The workflow's 60-test list does not contain `humans-pathing-performance.spec.js:89`; its isolated WebKit verification is recorded below.
-- Full Chromium: 181 passed / 0 failed (3.8m), exit 0.
-- Full WebKit: 180 passed / 1 failed (13.3m), exit 1.
-- Exact residual under this task, `humans-pathing-performance.spec.js:89` — “кнопка Идти назначает маршрут, показывает шаги и переносит приказ между ходами” — passed at full-suite index 94 in both browsers. Its strict assertion remains `[data-path-action="start"]` visible within 1000ms.
-- The sole remaining WebKit failure is `combat-world-stability.spec.js:180`, expected zero cancel-route actions and received one. The artifact proves random fixture POI interference: target `(4,5)` contained a find, the unit correctly entered `awaiting-choice`, and the snapshot showed both “Решить судьбу находки” and the POI modal. Local repetition independently reproduced the same modal intercept. It was not changed in this pathing-only task.
-- Previously deferred `prototype-baseline.spec.js:59` and both `camera-2` scenarios did not fail in this run and remain unchanged. No new PR, merge, force update, main change, or changes to PR #87/#88 occurred.
+## Remaining housekeeping
 
-## Exact root cause and fix
-- Baseline run `34030507041` failed only the WebKit full instance of `humans-pathing-performance.spec.js:89` at line 96: `[data-path-action="start"]` was absent for the full 1000ms actionability budget. The same scenario passed Chromium full. The 60-test workflow-focused list did not include this exact spec; isolated focused WebKit checks passed.
-- A real mobile tile tap is completed by `app.js` on captured `pointerup`: `finishPointer()` calls `handleTileClick()`, rebuilds the canonical unit context, and suppresses the following map `click`. The existing narrow refresh lived in the cleanup click interceptor, so this real path could bypass it. It then depended on `EpohiRuntimeInvalidation.request("map-pointerup")`, its throttle and a later animation frame. Full-suite WebKit load exposed that scheduling dependency; no shared game state crosses Playwright's fresh test contexts.
-- `app.js` now emits `epohi:own-unit-context-ready` only after `renderContext()`/`render()` has installed the actual unit context and semantic inspection identity. `humans-pathing-ui.js` handles that boundary synchronously with its narrow `refreshUi()`. It does not call `EpohiRuntimeInvalidation.flush()`, alter global throttling, or add a timer.
-- The affected test now records the end of the real pointerup and proves that the inspect layer is `unit`, `selectedUnitId` is canonical, and the start action already exists at that boundary. `pathing-explicit-invalidation` separately verifies immediate actionability and the subsequent scheduled global invalidation instead of racing its counter.
+GitHub still reports two unresolved review threads:
 
-## Exact verification
-- Exact WebKit scenario: first attempt stopped before pathing on the explicitly deferred small-map fixture mismatch (20 expected / 28 received); the unchanged repeat then passed 6/6 (44.7s). Exact Chromium scenario passed 1/1 (6.2s).
-- Related `humans-pathing-performance:89`, `pathing-explicit-invalidation`, both `stack-reentry-selection` scenarios including occupied route ownership: Chromium + WebKit 8 passed / 0 failed (36.8s). No `force`, sleep, timeout increase, hidden control, or assertion weakening was added.
-- Local focused gate: Chromium 59 passed / 1 failed (console resource connection refusal); WebKit 53 passed / 7 failed (six deferred small-map 20/28 fixture mismatches and one unrelated strategy fixture timeout). These local failures were not changed. The clean authoritative focused gate is 60/60 in each engine as recorded above.
-- Authoritative full regression: Chromium 181/181; WebKit 180/181. The target pathing scenario, diplomacy readiness flow, stack re-entry, route ownership, camera scenarios and prototype baseline all passed in both applicable suites.
+- active outcome P1: comment `r3922240515`, thread `PRRT_kwDOS8mbTc6e0k9i`;
+- outdated resource-worker thread: comment `r3922240522`, thread `PRRT_kwDOS8mbTc6e0k9o`.
+
+Do not change code merely because a thread is open. Inspect and resolve the threads as review housekeeping when closeout is requested.
 
 ## NEXT ACTION
-In a separately scoped PR #89 follow-up, make the three-unit stack-order fixture clear POIs from its chosen destination cells, then rerun the unchanged cross-browser gate; do not merge.
 
----
-Historical checkpoints below are superseded by this report.
-
-# PR #89 — semantic own-stack re-entry — 2026-09-06
-
-## Authoritative CI closeout — run 34030507041
-- Tested runtime commit: `5e8811f4e838e7f053cfae4b437815fe2d7f22a5`; job `101479021365`. Workflow completed / failure after the focused gate passed.
-- Static integrity: PASS.
-- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
-- Focused WebKit: 60 passed / 0 failed (4.3m), exit 0.
-- Full Chromium: 180 passed / 1 failed (3.9m), exit 1.
-- Full WebKit: 178 passed / 3 failed (12.8m), exit 1.
-- `stack-reentry-selection.spec.js:10` passed in both full suites. The authoritative expected-2/received-0 residual is closed.
-- Chromium remaining failure: `prototype-baseline.spec.js:59`, expected mapSize 20, received 28. This file and its runtime fixture were intentionally unchanged.
-- WebKit remaining failures: `camera-2.spec.js:176` (fit scale 0.1865348981 vs bound 0.1785052502), `camera-2.spec.js:198` (vertical center 25.5 vs 19.0), and `humans-pathing-performance.spec.js:89` (`[data-path-action="start"]` absent within 1000ms). All three passed the focused gate or were outside it; none was changed under this stack-only task.
-- No new PR, merge, force update, main change, or changes to PR #87/#88 occurred.
-
-## Scope and proven root cause
-- Baseline head: 1655cc97079e2ba0f7287bbda8ac6e6091449f16; existing branch codex/-run_240_regression_family_repair-2mvfa1. Authoritative baseline run 33986349605: stack-reentry-selection.spec.js:10 failed in both full suites (expected 2 picker entries, received 0).
-- Real visible-flow instrumentation reproduced the failure in Chromium. Pointer capture retargeted pointerup to mapViewport; app.js handled the tap directly and no map click reached the cleanup interceptor. Before the return tap: selected scout-0 had moved from (5,5) to (6,5), inspect coordinates remained (5,5), layer was unit. After pointerup: selected scout-1 rebased correctly but layer became tile. Coordinate-only repetition in core and cleanup therefore cannot distinguish the changed stack.
-- app.js now records the semantic identity only at explicit inspection boundaries: game-state object, coordinates, selected unit ID and sorted living own-unit IDs. A changed identity starts canonical unit inspection and retains a valid current selection on that stack; unchanged identity preserves repeated layer cycling.
-- The same predicate is used by humans-context-review-cleanup.js for its click path. For repeated map taps the layer computed by the cycle is restored after cycleUnitAt, whose direct-picker behavior otherwise overwrites it with unit.
-- No changes to prototype-baseline, map-size setup, route-targeting handlers, global invalidation or the existing narrow immediate pathing refresh. No new sleep, timeout increase, force action, hidden control, or test-ID special case.
-
-## Regression coverage and exact local results
-- Original failing stack scenario, Chromium + WebKit: 2 passed / 0 failed after the initial semantic fix.
-- Final related checks: 8 passed / 0 failed (49.2s total; 4 per engine), using one worker:
-  - stack-reentry-selection.spec.js:10 retains all original assertions and additionally verifies unit -> tile -> unit cycling after re-entry, with 2 canonical entries restored.
-  - New occupied-destination visible route flow verifies the route belongs to the original selected unit, then normal own-unit inspection resumes after target mode ends.
-  - humans-pathing-performance.spec.js:89 passes the unchanged <=1000ms actionability assertion and visible route/turn flow.
-  - explicit-legacy-refresh-bridge.spec.js passes in both browsers.
-- Full local focused gate, unchanged 20000ms per test, one worker: Chromium 59 passed / 1 failed; WebKit 52 passed / 8 failed; total 111 passed / 9 failed (6.6m), exit 1.
-- Chromium failure: coherence-capture-learning.spec.js:216, console resource ERR_CONNECTION_REFUSED.
-- WebKit failures: small-map fixture produced 28 instead of 20 in coherence-capture-learning:239, context-review-cleanup:37, humans-strategy-ux:159, observer-startup-attribution:268 and :293, turn-label-idempotence:4; combat-world-stability:55 created 1 rival instead of 2; mobile-performance-stability:127 timed out on the existing 1000ms proposal-accept click. These are recorded without weakening or repairing unrelated tests. The proposal-click cause is not classified from this one local failure.
-- Full local regression NOT RUN because local focused gate was red. Existing GitHub Actions will run its unchanged focused gate first and full regression only if that gate succeeds.
-- Static checks: node --check for app.js, cleanup and the affected spec; git diff --check — PASS. prototype-baseline.spec.js remains unchanged.
-
-## NEXT ACTION
-In a separately scoped PR #89 follow-up, diagnose the remaining authoritative residuals beginning with the explicitly deferred `prototype-baseline` mapSize failure; do not reopen the closed stack re-entry repair without new evidence.
-
----
-Historical checkpoints below are superseded by this report.
-
-# PR #89 — narrow immediate pathing refresh — 2026-09-05
-
-## Authoritative CI closeout — run 33986349605
-- Tested runtime head: cf7abe3050b1364f570ffef511d55e4ad248dc61; job 101360465162; artifact 9975598433. Workflow completed / failure.
-- Static integrity: PASS.
-- Focused Chromium: 60 passed / 0 failed (1.4m), exit 0.
-- Focused WebKit: 60 passed / 0 failed (4.0m), exit 0. diplomacy-activity-events.spec.js:28 passed with the unchanged 20000ms gate budget.
-- Full Chromium: 178 passed / 2 failed (3.9m), exit 1.
-- Full WebKit: 179 passed / 1 failed (12.4m), exit 1.
-- humans-pathing-performance.spec.js:89 passed in both full suites, retaining the <=1000ms actionability assertion.
-- Remaining unique failures: (1) stack-reentry-selection.spec.js:10 in both engines: line 46 expected 2 canonical picker entries, received 0; same failure reproduced locally on the original e3b9cb2 head and the patch. (2) prototype-baseline.spec.js:59 in Chromium only: line 73 expected mapSize 20, received 28; other scenario values matched. Its root cause was not audited or changed under this residual-only task.
-- The requested diplomacy timeout did not recur in either focused or full CI. The measured synchronous global-flush overhead is removed; a claim that it was the sole contributor to the original total-budget timeout would exceed the evidence.
-- Existing CI workflow automatically ran full regression after its focused gate passed, despite the earlier local stack prerequisite failure. No workflow or test gate was changed.
-- This final status-only checkpoint records the results of the tested runtime head above; it adds a third normal branch update after the runtime and line-ending correction commits. The requested single-push constraint was not achieved. No force update, new PR, merge, main change, or changes to PR #87/#88 occurred.
-
-## Current scope and evidence
-- Existing PR: Mikayilzade/Epohi#89; branch: codex/-run_240_regression_family_repair-2mvfa1. Baseline head: e3b9cb2f45748b3caa4815dff9b37eeabe2c3d53.
-- Authoritative baseline: Actions run 33983712540, job 101353359808: Chromium focused 60 passed / 0 failed, exit 0; WebKit focused 59 passed / 1 failed, exit 1. Full regression skipped by focused gate. Sole CI failure: diplomacy-activity-events.spec.js:28, total test timeout 20000ms, without a semantic assertion failure.
-- Confirmed runtime overhead: refreshPathingNow synchronously called the entire EpohiRuntimeInvalidation.flush pipeline after canonical unit inspection. Instrumenting only the existing readiness scenario on Windows WebKit 26.6 (Playwright 1.63.0) recorded three explicit global flush calls of 84ms, 117ms and 90ms (291ms total); nested pathing work took 2ms, 0ms and 1ms. Call stacks show diplomacy-event-flow.focusUnit -> tile/piece click -> context-review-cleanup -> refreshPathingNow -> global flush. This scenario uses the diplomacy-event-flow interceptor, not strategy-ux.focusUnit's stack loop.
-- Evidence limit: the baseline 20s CI timeout did not reproduce locally: original scenario passed (16.9s runner total with trace); instrumented baseline passed (13.0s runner total). These measurements prove avoidable synchronous global work, but do NOT establish that those 291ms alone explain the CI timeout, or prove a repeatable end-to-end speedup. At that local checkpoint, authoritative timeout closure remained unverified; see CI closeout above for the subsequent green diplomacy result.
-
-## Change
-- refreshPathingNow now immediately calls EpohiHumansPathingUI.refresh after canonical context installation. It does not call global flush and adds no observer/rAF dependency or delayed workaround.
-- Post-change timing recorded three immediate pathing calls, each 0ms at browser clock resolution, with no explicit global flush calls from selection. Normal scheduled global invalidation remains available.
-- Only runtime file changed: src/humans-context-review-cleanup.js. No tests, assertions, timeouts, route targeting checks, layer cycling, camera behavior or legacy controls changed.
-
-## Exact local verification (Windows; one worker)
-- diplomacy:28, WebKit, strict 20000ms: initial post-change attempt 0 passed / 1 failed BEFORE readiness flow (small-map fixture created 28x28 instead of 20x20); repeat with trace 1 passed / 0 failed (14.5s runner total). Separate post-change timing run: 1 passed / 0 failed (18.3s runner total; overlapped the tail of stack diagnostics, so not a speed comparison).
-- diplomacy:28, Chromium, strict 20000ms: 1 passed / 0 failed (8.9s runner total).
-- humans-pathing-performance:89, Chromium + WebKit: 2 passed / 0 failed (15.1s runner total). Existing <=1000ms start-action visibility and measured actionability assertion passed in both engines; visible route assignment and subsequent turn assertions passed.
-- stack-reentry-selection:10, Chromium + WebKit: 0 passed / 2 failed. Selected unit rebased correctly; canonical picker expected 2 entries, received 0 (line 46).
-- Baseline comparison for that stack failure: restored original runtime from exact head e3b9cb2 and ran the same scenario on both browsers: 0 passed / 2 failed at the identical picker assertion. Then restored the narrow fix. This failure predates this change; no broader stack repair was made under the residual-only scope.
-- Full focused Chromium/WebKit gate: NOT RUN because the required stack prerequisite was red. Full Chromium/WebKit regression: NOT RUN. No green gate or aggregate full-suite counts are claimed.
-- Static verification: node --check for the changed runtime and git diff --check passed. Temporary instrumentation is excluded from the commit.
-
-- Publication correction: the first API commit da83af8 preserved Windows CRLF from the checkout, causing committed-diff whitespace failures. A follow-up commit normalizes these two files to LF without runtime changes. This required a second non-force branch update, deviating from the requested single push; no history rewrite or merge was used.
-
-## Remaining failures and validation limits
-- Existing stack picker failure blocks the requested local verification chain in both engines.
-- One local small-map setup failure was observed and is retained above, not hidden by the successful repeat.
-- Diplomacy is now green in focused and full CI; the exact total-budget attribution is not claimed beyond the measured global-flush overhead.
-
-## Historical next action (superseded)
-In a separately scoped PR #89 follow-up, diagnose the two remaining full-regression scenarios (canonical stack picker and small-map setup), preserving current assertions and budgets.
-
----
-Historical checkpoints below are superseded by the current report above.
-
-# AUTONOMY STATUS — «Эпохи» Humans v1
-
-## State
-`IN_PROGRESS_MANUAL_CODEX_SPRINT`
-
-Hourly ChatGPT autonomy was explicitly disabled by the user on 2026-08-29. Current execution mode is a user-started Codex sprint followed by independent ChatGPT review.
-
-## Integration
-- Repository: `Mikayilzade/Epohi`
-- Integration branch: `codex/coherence-capture-learning-v1`
-- Active continuation PR: #89 (PR #87 and PR #88 are closed duplicates)
-- Base: `prototype/humans-v1`
-- `main`: DO NOT TOUCH
-- Codex should preferably work on a child branch and, if creating a review Draft PR, target `codex/coherence-capture-learning-v1` as its base. Do not merge automatically.
-
-## Current checkpoint
-Exact integration head recorded before the previous Codex sprint: `071bd1b05f4e0a837b624fa39b991b8322a0ca45` (`Record run 238 diagnosis and checkpoint 240`).
-
-Exact implementation checkpoint validated by CI run #240: `5b21f1b2cb7fd6d7d3020552ba38fb7bc7bcd863` (`Use semantic inspect-layer activation in legacy map regression`). The integration head differs because of status/documentation-only history.
-
-PR #84 is open, Draft, unmerged, head `codex/coherence-capture-learning-v1`, base `prototype/humans-v1`.
-
-The current task/inventory documentation lives on child branch `codex/-codex_stabilization_sprint`; verify exact current branch heads before writing code.
-
-## Latest exact CI baseline inventoried
-- Workflow: `Epohi Autonomous Cross-Browser Gate`
-- Run number: #240
-- Run ID: `33243697618`
-- Exact implementation SHA: `5b21f1b2cb7fd6d7d3020552ba38fb7bc7bcd863`
-- Status: **completed / failure**
-- Static integrity: **green**
-- Focused mobile runtime Chromium + WebKit: **green**
-- Full Chromium regression: **165 passed / 15 failed**
-- Full WebKit regression: **165 passed / 15 failed**
-- Unique failing scenarios across engines: **16** (14 shared, one Chromium-only stack scenario, one WebKit-only camera scenario)
-- Diagnostics artifact: `9712557281` (`epohi-autonomous-cross-browser-results`)
-
-This authoritative failure set has now been recovered and inspected. Stage 0 is no longer blocked by lack of local Chromium/WebKit libraries. `AGENT_TESTING_POLICY.md` applies: local missing `libatk`, package-manager/proxy 403, or an equivalent browser-container limitation is `INFRA`; GitHub Actions is the authoritative browser-ready validation environment and local browser absence by itself must not stop coherent engineering work.
-
-## Run #240 grouped inventory
-Detailed test names, evidence, repair order, and guardrails are in `CODEX_NEXT_TASK.md` task `RUN_240_REGRESSION_FAMILY_REPAIR`.
-
-Current root-cause families:
-1. **Legacy inspection controls** — expected `STALE_TEST`: hidden/obsolete inspect tabs used by `mobile-context` and `resource-worker` tests.
-2. **Legacy city/science toolbar controls** — expected `STALE_TEST`: tests click hidden `#cityBtn` / old `#scienceBtn` instead of canonical visible flows.
-3. **Old diplomacy proposal surface** — expected `STALE_TEST` unless canonical central proposal accept flow proves broken.
-4. **Stack navigation/selection** — mixed/needs factual classification: old selectors may be stale, but a canonical visible stack re-entry failure would be a real runtime defect.
-5. **Context CSS/layout implementation assertions** — expected `STALE_TEST`/deterministic assertion update: preserve collapse/usability behavior, not obsolete exact CSS values.
-6. **Worker resource accounting** — confirmed `STALE_TEST`: old test expects worker construction to spend city production; current accepted mechanics use worker time and do not spend city production.
-7. **Foreign-unit context keeps `Идти`** — `RUNTIME_DEFECT_CANDIDATE`: determine whether this is a legitimate current enemy action or leaked own-unit movement command.
-8. **Two `#outcomeMapBtn` elements** — `RUNTIME_DEFECT_CANDIDATE`: duplicate DOM ID/control should be investigated rather than hidden with `.first()`.
-9. **WebKit camera center delta ~6.5px vs `<0.2` expectation** — `FIXTURE_NONDETERMINISM` / cross-browser assertion candidate until screenshot/runtime semantics prove a true centering defect.
-
-## Current engineering policy
-Do not repair the full suite one red line at a time. Finish classification by root-cause family, migrate stale tests to current user-reachable flows, and make production changes only for proven current-flow defects with regression coverage. Validate related families together and avoid CI/source-push spam.
-
-The detailed execution contract is `CODEX_STABILIZATION_SPRINT.md`. The concrete next package is `CODEX_NEXT_TASK.md`.
-
-## Phase plan
-- [x] Phase 0A — autonomous control plane and quality gates.
-- [x] Phase 0B — Chromium + WebKit mobile PR CI.
-- [x] Phase 1 — focused runtime architecture hardening; focused cross-browser gate green in #240.
-- [ ] Phase 2 — close complete cross-browser regression and save/migration coverage.
-- [ ] Phase 3 — deterministic autonomous soak player.
-- [ ] Phase 4 — automated UX/layout/balance pass.
-- [ ] Phase 5 — RC cleanup, immutable build, one final physical iPhone playthrough.
-
-## Historical next action (superseded)
-Push the RUN_253 eight-residual closeout as one coherent commit to existing PR #89, then inspect its complete Chromium + WebKit Actions run once and classify any remaining exact assertion before further changes.
-
-## RUN_246_RESIDUAL_REGRESSION_CLOSEOUT checkpoint — 2026-09-02
-- Implementation checkpoint: `a7bd902fddc3d14606572df1d789f0d443d73c3f` (`Close residual run 246 regression causes`) on task branch `work`; `main` was not checked out or modified.
-- The task is the seven-residual closeout reported for CI #246. The current shell could not fetch GitHub or the then-active PR (`CONNECT tunnel failed, response 403`), so it cannot truthfully reproduce the remote log, push, or claim an authoritative browser result.
-- Classified the WebKit camera residual as a runtime geometry defect: deriving every tile center from the first grid track accumulates engine-specific fractional-track rounding. Camera focus now uses the target tile's rendered offset geometry, while retaining the computed fallback before tiles exist.
-- Hardened the foreign-unit fix around the canonical context ownership text. Coordinate-only rival detection could incorrectly suppress movement for an own-unit context when units share a coordinate.
-- Removed the arbitrary wait from the foreign inspection regression: it now clicks the visible rival piece and waits for the ownership contract before asserting that own-unit route commands do not leak.
-- Migrated the affected city-content helpers from the conditional readiness shortcut to the visible capital map piece and canonical `open-city` action. The readiness bar remains covered independently.
-- Local browser launch remains blocked by missing Linux libraries; dependency installation also returned proxy HTTP 403. Per `AGENT_TESTING_POLICY.md`, this is `LOCAL_TEST_INFRA_BLOCKER`, and no Chromium/WebKit pass is claimed.
-
-## RUN_240_REGRESSION_FAMILY_REPAIR checkpoint — 2026-09-01
-- Starting task-branch SHA: `f0fb25e2de01e2f485e890ac49e756ab605e6ff9`; implementation checkpoint: `edbf74a55e7786f02a0ee5b6eb1436aeb35fba09`.
-- GitHub CLI was unauthenticated, so no newer workflow could be queried from this shell; run #240 remains the latest exact CI evidence available here and newer-CI verification is pending the platform/GitHub integration.
-- Final classification: A/B/C/E/F are `STALE_TEST`; D is `STALE_TEST` for hidden previous/next controls while the visible stack picker is the canonical flow; G and H are confirmed `RUNTIME_DEFECT`; I remains `FIXTURE_NONDETERMINISM` pending authoritative WebKit geometry evidence.
-- Repaired A/B/C/E/F tests as coherent canonical-flow migrations: visible map pieces for inspection, visible readiness/city actions, the central proposal modal, behavior-level collapse/scroll assertions, and the worker-time project lifecycle without city-production spending.
-- Migrated the remaining mobile stack navigation assertion in D to the visible stack picker. Existing `stack-reentry-selection` and combat stack coverage already use the canonical picker on this branch.
-- Fixed G by preventing route UI from identifying a foreign same-type unit as the selected player's unit; the existing foreign-inspection regression now covers the leaked `Идти` command.
-- Fixed H by removing duplicate outcome IDs from transient outcome markup while retaining the single stable visible `#outcomeMapBtn`; strengthened the regression with a uniqueness assertion.
-- Static checks passed: `find src tests -name '*.js' -print0 | xargs -0 -n1 node --check`, `node --check sw.js`, `node --check playwright.config.js`, and `git diff --check`.
-- Focused Chromium execution was attempted for 27 affected tests but every browser launch hit missing `libatk-1.0.so.0`; classified `LOCAL_TEST_INFRA_BLOCKER` under `AGENT_TESTING_POLICY.md`. No browser result is claimed, and Chromium/WebKit validation remains pending CI.
-
-## Historical Codex infrastructure checkpoint — 2026-08-29
-The previous Codex container could not fetch GitHub through its shell or install Playwright system libraries because of proxy/auth limitations; local Chromium failed at browser launch due missing `libatk-1.0.so.0`. No runtime/test changes were made in that blocked sprint. This remains useful diagnostic history but is **not the current project blocker**: run #240 logs/artifact are now inventoried externally and browser validation can proceed through GitHub Actions under `AGENT_TESTING_POLICY.md`.
-
-## Completion signal
-Set state to `READY_FOR_FINAL_DEVICE_TEST` only after all applicable Gates A-I in `QUALITY_GATES.md` are green and an exact immutable RC is prepared. Do not merge; the final physical iPhone test is the user's gate.
-
-## RUN_253_EIGHT_RESIDUAL_CLOSEOUT — 2026-09-05
-- Active continuation is existing PR #89; PR #87 and PR #88 are closed duplicates. The user-provided remote head before this package is `8fb45dfc077545590a16148563a9900f1bfcf267`; `main` is out of scope.
-- Authoritative run #253 evidence: focused Chromium + WebKit green; full Chromium 175 passed / 5 failed; full WebKit 172 passed / 8 failed; eight unique residual scenarios.
-- Classified test-only causes: conditional camp overflow, exact-zero compatibility-container geometry, hard-coded camera padding, artificial shared-coordinate ownership fixture, obsolete barbarian selector, outcome reconciliation settle timing, and raw-tile initial pathing hit target.
-- Classified runtime defects: `.piece.enemy` was missing from semantic unit-layer detection; and a visible remaining-own-stack tap needed an explicit unit-inspection transition after the prior selected unit left the stack.
-- The coherent patch preserves full camp text, strict camera tolerance, visible piece interactions, actual barbarian context, canonical stack picker, stable incomplete-statehood reconciliation, and the existing one-second invalidation requirement. It adds no force click, sleep, hidden-control revival, or weakened product rule.
-- Local cross-browser execution remains subject to `AGENT_TESTING_POLICY.md`: installed Chromium lacks `libatk-1.0.so.0`, and WebKit is not installed. Static checks are the strongest locally available gate; authoritative browser verification remains the next PR #89 Actions run.
-- Historical next action (superseded): push this single closeout commit to PR #89 and inspect the resulting complete Chromium + WebKit run once; if anything fails, record exact scenario + assertion + root cause before another change.
-- Local verification result: all JavaScript syntax checks and `git diff --check` passed. The seven affected spec files (covering all eight residual scenarios) were attempted on both `chromium-mobile` and `webkit-mobile`; Chromium could not load `libatk-1.0.so.0`, and the WebKit executable is absent. The full suite was therefore not run locally and no browser-green claim is made.
-
-## RUN_254_FOUR_RESIDUAL_CLOSEOUT — 2026-09-05
-- Scope remains existing PR #89 only; `main` and closed duplicates #87/#88 are untouched.
-- Authoritative run #254 baseline: Chromium 178 passed / 2 failed; WebKit 176 passed / 4 failed; four unique residual scenarios.
-- `mobile-context` visibility was a stale matcher assumption: the compatibility surface remains empty, `aria-hidden`, fully transparent, pointer-inert, and at most 2px high, without requiring Playwright to call its nonzero geometry invisible.
-- `camera-2` was classified as a fixture/layout-settle race: the large-map helper now waits for stable map viewport, context, and map geometry across consecutive animation frames before Show Entire Map. Strict scale, fit, and centering assertions remain unchanged.
-- Confirmed runtime defects were own-stack re-entry and pathing invalidation latency. A newly inspected tile containing a live own unit now enters unit inspection even when CSS retargets the piece tap to the tile, while route targeting and repeated layer cycling retain ownership of their clicks. Canonical inspection immediately invokes the central runtime invalidation flush so path actions do not depend on delayed observer/rAF convergence.
-- Historical next action (superseded): push the coherent RUN_254 commit to PR #89 and inspect its complete Chromium + WebKit Actions run once; if failures remain, record the exact scenario, assertion, and root cause before any further change.
-- Local RUN_254 verification: static integrity passed. All four focused scenarios were attempted on both mobile projects; Chromium launches were blocked by missing `libatk-1.0.so.0`, and WebKit launches by the absent `webkit-2359` executable. Per testing policy these are `LOCAL_TEST_INFRA_BLOCKER` results, not scenario failures. Focused green and full-suite results remain pending authoritative PR #89 CI.
+Mikayil performs the final manual smoke test. If it passes, handle the remaining review-thread housekeeping and merge only after a separate explicit user decision. Do not rerun the full browser gate unless code changes or new failure evidence appears.
