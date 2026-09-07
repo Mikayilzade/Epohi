@@ -8,8 +8,7 @@ Historical checkpoints were moved intact to `docs/archive/AUTONOMY_STATUS_throug
 
 - Repository: `Mikayilzade/Epohi`.
 - Active PR: #89, branch `codex/-run_240_regression_family_repair-2mvfa1` -> base `codex/-codex_stabilization_sprint`.
-- Current PR head: `76c2db88077f0c54c2f6279851509a1e8376f93a` (docs-only harness optimization).
-- Last game-code/test head: `07b01517d8880d167419109ac83d5707fc5a66d1`.
+- Current PR head contains only harness/documentation changes after the validated game-code/test head `07b01517d8880d167419109ac83d5707fc5a66d1`.
 - No merge, protected/integration branch update, force update, or branch deletion has been authorized.
 
 ## Authoritative result

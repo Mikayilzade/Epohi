@@ -1,6 +1,6 @@
 # CODEX NEXT TASK
 
-PR #89 implementation is complete. Game-code SHA `07b0151` passed authoritative run `34053192225` attempt 4: focused gate green, full Chromium 182/182, full WebKit 182/182. Current head `76c2db8` changes only the lightweight agent harness.
+PR #89 implementation is complete. Game-code SHA `07b0151` passed authoritative run `34053192225` attempt 4: focused gate green, full Chromium 182/182, full WebKit 182/182. All commits after `07b0151` change only the lightweight agent harness and handoff documentation.
 
 ## NEXT ACTION
 
