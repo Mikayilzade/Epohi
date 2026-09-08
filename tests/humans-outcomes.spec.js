@@ -306,8 +306,14 @@ test.describe('Победа, поражение и восстановление 
       outcomeStatus: 'active'
     });
 
-    await page.locator('#endTurnBtn').click();
-    await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    await page.locator('[data-open-human-journey]').first().click();
+    await expect(page.locator('#humansJourneyModal')).toHaveClass(/show/);
+    await page.locator('#humansJourneyModal [data-close-human-journey]').click();
+
+    for (let index = 0; index < 3; index += 1) {
+      await page.locator('#endTurnBtn').click();
+      await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    }
     await page.waitForTimeout(350);
     const afterTurn = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
@@ -320,12 +326,27 @@ test.describe('Победа, поражение и восстановление 
       };
     });
     expect(afterTurn).toEqual({
-      turn: turn + 1,
+      turn: turn + 3,
       outcomeStatus: 'active',
       victory: false,
       modalOpen: false
     });
     await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
+    await expect(page.locator('#outcomeGoalsBtn:visible')).toHaveCount(0);
+    await expect(page.locator('#outcomeMapBtn:visible')).toHaveCount(0);
+
+    await page.locator('#menuBtn').click();
+    await page.locator('#quickSaveBtn').click();
+    await expect(page.locator('#menuContent')).toContainText('Сохранено');
+    await page.locator('#toMainBtn').click();
+    await expect(page.locator('[data-continue]')).toBeVisible();
+    await page.locator('[data-continue]').first().click();
+    await expect(page.locator('#gameApp')).toBeVisible();
+    await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
+    expect(await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      return { continued: state.continueAfterOutcome, outcome: state.outcome.status, victory: state.victory };
+    })).toEqual({ continued: true, outcome: 'active', victory: false });
   });
 
   test('цели партии доступны из игрового меню', async ({ page }) => {

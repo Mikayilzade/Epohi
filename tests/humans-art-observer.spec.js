@@ -146,7 +146,9 @@ test.describe('Визуальная демка и режим наблюдени�
         units: window.EpohiHumansVisuals.unitSprites.length,
         terrains: window.EpohiHumansVisuals.terrainSprites.length,
         pois: window.EpohiHumansVisuals.poiSprites.length,
-        improvements: window.EpohiHumansVisuals.improvementSprites.length
+        improvements: window.EpohiHumansVisuals.improvementSprites.length,
+        inlineDataSprites: document.querySelectorAll('[style*="data:image/svg+xml"]').length,
+        registryRules: document.getElementById('humansVisualSpriteRegistry').sheet.cssRules.length
       };
     });
 
@@ -159,7 +161,36 @@ test.describe('Визуальная демка и режим наблюдени�
     expect(art.terrains).toBe(7);
     expect(art.pois).toBe(8);
     expect(art.improvements).toBe(5);
+    expect(art.inlineDataSprites).toBe(0);
+    expect(art.registryRules).toBeGreaterThan(0);
     await expectNoConsoleProblems(problems);
+  });
+
+  test('открытая карта отменяется без изменений и сохраняется в текущей партии после подтверждения', async ({ page }) => {
+    await createConfiguredGame(page, { size: 'small', rivals: 1, barbarians: 'off', name: 'Открытая карта' });
+    const hiddenBefore = await page.evaluate(() => window.__epohiDebug().state.map.flat().filter(tile => !tile.revealed).length);
+
+    await page.locator('#menuBtn').click();
+    page.once('dialog', dialog => dialog.dismiss());
+    await page.locator('[data-open-map-mode]').click();
+    expect(await page.evaluate(() => ({
+      open: window.__epohiDebug().state.openMapMode,
+      hidden: window.__epohiDebug().state.map.flat().filter(tile => !tile.revealed).length
+    }))).toEqual({ open: false, hidden: hiddenBefore });
+    await expect(page.locator('#gameApp')).toBeVisible();
+
+    page.once('dialog', dialog => dialog.accept());
+    await page.locator('[data-open-map-mode]').click();
+    await expect(page.locator('#menuModal')).not.toHaveClass(/show/);
+    await expect.poll(() => page.evaluate(() => window.__epohiDebug().state.map.flat().filter(tile => !tile.revealed).length)).toBe(0);
+    await page.locator('#menuBtn').click();
+    await page.locator('#toMainBtn').click();
+    await expect(page.locator('[data-continue]')).toBeVisible();
+    await page.locator('[data-continue]').first().click();
+    expect(await page.evaluate(() => ({
+      open: window.__epohiDebug().state.openMapMode,
+      hidden: window.__epohiDebug().state.map.flat().filter(tile => !tile.revealed).length
+    }))).toEqual({ open: true, hidden: 0 });
   });
 
   test('визуальная панель и карта помещаются на экран iPhone', async ({ page }) => {

@@ -284,6 +284,9 @@
 
   function moveOne(gs, unit, point, available) {
     if (!point || available < movementCost(gs, unit, point)) return false;
+    const destination = gs.map[point.y] && gs.map[point.y][point.x];
+    if (destination && !destination.revealed && !gs.openMapMode) destination.revealed = true;
+    if (available < movementCost(gs, unit, point)) return false;
     if (isBlocked(gs, unit, point.x, point.y)) return false;
     unit.x = point.x;
     unit.y = point.y;

@@ -14,30 +14,16 @@
     return value && value.state ? value.state : null;
   }
 
-  function removeRecreatedButtons(content) {
-    content.querySelectorAll("#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]").forEach(function (button) {
-      button.removeAttribute("id");
-      button.hidden = true;
-      button.setAttribute("aria-hidden", "true");
-      button.tabIndex = -1;
-    });
-  }
-
   function ensureStableControls() {
     const modal = document.getElementById("victoryModal");
     const content = document.getElementById("victoryContent");
     const sheet = modal && modal.querySelector(".sheet");
     if (!modal || !content || !sheet) return;
 
-    if (!controls || !document.body.contains(controls)) {
-      controls = document.createElement("div");
-      controls.className = "menu-actions feedback-outcome-controls";
-      controls.innerHTML = '<button id="outcomeGoalsBtn" type="button" class="wide-btn secondary">Посмотреть цели</button>' +
-        '<button id="outcomeMapBtn" type="button" class="wide-btn">Вернуться к карте</button>';
-      sheet.appendChild(controls);
-    }
-
-    removeRecreatedButtons(content);
+    // Outcome rendering owns the only action pair. Remove controls left by an
+    // older cached runtime instead of maintaining a second, competing copy.
+    sheet.querySelectorAll(".feedback-outcome-controls").forEach(function (node) { node.remove(); });
+    controls = null;
   }
 
   function preserveFreePlay() {
