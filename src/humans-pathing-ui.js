@@ -53,6 +53,11 @@
     }) || null;
   }
 
+  function inspectsForeignUnit(gs) {
+    const actions = document.getElementById("contextActions");
+    return Boolean(gs && actions && actions.dataset.unitOwner === "rival");
+  }
+
   function notify(text) {
     const toast = document.getElementById("toast");
     if (!toast) return;
@@ -257,7 +262,12 @@
     }
 
     const def = UNIT_DEFS[unit.type] || { name: unit.type || "Юнит" };
-    const showsUnit = title.textContent.includes(unit.name || "") || title.textContent.includes(def.name);
+    // Unit type names are not unique between civilizations. In particular, an
+    // inspected rival warrior must not inherit the selected player's "Идти"
+    // command merely because both context titles contain "Воин".
+    const foreignUnitContext = inspectsForeignUnit(gs);
+    const showsUnit = !foreignUnitContext &&
+      (title.textContent.includes(unit.name || "") || title.textContent.includes(def.name));
     const selectedHasRoute = Boolean(selected && selected.travelOrder);
     const actionUnit = showsUnit ? unit : selected;
 
@@ -265,7 +275,7 @@
     // A route therefore remains the selected unit's route even when the context
     // card is temporarily showing the destination cell. Keep route controls and
     // ETA visible in that case; new-route/worker controls still require unit view.
-    if ((showsUnit || selectedHasRoute) && actionUnit && !actions.querySelector("[data-path-action]")) {
+    if (!foreignUnitContext && (showsUnit || selectedHasRoute) && actionUnit && !actions.querySelector("[data-path-action]")) {
       if (actionUnit.travelOrder) {
         if (actionUnit.travelOrder.status === "awaiting-choice") {
           actions.appendChild(makeButton("✨<br>Решить судьбу находки", "poi-choice", function () {
@@ -288,7 +298,7 @@
 
     if (showsUnit) injectWorkerPicker(unit, actions);
 
-    if (selected && selected.travelOrder && route) {
+    if (!foreignUnitContext && selected && selected.travelOrder && route) {
       const description = routeDescription(selected, route);
       let element = summary;
       if (!element) {
@@ -386,6 +396,10 @@
 
     document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);
+    // app.js emits this only after the canonical own-unit context has finished
+    // rendering. Refresh pathing at that semantic boundary so a captured mobile
+    // tap does not depend on the later, throttled global invalidation frame.
+    document.addEventListener("epohi:own-unit-context-ready", refreshUi);
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && targetModeUnitId != null) {
         stopTargetMode();

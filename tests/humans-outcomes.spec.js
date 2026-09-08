@@ -115,8 +115,12 @@ test.describe('Победа, поражение и восстановление 
 
     await page.locator('#endTurnBtn').click();
     await page.waitForFunction(() => {
-      const state = window.__epohiDebug().state;
-      return state.cities[0].buildings.includes('palace') && state.outcome && state.outcome.status === 'active';
+      const debug = window.__epohiDebug();
+      const state = debug.state;
+      return !debug.isTurnProcessing() &&
+        state.cities[0].buildings.includes('palace') &&
+        state.outcome && state.outcome.status === 'active' &&
+        state.outcomeNotices.includes('palace-before-stable-state');
     });
 
     const result = await page.evaluate(() => {
@@ -247,6 +251,69 @@ test.describe('Победа, поражение и восстановление 
     expect(result.victory).toBe(true);
     expect(result.defeat).toBe(false);
     await expect(page.locator('#victoryModalTitle')).toHaveText('Соперники подчинены!');
+  });
+
+  test('transient outcome actions preserve goals and enable post-victory free play', async ({ page }) => {
+    await openFreshGame(page, { name: 'Свободная игра' });
+
+    const turn = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      state.continueAfterOutcome = false;
+      state.outcome = {
+        version: 1,
+        status: 'victory',
+        type: 'statehood',
+        turn: state.turn,
+        title: 'Государство создано!',
+        summary: 'Проверка transient outcome actions.'
+      };
+      state.victory = true;
+      state.defeat = false;
+      window.EpohiHumansOutcomes.sync({ announce: true });
+      return state.turn;
+    });
+
+    await expect(page.locator('[data-outcome-goals-action]')).toBeVisible();
+    await expect(page.locator('[data-outcome-map-action]')).toHaveCount(1);
+    await expect(page.locator('#outcomeGoalsBtn')).toHaveCount(1);
+    await expect(page.locator('#outcomeMapBtn')).toHaveCount(1);
+    await page.locator('[data-outcome-goals-action]').click();
+    await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
+    await expect(page.locator('#humansGoalsModal')).toHaveClass(/show/);
+    await page.locator('[data-close-human-goals]').click();
+
+    await page.evaluate(() => {
+      window.EpohiHumansOutcomes.sync({ announce: true });
+    });
+    const transientMapAction = page.locator('[data-outcome-map-action]');
+    await expect(transientMapAction).toBeVisible();
+    await transientMapAction.click();
+    await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
+
+    const continued = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      return {
+        continueAfterOutcome: state.continueAfterOutcome,
+        victory: state.victory,
+        defeat: state.defeat,
+        outcomeStatus: state.outcome && state.outcome.status
+      };
+    });
+    expect(continued).toEqual({
+      continueAfterOutcome: true,
+      victory: false,
+      defeat: false,
+      outcomeStatus: 'active'
+    });
+
+    await page.locator('#endTurnBtn').click();
+    await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    const afterTurn = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      return { turn: state.turn, outcomeStatus: state.outcome.status };
+    });
+    expect(afterTurn).toEqual({ turn: turn + 1, outcomeStatus: 'active' });
+    await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
   });
 
   test('цели партии доступны из игрового меню', async ({ page }) => {

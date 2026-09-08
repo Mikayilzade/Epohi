@@ -8,10 +8,13 @@ async function cameraState(page) {
     const bounds = debug.getCameraScaleBounds();
     const viewport = document.getElementById('mapViewport');
     const map = document.getElementById('map');
+    const style = getComputedStyle(viewport);
+    const horizontalPadding = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+    const verticalPadding = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
     return {
       camera: { x: camera.x, y: camera.y, scale: camera.scale },
       bounds,
-      viewport: { width: viewport.clientWidth - 10, height: viewport.clientHeight - 10 },
+      viewport: { width: viewport.clientWidth - horizontalPadding, height: viewport.clientHeight - verticalPadding },
       map: { width: map.offsetWidth, height: map.offsetHeight },
       zoomInDisabled: document.getElementById('zoomInBtn').disabled,
       zoomOutDisabled: document.getElementById('zoomOutBtn').disabled,
@@ -36,6 +39,23 @@ async function zoomAboveFit(page) {
     const scale = Math.min(bounds.max, Math.max(bounds.min * 3, 2.4));
     debug.setCameraScale(scale, null, null, false);
     return scale;
+  });
+}
+
+async function waitForStableMapLayout(page) {
+  await page.waitForFunction(async () => {
+    const sample = () => {
+      const viewport = document.getElementById('mapViewport').getBoundingClientRect();
+      const context = document.getElementById('contextPanel').getBoundingClientRect();
+      const map = document.getElementById('map').getBoundingClientRect();
+      return [viewport.x, viewport.y, viewport.width, viewport.height, context.height, map.width, map.height];
+    };
+    const equal = (a, b) => a.every((value, index) => Math.abs(value - b[index]) < 0.01);
+    const first = sample();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    const second = sample();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    return equal(first, second) && equal(second, sample());
   });
 }
 
@@ -123,6 +143,7 @@ async function expectLargeMapFitsViewport(page, viewportSize) {
   await page.setViewportSize(viewportSize);
   await clearStorage(page);
   await createGame(page, 0, 'large');
+  await waitForStableMapLayout(page);
   await page.locator('#showMapBtn').click();
   const info = await cameraState(page);
   const requiredFitScale = Math.min(info.viewport.width / info.map.width, info.viewport.height / info.map.height);

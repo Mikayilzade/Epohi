@@ -179,7 +179,7 @@ test.describe('Combat, AI and world stability', () => {
 
   test('three same-type stacked units keep distinct selection and orders', async ({ page }) => {
     await ready(page,0);
-    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{gs.map[y][x].terrain='plains';gs.map[y][x].revealed=true;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
+    const ids=await page.evaluate(()=>{const gs=window.__epohiDebug().state,def=window.EpohiData.UNIT_DEFS.scout;gs.units=[0,1,2].map(i=>({id:'stack-scout-'+i,type:'scout',x:5,y:5,moves:def.maxMoves,acted:false,hp:def.maxHealth,maxHp:def.maxHealth,travelOrder:null}));[[5,5],[6,5],[5,6],[4,5]].forEach(([x,y])=>{const tile=gs.map[y][x];tile.terrain='plains';tile.revealed=true;tile.poi=null;tile.camp=null;tile.feature=null;tile.improvement=null;});window.__epohiDebug().render();return gs.units.map(u=>u.id);});
     await clickMapUnitSemanticDom(page,5,5);
     await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(3);
     const targets=[[6,5],[5,6],[4,5]];

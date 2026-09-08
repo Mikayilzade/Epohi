@@ -89,7 +89,28 @@ test.describe('Маршруты, desktop-карта и производител�
   test('кнопка Идти назначает маршрут, показывает шаги и переносит приказ между ходами', async ({ page }) => {
     const problems = await openGame(page);
     const unit = await prepareOpenPlains(page);
+    await page.evaluate(() => {
+      window.__epohiPathingPointerBoundary = null;
+      document.addEventListener('pointerup', event => {
+        const viewport = document.getElementById('mapViewport');
+        const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+        if (!viewport || (event.target !== viewport && !viewport.contains(event.target) && !path.includes(viewport))) return;
+        const debug = window.__epohiDebug();
+        window.__epohiPathingPointerBoundary = {
+          layer: debug.getInspectLayer(),
+          selectedUnitId: debug.getSelectedUnitId(),
+          routeStartVisible: Boolean(document.querySelector('[data-path-action="start"]'))
+        };
+      }, { once: true });
+    });
     await page.locator(`.tile[data-x="${unit.x}"][data-y="${unit.y}"]`).click();
+
+    const pointerBoundary = await page.evaluate(() => window.__epohiPathingPointerBoundary);
+    expect(pointerBoundary).toEqual({
+      layer: 'unit',
+      selectedUnitId: unit.id,
+      routeStartVisible: true
+    });
 
     const routeStart = page.locator('[data-path-action="start"]');
     const actionabilityStartedAt = Date.now();

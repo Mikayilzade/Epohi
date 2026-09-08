@@ -474,11 +474,34 @@
     if (modal) modal.classList.remove("show");
   }
 
+  function continueAfterOutcome(state) {
+    const feedback = window.EpohiPlayerFeedback;
+    if (feedback && typeof feedback.continueAfterOutcome === "function") {
+      feedback.continueAfterOutcome(state);
+      return;
+    }
+
+    // The outcomes module loads before player feedback. Keep an early click safe
+    // without requiring the stabilization pass or a second implementation later.
+    ensureOutcomeState(state);
+    state.continueAfterOutcome = true;
+    state.victory = false;
+    state.defeat = false;
+    if (state.outcome) state.outcome.status = "active";
+    hideLegacyOutcomeModal();
+  }
+
   function showOutcomeModal(state, outcome) {
     const modal = document.getElementById("victoryModal");
     const title = document.getElementById("victoryModalTitle");
     const content = document.getElementById("victoryContent");
     if (!modal || !title || !content) return;
+
+    const goals = document.getElementById("humansGoalsModal");
+    if (goals && goals.classList.contains("show")) {
+      hideLegacyOutcomeModal();
+      return;
+    }
 
     title.textContent = outcome.title;
     const cityCount = livingCities(state).length;
@@ -491,15 +514,15 @@
       '<div class="summary-card"><strong>' + cityCount + '</strong><small>живых городов</small></div>' +
       '<div class="summary-card"><strong>' + population + '</strong><small>население</small></div>' +
       '</div><div class="menu-actions" style="margin-top:14px">' +
-      '<button id="outcomeGoalsBtn" class="wide-btn secondary">Посмотреть цели</button>' +
-      '<button id="outcomeMapBtn" class="wide-btn">Вернуться к карте</button></div>';
+      '<button data-outcome-goals-action class="wide-btn secondary">Посмотреть цели</button>' +
+      '<button data-outcome-map-action class="wide-btn">Вернуться к карте</button></div>';
 
-    content.querySelector("#outcomeGoalsBtn").addEventListener("click", function () {
+    content.querySelector("[data-outcome-goals-action]").addEventListener("click", function () {
       modal.classList.remove("show");
       openGoals();
     });
-    content.querySelector("#outcomeMapBtn").addEventListener("click", function () {
-      modal.classList.remove("show");
+    content.querySelector("[data-outcome-map-action]").addEventListener("click", function () {
+      continueAfterOutcome(state);
     });
     modal.classList.add("show");
   }
@@ -566,7 +589,11 @@
       }).observe(turnValue, { childList: true, characterData: true, subtree: true });
     }
 
-    document.addEventListener("click", function () {
+    document.addEventListener("click", function (event) {
+      const outcomeAction = event.target.closest && event.target.closest(
+        "#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]"
+      );
+      if (outcomeAction) return;
       scheduleSync({ announce: false, showGoalsOnBlockedVictory: true });
       window.setTimeout(function () {
         scheduleSync({ announce: true, showGoalsOnBlockedVictory: true });

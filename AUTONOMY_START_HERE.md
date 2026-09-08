@@ -1,58 +1,29 @@
 # AUTONOMY START HERE — «Эпохи»
 
-This file is the entry point for autonomous ChatGPT/Codex work on the current Humans v1 stabilization package.
+Use this file only when Mikayil asks an agent to continue autonomously. The permanent lightweight entry point is `AGENTS.md`.
 
-## Mission
-Deliver a real **Release Candidate** of the Humans v1 prototype that survives automated cross-browser and long-run testing before Mikayil is asked to test it on a physical iPhone again.
+## Start
 
-The user is no longer the routine QA loop. Do not ask for manual testing after small fixes.
+1. Follow `AGENTS.md` and send its one-line startup receipt.
+2. Verify the actual repository, current branch/head, PR base, user scope, and latest relevant CI. Do not trust branch or PR numbers copied from old notes.
+3. Read all of `CODEX_NEXT_TASK.md`.
+4. Read only the newest checkpoint at the top of `AUTONOMY_STATUS.md`, stopping at the first `---` or “Historical checkpoints” marker.
+5. Open `QUALITY_GATES.md`, `AGENT_TESTING_POLICY.md`, a checklist, or old handoff history only when the current task specifically needs it.
 
-## Current integration boundary
-- Repository: `Mikayilzade/Epohi`
-- Active work branch: `codex/coherence-capture-learning-v1`
-- Active Draft PR: **#84**
-- PR base: `prototype/humans-v1`
-- `main` is out of bounds.
-- Do not merge PR #84 or update `prototype/humans-v1` without explicit user approval after the final device gate.
+The current branch and PR are intentionally not hard-coded here because they change. Repository and CI state win over historical chat or documents.
 
-## Source-of-truth order
-1. Latest code/Git history on the active branch.
-2. `AUTONOMY_STATUS.md`.
-3. `QUALITY_GATES.md`.
-4. `AGENT_TESTING_POLICY.md`.
-5. `CODEX_NEXT_TASK.md`.
-6. PR #84 description/comments.
-7. `PROJECT_HANDOFF.md`.
+## Work loop
 
-If an older handoff or chat memory disagrees with current repository state, the repository wins.
+- Complete one meaningful, bounded package from the current task.
+- Diagnose from exact source/CI evidence; never guess a failed test's cause.
+- Add or preserve regression coverage for real defects.
+- Start with focused checks. Use the full cross-browser gate only at the appropriate gate.
+- Do not spend a run repeatedly repairing an immutable temporary environment; follow `AGENT_TESTING_POLICY.md` when that problem actually occurs.
+- Update only the compact current handoff needed by the next agent.
+- Report briefly: result, blocker if any, and one next action.
 
-## Autonomous loop
-Every run must:
-1. Read this file, `AUTONOMY_STATUS.md`, `QUALITY_GATES.md`, `AGENT_TESTING_POLICY.md`, and `CODEX_NEXT_TASK.md`.
-2. Fetch PR #84 and verify the current branch head before writing.
-3. Inspect the latest relevant CI result/logs. Never guess why CI failed.
-4. Execute **one meaningful bounded package** from `NEXT ACTION` / `CODEX_NEXT_TASK.md` (target 30–60 minutes of engineering work, not a cosmetic micro-commit).
-5. Add or strengthen regression coverage for every defect fixed.
-6. Run the strongest checks available in the current environment and follow `AGENT_TESTING_POLICY.md`. Missing local Linux/browser dependencies are infrastructure limitations, not automatic game-code failures; use GitHub Actions for authoritative Chromium/WebKit browser gates when the local container cannot run them.
-7. Update `AUTONOMY_STATUS.md` with exact SHA/results/blocker and a single next action.
-8. Keep the user-facing report short: `в процессе`, `нужен ответ: ...`, or `готово к финальному тесту` plus one sentence of substance.
+## Stop or ask
 
-## Stop / escalation conditions
-Stop autonomous implementation only when one of these is true:
-- a genuine product/design choice has multiple reasonable answers and repository context does not decide it;
-- a destructive migration or data-loss risk needs approval;
-- credentials, payment, legal acceptance, or an unavailable external service is required;
-- the project reached `READY_FOR_FINAL_DEVICE_TEST`;
-- an infrastructure failure cannot be bypassed after applying `AGENT_TESTING_POLICY.md` and the next meaningful engineering action genuinely cannot continue safely.
+Stop only for a real product choice not decided by current evidence, destructive/data-loss risk, unavailable credentials/service, explicit user-controlled merge/device gate, or a blocker with no safe path forward.
 
-Ordinary test failures, browser differences, refactors, flaky CI, local Playwright dependency failures, and implementation choices are **not** reasons to ask the user to test or decide when a safe CI/platform path exists.
-
-## Physical-device policy
-A physical iPhone test happens only at the final RC gate. Every issue discovered there must first become an automated regression before another device build is offered.
-
-## Commit / CI policy
-- Prefer one implementation commit plus at most one stabilization commit per package.
-- Do not push no-op commits just to rerun CI.
-- Avoid GitHub/email spam.
-- Do not weaken or delete a valid test merely to make CI green; update stale tests only when current accepted product rules clearly supersede them.
-- Preserve save compatibility or add explicit migration coverage.
+Do not request routine manual testing after small fixes. Do not merge or alter protected/integration branches without explicit user approval.

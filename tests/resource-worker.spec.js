@@ -8,11 +8,10 @@ const {
 
 
 test.describe('v1.4.2 resource, worker, and inspection checks', () => {
-  test('resource switcher uses local city stocks and worker spends local production', async ({ page }) => {
+  test('worker uses worker time without spending local city production', async ({ page }) => {
     const problems = watchConsole(page);
     await clearStorage(page);
     await createGame(page, 0, 'small');
-    await expect(page.locator('#resourceScope')).toHaveText('Вся империя');
     const result = await page.evaluate(() => {
       const d = window.__epohiDebug(); const s = d.state; const cap = s.city;
       s.researched.push('mining');
@@ -23,13 +22,24 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       s.units.push(worker);
       d.setResourceViewCity(cap.id);
       d.render();
-      d.buildImprovementWithWorker(worker.id, 'lumber');
-      return { capProduction: cap.production, globalProduction: s.resources.production, improvement: tile.improvement, owner: tile.owner };
+      return { capProduction: cap.production, globalProduction: s.resources.production, owner: tile.owner, workerId: worker.id, x: worker.x, y: worker.y };
     });
-    await expect(page.locator('#resourceScope')).toContainText('Ардена');
-    expect(result).toEqual({ capProduction: 4, globalProduction: 0, improvement: 'lumber', owner: 'player-cap' });
-    await page.locator('#resourcePrev').click();
-    await expect(page.locator('#resourceScope')).toHaveText('Вся империя');
+    const workerPiece = page.locator(`.tile[data-x="${result.x}"][data-y="${result.y}"] .piece.unit`).first();
+    await expect(workerPiece).toBeVisible();
+    await workerPiece.click();
+    const build = page.locator('#contextActions [data-context-action="build-improvement"]');
+    await expect(build).toBeVisible();
+    await build.click();
+    const started = await page.evaluate((id) => {
+      const d = window.__epohiDebug();
+      const worker = d.state.units.find(unit => unit.id === id);
+      return { capProduction: d.state.city.production, globalProduction: d.state.resources.production, project: worker.workerProject, acted: worker.acted };
+    }, result.workerId);
+    expect(started.capProduction).toBe(14);
+    expect(started.globalProduction).toBe(0);
+    expect(started.project).toEqual(expect.objectContaining({ improvementId: 'lumber', x: result.x, y: result.y }));
+    expect(started.acted).toBe(true);
+    expect(result.owner).toBe('player-cap');
     expect(problems).toEqual([]);
   });
 
@@ -47,17 +57,18 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       d.render();
       return { ownId: own.id, unitX: unit.x, unitY: unit.y, cityX: city.x, cityY: city.y, campX, campY, barbX: cap.x-1, barbY: cap.y };
     });
-    await page.locator(`.tile[data-x="${setup.unitX}"][data-y="${setup.unitY}"]`).click();
+    await page.locator(`.tile[data-x="${setup.unitX}"][data-y="${setup.unitY}"] .piece.ai-unit`).click();
     await expect(page.locator('#contextText')).toContainText('атака');
-    await page.locator(`.tile[data-x="${setup.cityX}"][data-y="${setup.cityY}"]`).click();
+    await page.locator(`.tile[data-x="${setup.cityX}"][data-y="${setup.cityY}"] .piece.ai-city`).click();
     await expect(page.locator('#contextText')).toContainText('Владелец');
-    await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"]`).click();
+    await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .piece.camp, .tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .camp-marker`).first().click();
     await expect(page.locator('#contextText')).toContainText('награда');
-    await expect(page.locator('[data-inspect-layer="camp"]')).toHaveText('Лагерь');
-    await page.locator('[data-inspect-layer="tile"]').click();
+    await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"]`).click({ position: { x: 4, y: 4 } });
     await expect(page.locator('#contextText')).toContainText(`X ${setup.campX}, Y ${setup.campY}`);
-    await page.locator('[data-inspect-layer="camp"]').click();
-    await page.locator(`.tile[data-x="${setup.barbX}"][data-y="${setup.barbY}"]`).click();
+    await page.locator(`.tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .piece.camp, .tile[data-x="${setup.campX}"][data-y="${setup.campY}"] .camp-marker`).first().click();
+    const barbarian = page.locator(`.tile[data-x="${setup.barbX}"][data-y="${setup.barbY}"] .piece.enemy`);
+    await expect(barbarian).toBeVisible();
+    await barbarian.click();
     await expect(page.locator('#contextText')).toContainText('здоровье');
     const ownStillExists = await page.evaluate((id) => window.__epohiDebug().state.units.some(u => u.id === id), setup.ownId);
     expect(ownStillExists).toBeTruthy();

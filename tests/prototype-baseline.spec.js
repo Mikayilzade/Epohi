@@ -128,7 +128,9 @@ test.describe('Эпохи: Люди — базовый контракт прот
   test('новые технологии, здания и юниты доступны через обычный интерфейс', async ({ page }) => {
     await openFreshGame(page, { size: 'small', barbarians: 'off', rivals: 0, name: 'Тест контента' });
 
-    await page.locator('#scienceBtn').click();
+    const scienceActivity = page.locator('#strategyReadiness [data-ready-kind="science"]');
+    await expect(scienceActivity).toBeVisible();
+    await scienceActivity.click();
     await expect(page.locator('#scienceContent')).toContainText('Обработка дерева');
     await expect(page.locator('#scienceContent')).toContainText('Животноводство');
     await expect(page.locator('#scienceContent')).toContainText('Военная организация');
@@ -143,7 +145,12 @@ test.describe('Эпохи: Люди — базовый контракт прот
       state.cities[0].production = 500;
     });
 
-    await page.locator('#cityBtn').click();
+    const capital = page.locator('#map .piece.city.player-capital');
+    await expect(capital).toBeVisible();
+    await capital.click();
+    const openCity = page.locator('#contextActions [data-context-action="open-city"]');
+    await expect(openCity).toBeVisible();
+    await openCity.click();
     await expect(page.locator('#cityContent')).toContainText('Склад');
     await expect(page.locator('#cityContent')).toContainText('Частокол');
     await expect(page.locator('#cityContent')).toContainText('Казармы');

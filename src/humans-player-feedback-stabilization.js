@@ -15,7 +15,7 @@
   }
 
   function removeRecreatedButtons(content) {
-    content.querySelectorAll("#outcomeGoalsBtn, #outcomeMapBtn").forEach(function (button) {
+    content.querySelectorAll("#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]").forEach(function (button) {
       button.removeAttribute("id");
       button.hidden = true;
       button.setAttribute("aria-hidden", "true");

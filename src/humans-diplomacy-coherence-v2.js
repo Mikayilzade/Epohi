@@ -313,6 +313,7 @@
     title.textContent=(def.icon||"⚔️")+" "+(unit.name||def.name);
     text.textContent="Владелец: "+civ.name+" · тип: "+def.name+" · здоровье: "+Math.ceil(unit.hp)+"/"+unit.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · отношения: "+(civ.relation==="war"?"война":civ.relation==="ally"?"союз":"нейтральные");
     actions.innerHTML="";
+    actions.dataset.unitOwner="rival";
     const value=debug(),selectedId=value&&value.getSelectedUnitId?value.getSelectedUnitId():null,attacker=gs.units&&gs.units.find(function(item){return String(item.id)===String(selectedId);});
     if(civ.relation==="war"&&attacker&&Number(attacker.moves||0)>0&&!attacker.acted&&window.EpohiUtils&&window.EpohiUtils.isAdjacent(attacker.x,attacker.y,unit.x,unit.y)){
       const attack=document.createElement("button"); attack.type="button"; attack.className="context-btn danger"; attack.dataset.contextAction="attack"; attack.innerHTML="⚔️<br>Атаковать"; attack.onclick=function(){if(window.EpohiHumansPathing)window.EpohiHumansPathing.assignTravelOrder(attacker.id,{type:"attack",targetKind:"rival",targetId:unit.id,civilizationId:civ.civilizationId,x:unit.x,y:unit.y,civ:civ});}; actions.appendChild(attack);
