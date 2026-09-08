@@ -1,9 +1,9 @@
 # CODEX NEXT TASK
 
-PR #89 implementation is complete. Game-code SHA `07b0151` passed authoritative run `34053192225` attempt 4: focused gate green, full Chromium 182/182, full WebKit 182/182. All commits after `07b0151` change only the lightweight agent harness and handoff documentation.
+Ручной тест 2026-09-08 провален: повторная победа, исчезающие иконки и другие проблемы.
+Работать в существующем PR #89: codex/-run_240_regression_family_repair-2mvfa1.
 
-## NEXT ACTION
-
-Await Mikayil's final manual smoke test. If it passes and the user requests closeout, inspect and resolve the two remaining GitHub review threads. Merge only after an explicit user decision.
-
-Do not change game code or rerun the full browser suites without a code change or new failure evidence.
+Следовать AGENTS.md. Выполнить REPAIR_STAGES.md последовательно, начиная с первого незавершённого этапа; наблюдения — MANUAL_SMOKE_2026-09-08.md.
+После проверенного этапа обновлять AUTONOMY_STATUS.md и переходить дальше без отдельного «го».
+При блокере записать доказательство и следующий шаг. Не повторять одинаковые прогоны без новой причины.
+Финал: READY_FOR_FINAL_DEVICE_TEST. Не merge, не создавать новый PR, не закрывать review threads.
