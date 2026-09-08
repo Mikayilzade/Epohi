@@ -308,11 +308,23 @@ test.describe('Победа, поражение и восстановление 
 
     await page.locator('#endTurnBtn').click();
     await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    await page.waitForTimeout(350);
     const afterTurn = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
-      return { turn: state.turn, outcomeStatus: state.outcome.status };
+      window.EpohiHumansOutcomes.sync({ announce: true });
+      return {
+        turn: state.turn,
+        outcomeStatus: state.outcome.status,
+        victory: state.victory,
+        modalOpen: document.getElementById('victoryModal').classList.contains('show')
+      };
     });
-    expect(afterTurn).toEqual({ turn: turn + 1, outcomeStatus: 'active' });
+    expect(afterTurn).toEqual({
+      turn: turn + 1,
+      outcomeStatus: 'active',
+      victory: false,
+      modalOpen: false
+    });
     await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
   });
 

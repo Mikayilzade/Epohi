@@ -1,9 +1,5 @@
 # CODEX NEXT TASK
 
-Ручной тест 2026-09-08 провален: повторная победа, исчезающие иконки и другие проблемы.
-Работать в существующем PR #89: codex/-run_240_regression_family_repair-2mvfa1.
+Continue existing PR #89 only. Repair implementation is in the current commit; read the current checkpoint at the top of `AUTONOMY_STATUS.md`.
 
-Следовать AGENTS.md. Выполнить REPAIR_STAGES.md последовательно, начиная с первого незавершённого этапа; наблюдения — MANUAL_SMOKE_2026-09-08.md.
-После проверенного этапа обновлять AUTONOMY_STATUS.md и переходить дальше без отдельного «го».
-При блокере записать доказательство и следующий шаг. Не повторять одинаковые прогоны без новой причины.
-Финал: READY_FOR_FINAL_DEVICE_TEST. Не merge, не создавать новый PR, не закрывать review threads.
+NEXT: push to the PR branch and run focused Chromium + WebKit acceptance for stages 1–5, resolve real failures, then execute `QUALITY_GATES.md`. Do not merge/create a PR/close threads. Final state only after green gates: `READY_FOR_FINAL_DEVICE_TEST`.

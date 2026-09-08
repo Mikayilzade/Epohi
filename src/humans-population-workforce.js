@@ -268,7 +268,11 @@
     }).join("");
     const specializationText = specializationKey
       ? '<div class="workforce-specialization">Специализация отдельно: ' + TYPES[specializationKey].icon + '+2 за ход.</div>'
-      : '<div class="workforce-specialization muted">Специализация откроется при населении 3 и считается отдельно.</div>';
+      : city.population < 3
+        ? '<div class="workforce-specialization muted">Специализация доступна при населении 3. Сейчас: ' + city.population + '/3.</div>'
+        : '<div class="workforce-specialization"><strong>Выберите специализацию (+2 за ход):</strong><div class="workforce-specialization-grid">' + TYPE_KEYS.map(function (key) {
+          return '<button type="button" data-workforce-specialization="' + key + '">' + TYPES[key].icon + ' ' + TYPES[key].label + '</button>';
+        }).join("") + '</div></div>';
     const signature = [city.id, city.population, city.growthFocus, formatWorkforce(workforce), city.specialization || "none"].join("|");
     if (panel.dataset.signature !== signature) {
       panel.dataset.signature = signature;
@@ -379,6 +383,7 @@
       ".population-workforce-panel p{margin:8px 0;line-height:1.35}",
       ".workforce-specialization{margin:7px 0;padding:7px 9px;border-radius:10px;background:rgba(86,129,75,.12);font-size:.86rem}",
       ".workforce-specialization.muted{opacity:.72}",
+      ".workforce-specialization-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:7px}.workforce-specialization-grid button{min-width:0;padding:8px;border-radius:9px;background:rgba(255,255,255,.5);color:inherit}",
       ".workforce-next{margin:10px 0 8px}",
       ".workforce-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}",
       ".workforce-focus-btn{min-width:0;min-height:62px;padding:8px;border:1px solid rgba(94,91,61,.24);border-radius:13px;background:rgba(255,255,255,.42);font:inherit;font-weight:700;color:inherit;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:7px;text-align:left;align-items:center}",
@@ -405,6 +410,17 @@
     }
 
     document.addEventListener("click", function (event) {
+      const specializationButton = event.target.closest && event.target.closest("[data-workforce-specialization]");
+      if (specializationButton) {
+        const gs = currentState();
+        const city = activePlayerCity(gs);
+        const journey = window.EpohiHumansJourney;
+        if (city && journey && journey.chooseSpecialization(city.id, specializationButton.dataset.workforceSpecialization)) {
+          toast("Специализация города выбрана.", 2600);
+          scheduleUiSync();
+        }
+        return;
+      }
       const button = event.target.closest && event.target.closest("[data-workforce-focus]");
       if (!button) return;
       const gs = currentState();

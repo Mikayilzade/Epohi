@@ -324,6 +324,13 @@
     if (!state) return null;
 
     const existing = ensureOutcomeState(state);
+    if (state.continueAfterOutcome) {
+      state.victory = false;
+      state.defeat = false;
+      existing.status = "active";
+      hideLegacyOutcomeModal();
+      return existing;
+    }
     if (!options.recalculate && (existing.status === "victory" || existing.status === "defeat")) {
       state.victory = existing.status === "victory";
       state.defeat = existing.status === "defeat";

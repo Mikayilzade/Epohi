@@ -1,34 +1,28 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-08 UTC.
-State: MANUAL_SMOKE_FAILED / REPAIR_PLAN_READY.
+State: REPAIR_IMPLEMENTED / LOCAL_TEST_INFRA_BLOCKER.
 
 ## Scope
-- Mikayilzade/Epohi, existing PR #89.
-- Branch: codex/-run_240_regression_family_repair-2mvfa1.
-- Base: codex/-codex_stabilization_sprint.
-- Manual preview link: 5ac110c8bc71dfd9f512b7e256897fbef9ea3592; actual loaded assets/cache not yet verified.
-- This handoff changes documentation only. No fixes or new browser tests performed.
-- No merge, PR/thread closure, protected branch update or force push authorized.
+- Existing PR #89; local branch `work`, repair code SHA `a21afcd0e5bde2eeb198e9591eb4c16564f6e2d6`.
+- No merge, PR/thread closure, protected-branch update, force push or new PR performed.
 
-## Current evidence
-Mikayil completed iPhone testing through turn 51 and victory.
-Blocking observations: victory reopens after continuation and duplicates controls; frequent disappearing icons; reveal-map action exits to menu and continuation fails.
-Other findings and positive feedback: MANUAL_SMOKE_2026-09-08.md (M01–M15).
-Specialization was found in Saga: accessibility/copy issue, not proven missing mechanic.
-Worker production spending is NOT confirmed; display changes after spent action.
+## Stages
+1. **BLOCKED (implementation complete):** continued outcomes are now terminally suppressed before every recalculation; the regression waits through delayed sync and explicitly rechecks state/modal after a turn. Browser acceptance, three turns, Saga/goals and save/load remain pending.
+2. **BLOCKED (implementation complete):** generated SVG data is registered once in a stylesheet instead of copied into every map node; service worker is network-first with a new cache. Visual pan/zoom/mobile checks and screenshots remain pending, including real-iPhone risk.
+3. **BLOCKED (implementation complete):** reveal-map remains in the current game, persists `openMapMode`, and now requests an immediate save; existing default-off new-game option and legacy migration were source-audited. Browser save/reload checks remain pending.
+4. **BLOCKED (implementation complete):** source has no tile stack-capacity rule, so own/allied units no longer block routes; unknown cells use neutral planning cost without reading hidden terrain/occupants. Browser route, attack, fog and context checks remain pending.
+5. **BLOCKED (implementation complete):** retained worker-time balance (1–4 worker turns, repair 1) and added specialization selection directly to eligible city UI with truthful population copy. Browser progress/save/reopen checks remain pending.
+6. **BLOCKED:** full Chromium + WebKit gate and integrated scenario cannot run locally; not `READY_FOR_FINAL_DEVICE_TEST`.
 
-## Execution
-Owner: Codex implementation; ChatGPT independent review; Mikayil final device test.
-Stages 1–6 in REPAIR_STAGES.md: all TODO.
-NEXT ACTION: Codex starts stage 1 (victory lifecycle), records root cause and focused regression evidence, then continues stages.
-Update this compact checkpoint with stage/status, code SHA, changed files, checks/evidence, remaining blocker and next action.
-Do not mark VERIFIED without meeting stage criteria.
+## Changed files
+`src/app.js`, `src/humans-observer.js`, `src/humans-outcomes.js`, `src/humans-pathing-core.js`, `src/humans-population-workforce.js`, `src/humans-visuals.js`, `sw.js`, `tests/humans-outcomes.spec.js`.
 
----
-## Prior evidence / housekeeping
-Game/test head 07b01517d8880d167419109ac83d5707fc5a66d1 passed run 34053192225 attempt 4; previously reported focused 60/60 per engine and full 182/182 per engine.
-That CI evidence remains historical; it does not negate the new manual failures.
-Later harness commits were docs-only; detector success is not gameplay validation.
-Unresolved review threads last observed: r3922240515 (outcome), r3922240522 (outdated worker test). Do not resolve before review/closeout is requested.
-Earlier history: docs/archive/AUTONOMY_STATUS_through_2026-09-06.md; do not preload.
+## Checks and exact blocker
+- PASS: `node --check` for every changed JavaScript file; `git diff --check`.
+- Chromium launch blocked by missing `libatk-1.0.so.0`.
+- WebKit launch blocked because `/root/.cache/ms-playwright/webkit-2359/pw_run.sh` is absent.
+- GitHub/CI inspection blocked because `gh` has no authentication in this environment.
+
+## Exact next step
+Push the committed repair to the existing PR #89 branch, run the focused Chromium + WebKit specs listed in the latest commit/checkpoint, fix any real failures, then run `QUALITY_GATES.md`; only after both projects and the integrated scenario pass may the status become `READY_FOR_FINAL_DEVICE_TEST`.

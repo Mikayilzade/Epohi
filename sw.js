@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-13-population-observer-narrowed-v1";
+  "epohi-v1-8-14-repair-v1";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -79,8 +79,7 @@ self.addEventListener("activate", function (event) {
 self.addEventListener("fetch", function (event) {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then(function (cached) {
-      const network = fetch(event.request).then(function (response) {
+    fetch(event.request).then(function (response) {
         if (response && response.status === 200 && response.type !== "opaque") {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
@@ -88,9 +87,7 @@ self.addEventListener("fetch", function (event) {
         return response;
       }).catch(function () {
         if (event.request.mode === "navigate") return caches.match("./index.html");
-        return cached;
-      });
-      return cached || network;
-    })
+        return caches.match(event.request, { ignoreSearch: true });
+      })
   );
 });

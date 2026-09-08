@@ -2,7 +2,9 @@
   "use strict";
 
   const CACHE = new Map();
+  const SPRITE_CLASSES = new Map();
   const previousPositions = new Map();
+  let spriteStyle = null;
 
   function svg(body, viewBox) {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + (viewBox || '0 0 64 64') + '">' +
@@ -19,6 +21,20 @@
   function url(markup) {
     if (!CACHE.has(markup)) CACHE.set(markup, 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markup) + '")');
     return CACHE.get(markup);
+  }
+
+  function spriteClass(markup, property) {
+    const key = property + ":" + markup;
+    if (SPRITE_CLASSES.has(key)) return SPRITE_CLASSES.get(key);
+    if (!spriteStyle || !document.head.contains(spriteStyle)) {
+      spriteStyle = document.createElement("style");
+      spriteStyle.id = "humansVisualSpriteRegistry";
+      document.head.appendChild(spriteStyle);
+    }
+    const className = "art-sprite-ref-" + SPRITE_CLASSES.size;
+    spriteStyle.sheet.insertRule("." + className + "{" + property + ":" + url(markup) + "}", spriteStyle.sheet.cssRules.length);
+    SPRITE_CLASSES.set(key, className);
+    return className;
   }
 
   function baseFigure(body) {
@@ -137,7 +153,7 @@
 
   function setSprite(element, markup) {
     if (!element || !markup) return;
-    element.style.setProperty("--art-sprite", url(markup));
+    element.classList.add(spriteClass(markup, "--art-sprite"));
     element.classList.add("has-art-sprite");
   }
 
@@ -191,7 +207,7 @@
 
       tileElement.classList.add("painted-tile");
       if (tile.revealed && TERRAIN[tile.terrain]) {
-        tileElement.style.setProperty("--terrain-sprite", url(TERRAIN[tile.terrain]));
+        tileElement.classList.add(spriteClass(TERRAIN[tile.terrain], "--terrain-sprite"));
       }
 
       const feature = tileElement.querySelector(".feature");
