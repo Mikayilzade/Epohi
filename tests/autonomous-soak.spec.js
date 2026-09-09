@@ -165,17 +165,37 @@ async function stateInvariantProblems(page) {
   });
 }
 
-async function idleMutationCount(page) {
+async function idleDomSettled(page) {
   return page.evaluate(() => new Promise((resolve) => {
     const root = document.getElementById('gameApp');
-    if (!root) return resolve(0);
+    if (!root) return resolve({ settled: true, records: 0 });
+
     let records = 0;
-    const observer = new MutationObserver((batch) => { records += batch.length; });
+    let done = false;
+    let quietTimer = null;
+    let hardTimer = null;
+    let observer = null;
+
+    const finish = (settled) => {
+      if (done) return;
+      done = true;
+      if (observer) observer.disconnect();
+      clearTimeout(quietTimer);
+      clearTimeout(hardTimer);
+      resolve({ settled, records });
+    };
+    const armQuietWindow = () => {
+      clearTimeout(quietTimer);
+      quietTimer = setTimeout(() => finish(true), 150);
+    };
+
+    observer = new MutationObserver((batch) => {
+      records += batch.length;
+      armQuietWindow();
+    });
     observer.observe(root, { subtree: true, childList: true, attributes: true, characterData: true });
-    setTimeout(() => {
-      observer.disconnect();
-      resolve(records);
-    }, 35);
+    armQuietWindow();
+    hardTimer = setTimeout(() => finish(false), 1500);
   }));
 }
 
@@ -281,8 +301,8 @@ test.describe('@soak deterministic autonomous player', () => {
         const invariants = await stateInvariantProblems(page);
         expect(invariants, invariants.join('\n')).toEqual([]);
 
-        const mutations = await idleMutationCount(page);
-        expect(mutations, `idle DOM mutation burst at seed ${seed}, turn ${current}`).toBeLessThan(200);
+        const idle = await idleDomSettled(page);
+        expect(idle.settled, `DOM did not become idle at seed ${seed}, turn ${current}; observed ${idle.records} mutation records`).toBe(true);
 
         await assignStandingOrders(page);
         const result = await advanceTurn(page, seed + current);
