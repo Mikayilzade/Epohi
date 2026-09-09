@@ -12,9 +12,9 @@ Then continue. Do not repeat the receipt inside the same task.
 
 ## Minimum-context workflow
 
-1. Treat the user's latest request plus the current branch, PR, diff, and CI state as the source of truth.
-2. Do not preload repository history. For an autonomous “continue/go” task, read `CODEX_NEXT_TASK.md` and only the newest checkpoint at the top of `AUTONOMY_STATUS.md`; stop at the first `---` / historical marker.
-3. Open other documents only when the task requires them:
+1. Treat the user's latest request plus `CODEX_NEXT_TASK.md`, the current branch/PR, diff, and CI state as the source of truth.
+2. For an autonomous “continue/go” task, read `CODEX_NEXT_TASK.md` and only the newest checkpoint at the top of `AUTONOMY_STATUS.md`; stop at the first `---` / historical marker.
+3. Do not preload repository history. Open other documents only when the task requires them:
    - `QUALITY_GATES.md` for a release/full gate;
    - `AGENT_TESTING_POLICY.md` for browser testing or infrastructure trouble;
    - design/checklist/handoff history only for the affected feature or a real contradiction.
@@ -23,6 +23,13 @@ Then continue. Do not repeat the receipt inside the same task.
 6. Keep user updates short and factual. Ask only a blocking question.
 7. On pause or context pressure, keep `CODEX_NEXT_TASK.md` compact and put one concise current checkpoint at the top of `AUTONOMY_STATUS.md`; do not duplicate old narratives or raw logs.
 
-## Safety
+## Branch / PR safety
 
-Do not merge, close PRs, delete branches, force-update refs, or change protected/integration branches without explicit user approval. Do not change game code merely to satisfy a stale or incorrect test.
+1. Work only in the branch and PR named in `CODEX_NEXT_TASK.md` or in the user's latest instruction.
+2. Never create a new branch or PR as a workaround for a missing local branch, failed fetch/push, network error, lost workspace, or uncertainty. Stop and report the blocker instead.
+3. Create a branch or PR only when the user's latest instruction explicitly asks for it.
+4. Before commit/push, verify the expected branch with `git status` / `git branch --show-current` and inspect the complete intended diff.
+5. Do not publish only a partial subset of an intended multi-file change. After push, verify the resulting commit SHA and changed-file list.
+6. Do not merge, close PRs, delete branches, force-update refs, or change protected/integration branches without explicit user approval.
+7. Do not change game code merely to satisfy a stale or incorrect test.
+8. If expected local changes are missing, do not pretend they still exist. Follow the recovery instructions in `CODEX_NEXT_TASK.md`; if recovery cannot be done safely, stop and report exactly what is missing.
