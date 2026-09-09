@@ -1,43 +1,24 @@
 # CODEX NEXT TASK
 
-## Scope
-Repository: `Mikayilzade/Epohi`.
-Work only in existing PR #91 / remote branch `codex-tgmou0`.
-Base is PR #90 branch `codex/work-on-existing-pr-and-follow-instructions`.
-Do not create any NEW REMOTE branch, another PR, retarget a PR, or merge.
+## Current state
+Gate G recovery for `Mikayilzade/Epohi` is published directly in existing PR #91 / branch `codex-tgmou0` because the Codex cloud environment cannot fetch GitHub (`CONNECT tunnel failed, response 403`).
 
-## BRANCH GATE — MUST HAPPEN FIRST
-The Codex checkout may start on local branch `work` and may have no `origin`. That is an environment detail, not a reason to work on `work`.
+Do not start another Codex implementation attempt while that infrastructure blocker remains. Do not create another PR/branch, retarget PRs, or merge.
 
-Before reading status files, editing, or running tests:
-1. Run `git status --short --branch` and require a clean working tree.
-2. Check `git remote -v`.
-3. If `origin` is missing, add exactly this remote: `git remote add origin https://github.com/Mikayilzade/Epohi.git`.
-4. Fetch the EXISTING remote branch: `git fetch origin codex-tgmou0`.
-5. Switch to a LOCAL tracking branch named exactly `codex-tgmou0` based on `origin/codex-tgmou0`. Creating this local tracking branch is explicitly allowed; creating a new remote branch is forbidden.
-6. Verify `git branch --show-current` is exactly `codex-tgmou0` and local `HEAD` equals `origin/codex-tgmou0` before any edits/tests.
+## Source of truth
+Read the top checkpoint of `AUTONOMY_STATUS.md` and the current PR #91 head/diff. The permanent CI entry point is `.github/workflows/playwright.yml`; the old temporary branch workflow is intentionally removed.
 
-If adding/fetching the remote is blocked by network/auth/403, STOP and report it. Do not run Gate G on `work`, do not create a replacement remote branch/PR, and do not modify files.
+## Next task
+1. Observe the GitHub Actions run for the current PR #91 head.
+2. Require all permanent Gate G jobs to be green:
+   - focused Chromium + WebKit;
+   - full non-soak Chromium + WebKit;
+   - long Chromium autonomous soak (5 deterministic seeds × 150 turns, or legitimate outcome);
+   - representative WebKit autonomous soak.
+3. On a failure, inspect the exact failing job/log and distinguish product/test/CI causes before changing anything.
+4. Make only the minimal evidence-based fix in existing `codex-tgmou0`, then require the affected permanent matrix to rerun green.
+5. After the final green head, perform an independent complete diff review and prepare an immutable GitHub link pinned to that exact SHA.
+6. Only then may the external status be set to `READY_FOR_FINAL_DEVICE_TEST`; Mikayil performs one final iPhone test.
 
-## Known good base
-PR #90 SHA `2ac5522965db8bab8372632cbdd76f935f5ebd25` already passed focused Chromium 60/60, focused WebKit 60/60, full Chromium 185/185, and full WebKit 185/185.
-
-PR #91 is the Gate G recovery PR. Its remote head may advance because instruction commits are being written directly to `codex-tgmou0`; always trust the fetched current remote head, not an old SHA from chat.
-
-## Task after BRANCH GATE passes
-1. Read the top current checkpoint of `AUTONOMY_STATUS.md` and only relevant Gate G/test files.
-2. Reconstruct the same Gate G intent, not a redesign:
-   - permanent Playwright GitHub Actions workflow;
-   - autonomous soak test;
-   - required helper changes;
-   - required status/checkpoint updates;
-   - preserve `package-lock.json` unless repository evidence proves it was unintended for Gate G.
-3. Do not change unrelated game behavior or game code merely to satisfy stale tests.
-4. Inspect full `git diff` and `git status`; confirm every intended Gate G file is present.
-5. Run only relevant local validation that the environment supports. Browser dependency/network failures are infrastructure blockers, not product failures.
-6. Commit all Gate G changes and push ONLY to the existing remote branch `codex-tgmou0`.
-7. Report: new head SHA, complete changed-file list, checks/results, blockers. Then stop.
-
-## Stop conditions
-- Any fetch/push auth or network failure, including 403: stop; create nothing remotely.
-- Do not set `READY_FOR_FINAL_DEVICE_TEST` yet. It requires green permanent CI, independent diff review, and an immutable exact-SHA link.
+## Safety
+No merge, no replacement PR/branch, no force update, no final-device request before green CI + independent diff review + immutable exact-SHA link.

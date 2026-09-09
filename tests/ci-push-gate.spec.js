@@ -6,75 +6,58 @@ const workflowPath = path.join(
   process.cwd(),
   '.github',
   'workflows',
-  'diplomacy-activity-events-temp.yml'
+  'playwright.yml'
 );
 
-function pullRequestBlock(workflow) {
-  const start = workflow.indexOf('  pull_request:');
-  const end = workflow.indexOf('  workflow_dispatch:', start);
+function eventBlock(workflow, eventName, nextEventName) {
+  const start = workflow.indexOf(`  ${eventName}:`);
+  const end = workflow.indexOf(`  ${nextEventName}:`, start);
   if (start < 0 || end < 0) return '';
   return workflow.slice(start, end);
 }
 
-function pushBlock(workflow) {
-  const start = workflow.indexOf('  push:');
-  const end = workflow.indexOf('  pull_request:', start);
-  if (start < 0 || end < 0) return '';
-  return workflow.slice(start, end);
-}
-
-test('PR #90 branch push runs the complete cross-browser gate for workflow changes', async () => {
+test('permanent Playwright workflow gates source/test/runtime changes on push and PR', async () => {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
-  const block = pushBlock(workflow);
+  const push = eventBlock(workflow, 'push', 'pull_request');
+  const pullRequest = eventBlock(workflow, 'pull_request', 'workflow_dispatch');
 
-  expect(block).toContain('      - codex/work-on-existing-pr-and-follow-instructions');
-  for (const requiredPath of [
-    '.github/workflows/diplomacy-activity-events-temp.yml',
-    'playwright.config.js',
-    'package.json',
-    'package-lock.json',
-    'src/**',
-    'tests/**',
-    'index.html',
-    'sw.js',
-  ]) {
-    expect(block).toContain(`      - ${requiredPath}`);
+  for (const block of [push, pullRequest]) {
+    expect(block).toContain('    paths:');
+    for (const requiredPath of [
+      '.github/workflows/playwright.yml',
+      'playwright.config.js',
+      'package.json',
+      'package-lock.json',
+      'src/**',
+      'tests/**',
+      'index.html',
+      'sw.js',
+    ]) {
+      expect(block).toContain(`      - ${requiredPath}`);
+    }
   }
 
-  expect(workflow).toContain('Full mobile regression — Chromium and WebKit');
-  expect(workflow).toContain('npx playwright test --project=chromium-mobile');
-  expect(workflow).toContain('npx playwright test --project=webkit-mobile');
-  expect(workflow).toContain(".github/workflows/diplomacy-activity-events-temp.yml \\");
+  expect(workflow).toContain('workflow_dispatch:');
+  expect(workflow).toContain('cancel-in-progress: false');
+  expect(workflow).not.toContain('codex/work-on-existing-pr-and-follow-instructions');
+  expect(workflow).not.toContain('codex-tgmou0');
+  expect(workflow).not.toContain('diplomacy-activity-events-temp.yml');
 });
 
-test('status/docs-only pushes cannot cancel a validating code checkpoint', async () => {
+test('permanent workflow runs focused, full and autonomous soak gates', async () => {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
-  const block = pullRequestBlock(workflow);
 
-  // Keep the durable trigger allowlist restricted to code/test/runtime paths for the
-  // point where this workflow definition lives on the PR base.
-  expect(block).toContain('    paths:');
-  for (const requiredPath of [
-    '.github/workflows/diplomacy-activity-events-temp.yml',
-    'playwright.config.js',
-    'package.json',
-    'package-lock.json',
-    'src/**',
-    'tests/**',
-    'index.html',
-    'sw.js',
-  ]) {
-    expect(block).toContain(`      - ${requiredPath}`);
-  }
+  expect(workflow).toContain('Focused mobile runtime — Chromium and WebKit');
+  expect(workflow).toContain('Full mobile regression — Chromium and WebKit');
+  expect(workflow).toContain('npx playwright test --grep-invert @soak --project=chromium-mobile');
+  expect(workflow).toContain('npx playwright test --grep-invert @soak --project=webkit-mobile');
 
-  expect(block).not.toContain('AUTONOMY_STATUS.md');
-  expect(block).not.toMatch(/-\s+\*\*\/\*\.md/);
+  expect(workflow).toContain('Autonomous soak — Chromium long matrix');
+  expect(workflow).toContain('EPOHI_SOAK_MODE=long npx playwright test tests/autonomous-soak.spec.js --project=chromium-mobile');
+  expect(workflow).toContain('Autonomous soak — WebKit representative matrix');
+  expect(workflow).toContain('EPOHI_SOAK_MODE=short npx playwright test tests/autonomous-soak.spec.js --project=webkit-mobile');
 
-  // On a pull_request workflow GitHub evaluates event trigger eligibility from the
-  // base-side workflow definition. While this gate only exists on the Draft PR branch,
-  // a docs/status synchronize can still start a detector-only run. It must never cancel
-  // a source/test run that is already validating the previous checkpoint.
-  expect(workflow).toContain('cancel-in-progress: false');
-  expect(workflow).toContain('Detect meaningful source change');
-  expect(workflow).toContain('run_browser_gate=false');
+  expect(workflow).toContain('npx playwright install --with-deps chromium webkit');
+  expect(workflow).toContain('npx playwright install --with-deps chromium');
+  expect(workflow).toContain('npx playwright install --with-deps webkit');
 });

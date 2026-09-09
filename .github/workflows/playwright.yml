@@ -1,54 +1,191 @@
-name: Playwright Smoke Tests
+name: Epohi Permanent Playwright Gate
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
-    branches:
-      - main
+    paths:
+      - .github/workflows/playwright.yml
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
+      - index.html
+      - sw.js
+  pull_request:
+    paths:
+      - .github/workflows/playwright.yml
+      - playwright.config.js
+      - package.json
+      - package-lock.json
+      - src/**
+      - tests/**
+      - index.html
+      - sw.js
   workflow_dispatch:
 
+concurrency:
+  group: epohi-playwright-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  smoke:
+  regression:
+    name: Focused + full cross-browser regression
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 65
 
     steps:
-      - name: Checkout repository
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Static integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check playwright.config.js
+          node --check sw.js
+          git diff --check HEAD^ HEAD
+
+      - name: Focused mobile runtime — Chromium and WebKit
+        shell: bash
+        run: |
+          set +e
+          tests=(
+            tests/runtime-invalidation.spec.js
+            tests/runtime-invalidation-cadence.spec.js
+            tests/turn-label-idempotence.spec.js
+            tests/legacy-observer-containment.spec.js
+            tests/explicit-legacy-refresh-bridge.spec.js
+            tests/mobile-performance-stability.spec.js
+            tests/observer-startup-attribution.spec.js
+            tests/observer-delivery-latency.spec.js
+            tests/coherence-capture-learning.spec.js
+            tests/diplomacy-activity-events.spec.js
+            tests/context-review-cleanup.spec.js
+            tests/humans-strategy-ux.spec.js
+            tests/combat-world-stability.spec.js
+          )
+
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Full mobile regression — Chromium and WebKit
+        shell: bash
+        run: |
+          set +e
+
+          npx playwright test --grep-invert @soak --project=chromium-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-chromium.txt
+          chromium_code=${PIPESTATUS[0]}
+
+          npx playwright test --grep-invert @soak --project=webkit-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-webkit.txt
+          webkit_code=${PIPESTATUS[0]}
+
+          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Upload regression diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epohi-regression-results
+          path: |
+            focused-chromium.txt
+            focused-webkit.txt
+            full-chromium.txt
+            full-webkit.txt
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  soak-chromium:
+    name: Autonomous soak — Chromium long matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout exact revision
         uses: actions/checkout@v4
 
       - name: Setup Node.js LTS
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: npm
 
       - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm install
-          fi
+        run: npm ci
 
-      - name: Install Playwright Chromium
+      - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run smoke tests
-        run: npm run test:smoke
+      - name: Autonomous soak — Chromium long matrix
+        run: EPOHI_SOAK_MODE=long npx playwright test tests/autonomous-soak.spec.js --project=chromium-mobile --reporter=line --workers=1
 
-      - name: Upload Playwright report
+      - name: Upload Chromium soak diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report/
+          name: epohi-soak-chromium
+          path: |
+            playwright-report/
+            test-results/
           if-no-files-found: ignore
+          retention-days: 7
 
-      - name: Upload test results
+  soak-webkit:
+    name: Autonomous soak — WebKit representative matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+
+      - name: Autonomous soak — WebKit representative matrix
+        run: EPOHI_SOAK_MODE=short npx playwright test tests/autonomous-soak.spec.js --project=webkit-mobile --reporter=line --workers=1
+
+      - name: Upload WebKit soak diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: test-results/
+          name: epohi-soak-webkit
+          path: |
+            playwright-report/
+            test-results/
           if-no-files-found: ignore
+          retention-days: 7
