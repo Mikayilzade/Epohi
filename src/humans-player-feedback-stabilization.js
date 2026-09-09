@@ -23,6 +23,19 @@
     // Outcome rendering owns the only action pair. Remove controls left by an
     // older cached runtime instead of maintaining a second, competing copy.
     sheet.querySelectorAll(".feedback-outcome-controls").forEach(function (node) { node.remove(); });
+    const canonical = new Set();
+    content.querySelectorAll(
+      "#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]"
+    ).forEach(function (button) {
+      const action = button.matches("[data-outcome-goals-action]") ? "goals" :
+        (button.matches("[data-outcome-map-action]") ? "map" : null);
+      const expectedId = action === "goals" ? "outcomeGoalsBtn" : "outcomeMapBtn";
+      if (!action || button.id !== expectedId || canonical.has(action)) {
+        button.remove();
+        return;
+      }
+      canonical.add(action);
+    });
     controls = null;
   }
 

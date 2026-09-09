@@ -174,9 +174,11 @@ test("runtime invalidation replaces broad visual/context polling with bounded fl
   const outcomeState = await page.evaluate(() => ({
     callbacks: window.EpohiPerformance.snapshot().observerCallbacks,
     duplicateOutcomeButtons: document.querySelectorAll("#victoryContent #outcomeGoalsBtn, #victoryContent #outcomeMapBtn").length,
+    visibleOutcomeButtons: Array.from(document.querySelectorAll("#victoryContent #outcomeGoalsBtn, #victoryContent #outcomeMapBtn")).filter(button => button.getClientRects().length > 0).length,
     scheduled: window.EpohiRuntimeInvalidation.stats().scheduled
   }));
   expect(outcomeState.duplicateOutcomeButtons).toBe(0);
+  expect(outcomeState.visibleOutcomeButtons).toBe(0);
   expect(outcomeState.callbacks - observerBeforeOutcomeChurn).toBeLessThanOrEqual(3);
   expect(outcomeState.scheduled).toBe(false);
 

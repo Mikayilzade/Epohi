@@ -277,6 +277,11 @@ test.describe('Победа, поражение и восстановление 
     await expect(page.locator('[data-outcome-map-action]')).toHaveCount(1);
     await expect(page.locator('#outcomeGoalsBtn')).toHaveCount(1);
     await expect(page.locator('#outcomeMapBtn')).toHaveCount(1);
+    await page.evaluate(() => {
+      for (let index = 0; index < 5; index += 1) window.EpohiHumansOutcomes.sync({ announce: true });
+    });
+    await expect(page.locator('#victoryContent #outcomeGoalsBtn:visible')).toHaveCount(1);
+    await expect(page.locator('#victoryContent #outcomeMapBtn:visible')).toHaveCount(1);
     await page.locator('[data-outcome-goals-action]').click();
     await expect(page.locator('#victoryModal')).not.toHaveClass(/show/);
     await expect(page.locator('#humansGoalsModal')).toHaveClass(/show/);
