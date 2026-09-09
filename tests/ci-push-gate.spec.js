@@ -16,6 +16,37 @@ function pullRequestBlock(workflow) {
   return workflow.slice(start, end);
 }
 
+function pushBlock(workflow) {
+  const start = workflow.indexOf('  push:');
+  const end = workflow.indexOf('  pull_request:', start);
+  if (start < 0 || end < 0) return '';
+  return workflow.slice(start, end);
+}
+
+test('PR #90 branch push runs the complete cross-browser gate for workflow changes', async () => {
+  const workflow = fs.readFileSync(workflowPath, 'utf8');
+  const block = pushBlock(workflow);
+
+  expect(block).toContain('      - codex/work-on-existing-pr-and-follow-instructions');
+  for (const requiredPath of [
+    '.github/workflows/diplomacy-activity-events-temp.yml',
+    'playwright.config.js',
+    'package.json',
+    'package-lock.json',
+    'src/**',
+    'tests/**',
+    'index.html',
+    'sw.js',
+  ]) {
+    expect(block).toContain(`      - ${requiredPath}`);
+  }
+
+  expect(workflow).toContain('Full mobile regression — Chromium and WebKit');
+  expect(workflow).toContain('npx playwright test --project=chromium-mobile');
+  expect(workflow).toContain('npx playwright test --project=webkit-mobile');
+  expect(workflow).toContain(".github/workflows/diplomacy-activity-events-temp.yml \\");
+});
+
 test('status/docs-only pushes cannot cancel a validating code checkpoint', async () => {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
   const block = pullRequestBlock(workflow);
