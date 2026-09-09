@@ -19,8 +19,9 @@ State: GATE_G_FIX_PUBLISHED / CI_PENDING / NOT_READY_FOR_FINAL_DEVICE_TEST.
 - Gate G head `f502daa3c999532a0566fbab8584efc5b1bf2fb9` exposed two test-gate defects, not evidence of a product regression.
 - Full Chromium found a stale `player-feedback-treasury` assertion that expected the retired `#feedbackWorldEvents` panel, while the current canonical UX intentionally uses the event toast + chronicle/history flow. The test was aligned with the current canonical behavior; game code was not changed.
 - Chromium/WebKit soak exposed a false-positive idle-DOM threshold: one legitimate delayed synchronization produced exactly 240 mutation records inside a fixed 35 ms window. The soak now checks that the DOM reaches a sustained 150 ms quiet window within 1.5 s instead of treating a finite render burst as runaway churn. Dedicated runtime cadence tests remain responsible for flush-rate limits.
-- Latest test-fix head: `1b27cf406143c8de6c2953aa8a7b4c075cb219b7`.
-- The latest permanent CI run is queued behind the superseded earlier run because the workflow intentionally uses `cancel-in-progress: false`.
+- Test fixes were published in commits `bb8b8698c0e14e90fc2350652b843ff3877202dc` and `1b27cf406143c8de6c2953aa8a7b4c075cb219b7`; subsequent commits only update Gate G checkpoint documentation.
+- Current branch head is `ffc1ab5fa87d3900bc6edd88ccd245bc2f2f8fb6` plus this status checkpoint commit; use the actual fetched current head as authoritative.
+- CI runs are queued because the workflow intentionally uses `cancel-in-progress: false` and superseded earlier code checkpoints must finish first.
 
 ## Permanent Gate G matrix
 - Focused Chromium + WebKit: the established 13-spec runtime set, one worker, strict per-test budget.
@@ -36,4 +37,4 @@ State: GATE_G_FIX_PUBLISHED / CI_PENDING / NOT_READY_FOR_FINAL_DEVICE_TEST.
 - Only after those conditions may Mikayil perform the single final iPhone test.
 
 ## Exact next step
-Wait for the permanent GitHub Actions workflow on head `1b27cf406143c8de6c2953aa8a7b4c075cb219b7`. If any job fails, diagnose the failing job/log first and make only the minimal evidence-based fix; rerun the complete affected Gate G matrix. Do not merge and do not request device testing yet.
+Wait for the permanent GitHub Actions workflow on the current fetched PR #91 head. If any job fails, diagnose the failing job/log first and make only the minimal evidence-based fix; rerun the complete affected Gate G matrix. Do not merge and do not request device testing yet.
