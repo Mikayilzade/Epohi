@@ -362,26 +362,40 @@
     if (!unit || unit.type !== "worker") return;
     const text = document.getElementById("contextText");
     if (text) {
-      const previous = text.querySelector("[data-worker-time-status]");
-      if (previous) previous.remove();
-      const status = document.createElement("span");
-      status.dataset.workerTimeStatus = "1";
-      status.className = "worker-time-status";
+      let status = text.querySelector("[data-worker-time-status]");
+      if (!status) {
+        status = document.createElement("span");
+        status.dataset.workerTimeStatus = "1";
+        status.className = "worker-time-status";
+        text.appendChild(status);
+      }
       if (unit.workerProject) {
         const project = unit.workerProject;
         const total = Math.max(1, Number(project.totalTurns) || 1);
         const remaining = Math.max(0, Number(project.remainingTurns) || 0);
         const done = Math.max(0, total - remaining);
         const def = IMPROVEMENTS[project.improvementId];
-        status.innerHTML = "<strong>Проект: " + (project.type === "repair" ? "ремонт" : (def ? def.name : "улучшение")) +
+        const markup = "<strong>Проект: " + (project.type === "repair" ? "ремонт" : (def ? def.name : "улучшение")) +
           "</strong><span>Выполнено: " + done + "/" + total + " действий рабочего · осталось: " + remaining +
           "</span><span>Следующий шаг: в начале следующего хода партии. Очки движения во время работы: 0.</span>";
+        if (status.innerHTML !== markup) status.innerHTML = markup;
       } else {
-        status.textContent = unit.acted
+        const message = unit.acted
           ? "Действие рабочего в этом ходу партии уже потрачено. Длительность проекта указана на каждой команде; производство города не расходуется."
           : "Действие рабочего доступно. Длительность проекта указана на каждой команде; производство города не расходуется.";
+        if (status.textContent !== message) status.textContent = message;
       }
-      text.appendChild(status);
+    }
+    const actions = document.getElementById("contextActions");
+    if (actions && unit.workerProject && !actions.querySelector('[data-context-action="build-improvement"],[data-context-action="build-harbor"],[data-context-action="repair"]')) {
+      const project = unit.workerProject;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "context-btn alt";
+      button.dataset.contextAction = project.type === "repair" ? "repair" :
+        (project.improvementId === "harbor" ? "build-harbor" : "build-improvement");
+      button.disabled = true;
+      actions.appendChild(button);
     }
     document.querySelectorAll('[data-context-action="build-improvement"],[data-context-action="build-harbor"],[data-context-action="repair"]').forEach(function (button) {
       button.disabled = !!unit.workerProject || !!unit.acted;
@@ -391,9 +405,10 @@
         const tx = tile ? Number(tile.dataset.x) : Number(unit.x);
         const ty = tile ? Number(tile.dataset.y) : Number(unit.y);
         const mapTile = gs.map[ty] && gs.map[ty][tx];
-        const id = button.dataset.contextAction === "build-harbor" ? "harbor" : Object.keys(IMPROVEMENTS).find(function (key) {
+        const id = unit.workerProject && unit.workerProject.improvementId ? unit.workerProject.improvementId :
+          (button.dataset.contextAction === "build-harbor" ? "harbor" : Object.keys(IMPROVEMENTS).find(function (key) {
           const def=IMPROVEMENTS[key]; return key!=="harbor" && mapTile && def.terrain.indexOf(mapTile.terrain)>=0 && (!def.tech || hasTech(gs,def.tech));
-        });
+          }));
         if (id) button.innerHTML = IMPROVEMENTS[id].icon + "<br>" + workerTurns(id,false) + " действ. рабочего";
       }
       if (unit.acted && !unit.workerProject) button.title = "Действие рабочего в этом ходу партии уже потрачено";

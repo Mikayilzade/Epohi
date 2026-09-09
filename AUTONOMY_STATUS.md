@@ -8,17 +8,17 @@ State: REPAIR_IN_PROGRESS / LOCAL_TEST_INFRA_BLOCKER.
 - No merge, new PR, review-thread closure, force push or base-branch update performed.
 
 ## Sequential stage checkpoint
-1. **IN_PROGRESS:** stale outcome cleanup is fixed; CI run `34322852436` confirms the focused gate is 60/60 in both browsers. Full-gate follow-up fixes are pending rerun.
+1. **IN_PROGRESS:** stale outcome cleanup is fixed; CI run `34325857300` confirms the focused gate is 60/60 in both browsers. Full-gate follow-up fixes are pending rerun.
 2. **IN_PROGRESS:** SVG registry/cache fix is covered by computed-style and zero-inline-data assertions. Mobile visual/pan/zoom acceptance still needs browser execution; real-iPhone risk remains.
 3. **IN_PROGRESS:** cancel/confirm/current-game/reveal/save/reload and default-off setup now have a user-path regression. Awaiting both browsers.
 4. **IN_PROGRESS:** the neutral-route failure was a test-map error: only a local three-row strip was water, so the valid router correctly found a longer path outside it. The fixture now makes the whole map water before opening one controlled corridor. The occupied-destination failure was also stale test semantics: allied/own stacking permits the adjacent scout to arrive immediately, so the assertion now verifies mover coordinates, completed (`null`) order, and retained selection.
-5. **IN_PROGRESS:** the empty-tile fixture alone did not fix worker UI. Root cause: base `renderContext()` writes the production price, while worker decoration depended on a deferred observer; the worker's capture handler also stops the click before RuntimeInvalidation schedules its pass. Worker UI now patches synchronously after the semantic own-unit-context event and immediately after project-start render, so both the duration label and progress belong to the final context DOM. The test also proves the selected ID before acting.
+5. **IN_PROGRESS:** price/progress now pass, but base render removes build actions once the worker acts. Contract is to retain the current command disabled with its duration and reason. Worker UI now recreates that disabled current-project command when absent, and RuntimeInvalidation runs worker decoration after pathing (the last context rebuilder). Decoration is idempotent to avoid observer churn.
 6. **BLOCKED:** full final Chromium + WebKit gate and integrated scenario have not run; not `READY_FOR_FINAL_DEVICE_TEST`.
 
 ## Checks and blocker
 - PASS: `node --check` on every changed JavaScript/spec file; `git diff --check`.
 - `npx playwright install --with-deps chromium webkit` failed: package repositories return proxy HTTP 403, leaving Chromium without `libatk-1.0.so.0` and WebKit without its executable.
-- Latest known CI: run `34322852436`, job `102373228475`; focused 60/60, full 183/185 in both browsers. Remaining worker failure was the render/decorator ordering bug above. The stack expectation was stale: after immediate arrival the mover remains selected on the first stack inspection; the regression now verifies both units are offered and explicitly switches to the resident unit. Live CI inspection remains unavailable locally.
+- Latest known CI: run `34325857300`, job `102382834903`; focused 60/60, full Chromium 183/185 and WebKit 184/185. Worker command lifecycle is fixed above. Chromium stack failure came from a random POI left at fixture coordinates; both controlled cells now clear POI/ruins/camp/improvement without force-clicking or disabling events. The selected mover remains selected until explicit picker selection. Live CI inspection remains unavailable locally.
 
 ## Exact next step
 On the PR #90 head, first run:

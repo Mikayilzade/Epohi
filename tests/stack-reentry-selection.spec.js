@@ -24,8 +24,10 @@ test('tapping a remaining own-unit stack rebases selection after the previously 
       travelOrder: null
     }));
     [[5,5],[6,5]].forEach(([x,y]) => {
-      gs.map[y][x].terrain = 'plains';
-      gs.map[y][x].revealed = true;
+      Object.assign(gs.map[y][x], {
+        terrain: 'plains', revealed: true, poi: null, feature: null,
+        camp: null, improvement: null, pillaged: false
+      });
     });
     window.__epohiDebug().render();
     return gs.units.map(unit => unit.id);
@@ -66,8 +68,10 @@ test('route targeting owns an occupied destination before its own unit is inspec
       travelOrder: null
     }));
     [5, 6].forEach(x => {
-      gs.map[5][x].terrain = 'plains';
-      gs.map[5][x].revealed = true;
+      Object.assign(gs.map[5][x], {
+        terrain: 'plains', revealed: true, poi: null, feature: null,
+        camp: null, improvement: null, pillaged: false
+      });
     });
     window.__epohiDebug().render();
   });
