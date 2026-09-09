@@ -113,14 +113,17 @@
 
   function isBlocked(gs, unit, x, y, options) {
     const tile = gs.map[y] && gs.map[y][x];
-    if (!tile || !passableTile(tile)) return true;
-    if (!tile.revealed && !gs.openMapMode) return true;
-    if (ownUnitAt(gs, x, y, unit.id)) return true;
+    if (!tile) return true;
+    // Plan through unexplored cells without consulting their hidden terrain or
+    // occupants. Execution will reveal the cell and recalculate if necessary.
+    if (!tile.revealed && !gs.openMapMode) return false;
+    if (!passableTile(tile)) return true;
 
     const allowTarget = options && options.allowTarget;
     if (allowTarget && allowTarget.x === x && allowTarget.y === y) return false;
 
-    return Boolean(barbarianAt(gs, x, y) || rivalUnitAt(gs, x, y) || campAt(gs, x, y) || rivalCityAt(gs, x, y));
+    const rival = rivalUnitAt(gs, x, y);
+    return Boolean(barbarianAt(gs, x, y) || (rival && rival.civ.relation !== "ally") || campAt(gs, x, y) || rivalCityAt(gs, x, y));
   }
 
   function pointKey(x, y) {
@@ -129,6 +132,7 @@
 
   function movementCost(gs, unit, point) {
     const tile = gs.map[point.y] && gs.map[point.y][point.x];
+    if (tile && !tile.revealed && !gs.openMapMode) return 1;
     const rule = tile && TERRAIN[tile.terrain];
     return rule && rule.passable !== false && Number.isFinite(rule.movementCost) ? rule.movementCost : Infinity;
   }
@@ -280,6 +284,9 @@
 
   function moveOne(gs, unit, point, available) {
     if (!point || available < movementCost(gs, unit, point)) return false;
+    const destination = gs.map[point.y] && gs.map[point.y][point.x];
+    if (destination && !destination.revealed && !gs.openMapMode) destination.revealed = true;
+    if (available < movementCost(gs, unit, point)) return false;
     if (isBlocked(gs, unit, point.x, point.y)) return false;
     unit.x = point.x;
     unit.y = point.y;

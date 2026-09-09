@@ -1,34 +1,26 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-08 UTC.
-State: MANUAL_SMOKE_FAILED / REPAIR_PLAN_READY.
+Updated: 2026-09-09 UTC.
+State: REPAIR_IN_PROGRESS / LOCAL_TEST_INFRA_BLOCKER.
 
 ## Scope
-- Mikayilzade/Epohi, existing PR #89.
-- Branch: codex/-run_240_regression_family_repair-2mvfa1.
-- Base: codex/-codex_stabilization_sprint.
-- Manual preview link: 5ac110c8bc71dfd9f512b7e256897fbef9ea3592; actual loaded assets/cache not yet verified.
-- This handoff changes documentation only. No fixes or new browser tests performed.
-- No merge, PR/thread closure, protected branch update or force push authorized.
+- Existing PR #90 on local branch `work`; PR #89 is the base.
+- No merge, new PR, review-thread closure, force push or base-branch update performed.
 
-## Current evidence
-Mikayil completed iPhone testing through turn 51 and victory.
-Blocking observations: victory reopens after continuation and duplicates controls; frequent disappearing icons; reveal-map action exits to menu and continuation fails.
-Other findings and positive feedback: MANUAL_SMOKE_2026-09-08.md (M01–M15).
-Specialization was found in Saga: accessibility/copy issue, not proven missing mechanic.
-Worker production spending is NOT confirmed; display changes after spent action.
+## Sequential stage checkpoint
+1. **IN_PROGRESS:** stale outcome cleanup is fixed; CI run `34325857300` confirms the focused gate is 60/60 in both browsers. Full-gate follow-up fixes are pending rerun.
+2. **IN_PROGRESS:** SVG registry/cache fix is covered by computed-style and zero-inline-data assertions. Mobile visual/pan/zoom acceptance still needs browser execution; real-iPhone risk remains.
+3. **IN_PROGRESS:** cancel/confirm/current-game/reveal/save/reload and default-off setup now have a user-path regression. Awaiting both browsers.
+4. **IN_PROGRESS:** the neutral-route failure was a test-map error: only a local three-row strip was water, so the valid router correctly found a longer path outside it. The fixture now makes the whole map water before opening one controlled corridor. The occupied-destination failure was also stale test semantics: allied/own stacking permits the adjacent scout to arrive immediately, so the assertion now verifies mover coordinates, completed (`null`) order, and retained selection.
+5. **IN_PROGRESS:** price/progress now pass, but base render removes build actions once the worker acts. Contract is to retain the current command disabled with its duration and reason. Worker UI now recreates that disabled current-project command when absent, and RuntimeInvalidation runs worker decoration after pathing (the last context rebuilder). Decoration is idempotent to avoid observer churn.
+6. **BLOCKED:** full final Chromium + WebKit gate and integrated scenario have not run; not `READY_FOR_FINAL_DEVICE_TEST`.
 
-## Execution
-Owner: Codex implementation; ChatGPT independent review; Mikayil final device test.
-Stages 1–6 in REPAIR_STAGES.md: all TODO.
-NEXT ACTION: Codex starts stage 1 (victory lifecycle), records root cause and focused regression evidence, then continues stages.
-Update this compact checkpoint with stage/status, code SHA, changed files, checks/evidence, remaining blocker and next action.
-Do not mark VERIFIED without meeting stage criteria.
+## Checks and blocker
+- PASS: `node --check` on every changed JavaScript/spec file; `git diff --check`.
+- `npx playwright install --with-deps chromium webkit` failed: package repositories return proxy HTTP 403, leaving Chromium without `libatk-1.0.so.0` and WebKit without its executable.
+- Latest known CI: run `34325857300`, job `102382834903`; focused 60/60, full Chromium 183/185 and WebKit 184/185. Worker command lifecycle is fixed above. Chromium stack failure came from a random POI left at fixture coordinates; both controlled cells now clear POI/ruins/camp/improvement without force-clicking or disabling events. The selected mover remains selected until explicit picker selection. Live CI inspection remains unavailable locally.
 
----
-## Prior evidence / housekeeping
-Game/test head 07b01517d8880d167419109ac83d5707fc5a66d1 passed run 34053192225 attempt 4; previously reported focused 60/60 per engine and full 182/182 per engine.
-That CI evidence remains historical; it does not negate the new manual failures.
-Later harness commits were docs-only; detector success is not gameplay validation.
-Unresolved review threads last observed: r3922240515 (outcome), r3922240522 (outdated worker test). Do not resolve before review/closeout is requested.
-Earlier history: docs/archive/AUTONOMY_STATUS_through_2026-09-06.md; do not preload.
+## Exact next step
+On the PR #90 head, first run:
+`npx playwright test tests/resource-worker.spec.js tests/stack-reentry-selection.spec.js --project=chromium-mobile --project=webkit-mobile --workers=1`
+then let the branch-push workflow run its unchanged full Chromium + WebKit gate. Fix real failures, then read and run `QUALITY_GATES.md` on the final SHA. Do not request device testing before both gates are green.

@@ -99,6 +99,7 @@
         const value = debug();
         if (value && typeof value.render === "function") value.render();
         menu.classList.remove("show");
+        if (value && typeof value.saveGame === "function") value.saveGame();
         schedule("open-map-enabled");
       });
     }

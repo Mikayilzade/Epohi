@@ -51,6 +51,42 @@ async function prepareOpenPlains(page) {
 }
 
 test.describe('Маршруты, desktop-карта и производительность', () => {
+  test('маршрут проходит через своих и союзников без лимита стека, но не через нейтрала или скрытую воду', async ({ page }) => {
+    await openGame(page, { rivals: 1 });
+    const result = await page.evaluate(() => {
+      const state = window.__epohiDebug().state;
+      const pathing = window.EpohiHumansPathing;
+      const unit = state.units[0];
+      const own = state.units[1] || { id:'own-blocker', type:'worker', hp:70, maxHp:70 };
+      if (!state.units.includes(own)) state.units.push(own);
+      const ally = state.rivals[0];
+      const allyUnit = ally.units[0];
+      Object.assign(unit, { x:5, y:5, moves:2, acted:false, travelOrder:null });
+      Object.assign(own, { x:6, y:5, hp:70 });
+      Object.assign(allyUnit, { x:6, y:5, hp:60 });
+      ally.relation = 'ally';
+      state.barbarians = [];
+      state.map.forEach(row => row.forEach(tile => Object.assign(tile, { terrain:'water', revealed:true, camp:null, poi:null })));
+      for (let x=4; x<=8; x += 1) Object.assign(state.map[5][x], { terrain:'plains', revealed:true });
+      const alliedPath = pathing.findPath(state, unit, { x:7, y:5 });
+      ally.relation = 'neutral';
+      const neutralPath = pathing.findPath(state, unit, { x:7, y:5 });
+      own.x = 4; own.y = 5; allyUnit.x = 8; allyUnit.y = 5;
+      state.map[5][6].terrain = 'water';
+      state.map[5][6].revealed = false;
+      pathing.assignTravelOrder(unit.id, { x:6, y:5, targetKind:'tile' });
+      pathing.processUnit(state, unit, { render:false });
+      return {
+        alliedPath: alliedPath && alliedPath.map(point => [point.x, point.y]),
+        neutralPath,
+        hiddenAttempt: { x:unit.x, y:unit.y, revealed:state.map[5][6].revealed, status:unit.travelOrder && unit.travelOrder.status }
+      };
+    });
+    expect(result.alliedPath).toEqual([[6,5],[7,5]]);
+    expect(result.neutralPath).toBeNull();
+    expect(result.hiddenAttempt).toEqual({ x:5, y:5, revealed:true, status:'waiting' });
+  });
+
   test('desktop-карта крупная, а постоянные водные анимации отключены', async ({ page }) => {
     const problems = watchConsole(page);
     await page.setViewportSize({ width: 1600, height: 900 });

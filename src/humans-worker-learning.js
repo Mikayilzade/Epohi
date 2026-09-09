@@ -288,11 +288,12 @@
     }
     if (unit.workerProject.remainingTurns <= 0) completeWorkerProject(gs, unit);
     else {
-      addEvent(gs, "worker-project-started", (unit.name || "Рабочий") + " начал работу: " + total + " рабоч. ход.", {x:tx,y:ty});
-      toast("Работа начата: осталось " + unit.workerProject.remainingTurns + " ход.");
+      addEvent(gs, "worker-project-started", (unit.name || "Рабочий") + " начал работу: " + total + " действий рабочего.", {x:tx,y:ty});
+      toast("Работа начата: осталось " + unit.workerProject.remainingTurns + " действий рабочего по одному в ход партии.");
     }
     const value = debug();
     if (value && typeof value.render === "function") value.render();
+    patchWorkerUi(gs);
     return true;
   }
 
@@ -360,22 +361,59 @@
     const unit = (gs.units || []).find(function (item) { return String(item.id) === String(selectedId); });
     if (!unit || unit.type !== "worker") return;
     const text = document.getElementById("contextText");
-    if (text && text.textContent.indexOf("Рабочее время") < 0) {
-      text.textContent += unit.workerProject ? " · Рабочее время: осталось " + unit.workerProject.remainingTurns + " ход." : " · Рабочее время: улучшения не тратят производство города.";
+    if (text) {
+      let status = text.querySelector("[data-worker-time-status]");
+      if (!status) {
+        status = document.createElement("span");
+        status.dataset.workerTimeStatus = "1";
+        status.className = "worker-time-status";
+        text.appendChild(status);
+      }
+      if (unit.workerProject) {
+        const project = unit.workerProject;
+        const total = Math.max(1, Number(project.totalTurns) || 1);
+        const remaining = Math.max(0, Number(project.remainingTurns) || 0);
+        const done = Math.max(0, total - remaining);
+        const def = IMPROVEMENTS[project.improvementId];
+        const markup = "<strong>Проект: " + (project.type === "repair" ? "ремонт" : (def ? def.name : "улучшение")) +
+          "</strong><span>Выполнено: " + done + "/" + total + " действий рабочего · осталось: " + remaining +
+          "</span><span>Следующий шаг: в начале следующего хода партии. Очки движения во время работы: 0.</span>";
+        if (status.innerHTML !== markup) status.innerHTML = markup;
+      } else {
+        const message = unit.acted
+          ? "Действие рабочего в этом ходу партии уже потрачено. Длительность проекта указана на каждой команде; производство города не расходуется."
+          : "Действие рабочего доступно. Длительность проекта указана на каждой команде; производство города не расходуется.";
+        if (status.textContent !== message) status.textContent = message;
+      }
+    }
+    const actions = document.getElementById("contextActions");
+    if (actions && unit.workerProject && !actions.querySelector('[data-context-action="build-improvement"],[data-context-action="build-harbor"],[data-context-action="repair"]')) {
+      const project = unit.workerProject;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "context-btn alt";
+      button.dataset.contextAction = project.type === "repair" ? "repair" :
+        (project.improvementId === "harbor" ? "build-harbor" : "build-improvement");
+      button.disabled = true;
+      actions.appendChild(button);
     }
     document.querySelectorAll('[data-context-action="build-improvement"],[data-context-action="build-harbor"],[data-context-action="repair"]').forEach(function (button) {
       button.disabled = !!unit.workerProject || !!unit.acted;
-      if (button.dataset.contextAction === "repair") button.innerHTML = "Ремонт<br>1 рабоч. ход";
+      if (button.dataset.contextAction === "repair") button.innerHTML = "Ремонт<br>1 действие рабочего";
       else {
         const tile = document.querySelector("#map .tile.inspect-tile");
         const tx = tile ? Number(tile.dataset.x) : Number(unit.x);
         const ty = tile ? Number(tile.dataset.y) : Number(unit.y);
         const mapTile = gs.map[ty] && gs.map[ty][tx];
-        const id = button.dataset.contextAction === "build-harbor" ? "harbor" : Object.keys(IMPROVEMENTS).find(function (key) {
+        const id = unit.workerProject && unit.workerProject.improvementId ? unit.workerProject.improvementId :
+          (button.dataset.contextAction === "build-harbor" ? "harbor" : Object.keys(IMPROVEMENTS).find(function (key) {
           const def=IMPROVEMENTS[key]; return key!=="harbor" && mapTile && def.terrain.indexOf(mapTile.terrain)>=0 && (!def.tech || hasTech(gs,def.tech));
-        });
-        if (id) button.innerHTML = IMPROVEMENTS[id].icon + "<br>" + workerTurns(id,false) + " рабоч. ход.";
+          }));
+        if (id) button.innerHTML = IMPROVEMENTS[id].icon + "<br>" + workerTurns(id,false) + " действ. рабочего";
       }
+      if (unit.acted && !unit.workerProject) button.title = "Действие рабочего в этом ходу партии уже потрачено";
+      else if (unit.workerProject) button.title = "Сначала завершите текущий проект";
+      else button.removeAttribute("title");
     });
   }
 
@@ -482,13 +520,17 @@
   function installStyles(){
     if(document.getElementById("workerLearningStyles"))return;
     const style=document.createElement("style"); style.id="workerLearningStyles";
-    style.textContent=".context-text{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important}.learning-note{display:block;margin-top:5px;font-size:9px;line-height:1.25;opacity:.8}@media(max-width:520px){.context{max-height:min(220px,31dvh)!important}.context-text{max-height:78px!important;line-height:1.25!important}}";
+    style.textContent=".context-text{overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important}.worker-time-status{display:grid;gap:2px;margin-top:6px;padding:6px 8px;border-radius:8px;background:rgba(91,119,78,.12)}.worker-time-status span{display:block}.learning-note{display:block;margin-top:5px;font-size:9px;line-height:1.25;opacity:.8}@media(max-width:520px){.context{max-height:min(220px,31dvh)!important}.context-text{max-height:92px!important;line-height:1.25!important}.context-actions{flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;overscroll-behavior-x:contain!important;touch-action:pan-x!important;-webkit-overflow-scrolling:touch!important}.context-actions .context-btn{flex:0 0 auto!important}}";
     document.head.appendChild(style);
   }
 
   function install(){
     installStyles(); patchDebug(); suppressIncomeToast(); ensureState(state());
     window.addEventListener("click",captureBeforeTurn,true); window.addEventListener("click",handleClick,true);
+    document.addEventListener("epohi:own-unit-context-ready", function () {
+      const gs = ensureState(state());
+      if (gs) patchWorkerUi(gs);
+    });
     const turn=document.getElementById("turnValue"); if(turn)new MutationObserver(onTurnChange).observe(turn,{childList:true,characterData:true,subtree:true});
     ["cityModal","feedbackTreasuryModal","contextPanel"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});});
     lastTurn=Number(state()&&state().turn)||null; schedule();
@@ -496,7 +538,7 @@
 
   window.EpohiWorkerLearning={
     version:1,ensureState:ensureState,buildingDiscount:buildingDiscount,unitDiscount:unitDiscount,effectiveProductionCost:effectiveProductionCost,
-    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents
+    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents,patchWorkerUi:patchWorkerUi
   };
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true}); else install();

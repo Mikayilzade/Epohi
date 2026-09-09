@@ -16,7 +16,11 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       const d = window.__epohiDebug(); const s = d.state; const cap = s.city;
       s.researched.push('mining');
       s.resources.production = 0; cap.production = 14; cap.food = 9;
-      const worker = { id:'worker-local-pay', type:'worker', x:cap.x-1, y:cap.y, moves:1, acted:false, hp:70, maxHp:70 };
+      const target = window.EpohiUtils.neighborsOf(cap.x, cap.y, s.map.length).find(point =>
+        !s.units.some(unit => unit.x === point.x && unit.y === point.y) &&
+        !s.cities.some(city => city.x === point.x && city.y === point.y)
+      );
+      const worker = { id:'worker-local-pay', type:'worker', x:target.x, y:target.y, moves:1, acted:false, hp:70, maxHp:70 };
       const tile = s.map[worker.y][worker.x];
       tile.terrain = 'forest'; tile.revealed = true; tile.improvement = null; tile.pillaged = false; tile.camp = null; tile.poi = null; tile.owner = cap.id;
       s.units.push(worker);
@@ -27,9 +31,22 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     const workerPiece = page.locator(`.tile[data-x="${result.x}"][data-y="${result.y}"] .piece.unit`).first();
     await expect(workerPiece).toBeVisible();
     await workerPiece.click();
+    await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(result.workerId);
     const build = page.locator('#contextActions [data-context-action="build-improvement"]');
     await expect(build).toBeVisible();
+    await expect(build).toContainText('2 действ. рабочего');
+    const mobileActions = await page.locator('#contextActions').evaluate(node => {
+      const style = getComputedStyle(node);
+      return { overflowX: style.overflowX, flexWrap: style.flexWrap, touchAction: style.touchAction };
+    });
+    expect(mobileActions).toEqual({ overflowX: 'auto', flexWrap: 'nowrap', touchAction: 'pan-x' });
     await build.click();
+    await expect(page.locator('[data-worker-time-status]')).toContainText('Выполнено: 1/2 действий рабочего');
+    await expect(page.locator('[data-worker-time-status]')).toContainText('осталось: 1');
+    await expect(page.locator('[data-worker-time-status]')).toContainText('следующего хода партии');
+    await expect(build).toBeDisabled();
+    await expect(build).toContainText('2 действ. рабочего');
+    await expect(build).toHaveAttribute('title', 'Сначала завершите текущий проект');
     const started = await page.evaluate((id) => {
       const d = window.__epohiDebug();
       const worker = d.state.units.find(unit => unit.id === id);
@@ -40,6 +57,24 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     expect(started.project).toEqual(expect.objectContaining({ improvementId: 'lumber', x: result.x, y: result.y }));
     expect(started.acted).toBe(true);
     expect(result.owner).toBe('player-cap');
+    await page.evaluate(() => window.__epohiDebug().saveGame());
+    await page.locator('#menuBtn').click();
+    await page.locator('#toMainBtn').click();
+    await expect(page.locator('[data-continue]')).toBeVisible();
+    await page.locator('[data-continue]').first().click();
+    expect(await page.evaluate(id => {
+      const worker = window.__epohiDebug().state.units.find(unit => unit.id === id);
+      return worker.workerProject;
+    }, result.workerId)).toEqual(expect.objectContaining({
+      improvementId: 'lumber', totalTurns: 2, remainingTurns: 1
+    }));
+    await page.locator('#endTurnBtn').click();
+    await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());
+    await expect.poll(() => page.evaluate(id => {
+      const state = window.__epohiDebug().state;
+      const worker = state.units.find(unit => unit.id === id);
+      return { improvement: state.map[worker.y][worker.x].improvement, project: worker.workerProject };
+    }, result.workerId)).toEqual({ improvement: 'lumber', project: null });
     expect(problems).toEqual([]);
   });
 

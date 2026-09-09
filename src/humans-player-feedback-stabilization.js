@@ -14,30 +14,29 @@
     return value && value.state ? value.state : null;
   }
 
-  function removeRecreatedButtons(content) {
-    content.querySelectorAll("#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]").forEach(function (button) {
-      button.removeAttribute("id");
-      button.hidden = true;
-      button.setAttribute("aria-hidden", "true");
-      button.tabIndex = -1;
-    });
-  }
-
   function ensureStableControls() {
     const modal = document.getElementById("victoryModal");
     const content = document.getElementById("victoryContent");
     const sheet = modal && modal.querySelector(".sheet");
     if (!modal || !content || !sheet) return;
 
-    if (!controls || !document.body.contains(controls)) {
-      controls = document.createElement("div");
-      controls.className = "menu-actions feedback-outcome-controls";
-      controls.innerHTML = '<button id="outcomeGoalsBtn" type="button" class="wide-btn secondary">Посмотреть цели</button>' +
-        '<button id="outcomeMapBtn" type="button" class="wide-btn">Вернуться к карте</button>';
-      sheet.appendChild(controls);
-    }
-
-    removeRecreatedButtons(content);
+    // Outcome rendering owns the only action pair. Remove controls left by an
+    // older cached runtime instead of maintaining a second, competing copy.
+    sheet.querySelectorAll(".feedback-outcome-controls").forEach(function (node) { node.remove(); });
+    const canonical = new Set();
+    content.querySelectorAll(
+      "#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]"
+    ).forEach(function (button) {
+      const action = button.matches("[data-outcome-goals-action]") ? "goals" :
+        (button.matches("[data-outcome-map-action]") ? "map" : null);
+      const expectedId = action === "goals" ? "outcomeGoalsBtn" : "outcomeMapBtn";
+      if (!action || button.id !== expectedId || canonical.has(action)) {
+        button.remove();
+        return;
+      }
+      canonical.add(action);
+    });
+    controls = null;
   }
 
   function preserveFreePlay() {
@@ -173,6 +172,9 @@
     if (!viewport || !window.ResizeObserver || viewport.dataset.ci179ResizeGuard === "1") return;
     viewport.dataset.ci179ResizeGuard = "1";
     let frame = 0;
+    let lastMinimum = null;
+    const initial = debug();
+    if (initial && typeof initial.getCameraScaleBounds === "function") lastMinimum = initial.getCameraScaleBounds().min;
     new ResizeObserver(function () {
       if (frame) cancelAnimationFrame(frame);
       frame = requestAnimationFrame(function () {
@@ -180,7 +182,11 @@
         const app = document.getElementById("gameApp");
         const value = debug();
         if (!app || app.classList.contains("is-hidden") || !value || !value.state || typeof value.applyCamera !== "function") return;
-        value.applyCamera(true);
+        const camera = typeof value.getCamera === "function" ? value.getCamera() : null;
+        const wasFit = camera && lastMinimum != null && Math.abs(camera.scale - lastMinimum) <= 0.002;
+        if (wasFit && typeof value.showEntireMap === "function") value.showEntireMap(true);
+        else value.applyCamera(true);
+        if (typeof value.getCameraScaleBounds === "function") lastMinimum = value.getCameraScaleBounds().min;
       });
     }).observe(viewport);
   }

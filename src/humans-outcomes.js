@@ -324,6 +324,13 @@
     if (!state) return null;
 
     const existing = ensureOutcomeState(state);
+    if (state.continueAfterOutcome) {
+      state.victory = false;
+      state.defeat = false;
+      existing.status = "active";
+      hideLegacyOutcomeModal();
+      return existing;
+    }
     if (!options.recalculate && (existing.status === "victory" || existing.status === "defeat")) {
       state.victory = existing.status === "victory";
       state.defeat = existing.status === "defeat";
@@ -514,8 +521,8 @@
       '<div class="summary-card"><strong>' + cityCount + '</strong><small>живых городов</small></div>' +
       '<div class="summary-card"><strong>' + population + '</strong><small>население</small></div>' +
       '</div><div class="menu-actions" style="margin-top:14px">' +
-      '<button data-outcome-goals-action class="wide-btn secondary">Посмотреть цели</button>' +
-      '<button data-outcome-map-action class="wide-btn">Вернуться к карте</button></div>';
+      '<button id="outcomeGoalsBtn" data-outcome-goals-action class="wide-btn secondary">Посмотреть цели</button>' +
+      '<button id="outcomeMapBtn" data-outcome-map-action class="wide-btn">Вернуться к карте</button></div>';
 
     content.querySelector("[data-outcome-goals-action]").addEventListener("click", function () {
       modal.classList.remove("show");

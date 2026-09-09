@@ -24,8 +24,10 @@ test('tapping a remaining own-unit stack rebases selection after the previously 
       travelOrder: null
     }));
     [[5,5],[6,5]].forEach(([x,y]) => {
-      gs.map[y][x].terrain = 'plains';
-      gs.map[y][x].revealed = true;
+      Object.assign(gs.map[y][x], {
+        terrain: 'plains', revealed: true, poi: null, feature: null,
+        camp: null, improvement: null, pillaged: false
+      });
     });
     window.__epohiDebug().render();
     return gs.units.map(unit => unit.id);
@@ -66,8 +68,10 @@ test('route targeting owns an occupied destination before its own unit is inspec
       travelOrder: null
     }));
     [5, 6].forEach(x => {
-      gs.map[5][x].terrain = 'plains';
-      gs.map[5][x].revealed = true;
+      Object.assign(gs.map[5][x], {
+        terrain: 'plains', revealed: true, poi: null, feature: null,
+        camp: null, improvement: null, pillaged: false
+      });
     });
     window.__epohiDebug().render();
   });
@@ -79,10 +83,15 @@ test('route targeting owns an occupied destination before its own unit is inspec
   await expect.poll(() => page.evaluate(() => {
     const d = window.__epohiDebug();
     const mover = d.state.units.find(unit => unit.id === 'destination-scout-0');
-    return { order: mover.travelOrder && { type: mover.travelOrder.type, x: mover.travelOrder.x, y: mover.travelOrder.y }, selected: d.getSelectedUnitId() };
-  })).toEqual({ order: { type: 'move', x: 6, y: 5 }, selected: 'destination-scout-0' });
+    return { position: [mover.x, mover.y], order: mover.travelOrder, selected: d.getSelectedUnitId() };
+  })).toEqual({ position: [6, 5], order: null, selected: 'destination-scout-0' });
   await expect(page.locator('body')).not.toHaveClass(/route-targeting/);
   await destination.click();
   await expect.poll(() => page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('unit');
+  // The arriving unit remains the explicit selection on the first stack tap;
+  // switching to the resident unit must remain an explicit player action.
+  await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe('destination-scout-0');
+  await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(2);
+  await page.locator('[data-context-stack-picker] [data-unit-id="destination-scout-1"]').click();
   await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe('destination-scout-1');
 });

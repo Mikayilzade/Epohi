@@ -86,6 +86,13 @@
     stats.pathingSyncs += 1;
   }
 
+  function syncWorkerUi() {
+    const worker = window.EpohiWorkerLearning;
+    const debug = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
+    if (!worker || typeof worker.patchWorkerUi !== "function" || !debug || !debug.state) return;
+    worker.patchWorkerUi(debug.state);
+  }
+
   function scheduleContextTailSync() {
     if (contextTailFrame) {
       window.cancelAnimationFrame(contextTailFrame);
@@ -118,6 +125,9 @@
     }
     syncPlayerFeedback();
     syncPathingUi();
+    // Pathing may rebuild the context actions, so worker duration/progress owns
+    // the final decoration pass for a selected worker.
+    syncWorkerUi();
     if (strategyQueuedIdentityFollowup) scheduleContextTailSync();
   }
 
