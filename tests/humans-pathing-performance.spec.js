@@ -66,9 +66,8 @@ test.describe('Маршруты, desktop-карта и производител�
       Object.assign(allyUnit, { x:6, y:5, hp:60 });
       ally.relation = 'ally';
       state.barbarians = [];
-      for (let y=4; y<=6; y += 1) for (let x=4; x<=8; x += 1) {
-        Object.assign(state.map[y][x], { terrain:y===5?'plains':'water', revealed:true, camp:null, poi:null });
-      }
+      state.map.forEach(row => row.forEach(tile => Object.assign(tile, { terrain:'water', revealed:true, camp:null, poi:null })));
+      for (let x=4; x<=8; x += 1) Object.assign(state.map[5][x], { terrain:'plains', revealed:true });
       const alliedPath = pathing.findPath(state, unit, { x:7, y:5 });
       ally.relation = 'neutral';
       const neutralPath = pathing.findPath(state, unit, { x:7, y:5 });

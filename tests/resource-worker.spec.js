@@ -16,7 +16,11 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       const d = window.__epohiDebug(); const s = d.state; const cap = s.city;
       s.researched.push('mining');
       s.resources.production = 0; cap.production = 14; cap.food = 9;
-      const worker = { id:'worker-local-pay', type:'worker', x:cap.x-1, y:cap.y, moves:1, acted:false, hp:70, maxHp:70 };
+      const target = window.EpohiUtils.neighborsOf(cap.x, cap.y, s.map.length).find(point =>
+        !s.units.some(unit => unit.x === point.x && unit.y === point.y) &&
+        !s.cities.some(city => city.x === point.x && city.y === point.y)
+      );
+      const worker = { id:'worker-local-pay', type:'worker', x:target.x, y:target.y, moves:1, acted:false, hp:70, maxHp:70 };
       const tile = s.map[worker.y][worker.x];
       tile.terrain = 'forest'; tile.revealed = true; tile.improvement = null; tile.pillaged = false; tile.camp = null; tile.poi = null; tile.owner = cap.id;
       s.units.push(worker);

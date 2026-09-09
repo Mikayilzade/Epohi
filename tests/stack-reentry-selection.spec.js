@@ -79,8 +79,8 @@ test('route targeting owns an occupied destination before its own unit is inspec
   await expect.poll(() => page.evaluate(() => {
     const d = window.__epohiDebug();
     const mover = d.state.units.find(unit => unit.id === 'destination-scout-0');
-    return { order: mover.travelOrder && { type: mover.travelOrder.type, x: mover.travelOrder.x, y: mover.travelOrder.y }, selected: d.getSelectedUnitId() };
-  })).toEqual({ order: { type: 'move', x: 6, y: 5 }, selected: 'destination-scout-0' });
+    return { position: [mover.x, mover.y], order: mover.travelOrder, selected: d.getSelectedUnitId() };
+  })).toEqual({ position: [6, 5], order: null, selected: 'destination-scout-0' });
   await expect(page.locator('body')).not.toHaveClass(/route-targeting/);
   await destination.click();
   await expect.poll(() => page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('unit');
