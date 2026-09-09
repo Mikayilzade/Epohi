@@ -31,6 +31,7 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     const workerPiece = page.locator(`.tile[data-x="${result.x}"][data-y="${result.y}"] .piece.unit`).first();
     await expect(workerPiece).toBeVisible();
     await workerPiece.click();
+    await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(result.workerId);
     const build = page.locator('#contextActions [data-context-action="build-improvement"]');
     await expect(build).toBeVisible();
     await expect(build).toContainText('2 действ. рабочего');

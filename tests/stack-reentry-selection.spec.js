@@ -84,5 +84,10 @@ test('route targeting owns an occupied destination before its own unit is inspec
   await expect(page.locator('body')).not.toHaveClass(/route-targeting/);
   await destination.click();
   await expect.poll(() => page.evaluate(() => window.__epohiDebug().getInspectLayer())).toBe('unit');
+  // The arriving unit remains the explicit selection on the first stack tap;
+  // switching to the resident unit must remain an explicit player action.
+  await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe('destination-scout-0');
+  await expect(page.locator('[data-context-stack-picker] .context-stack-unit')).toHaveCount(2);
+  await page.locator('[data-context-stack-picker] [data-unit-id="destination-scout-1"]').click();
   await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe('destination-scout-1');
 });

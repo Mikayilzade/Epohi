@@ -293,6 +293,7 @@
     }
     const value = debug();
     if (value && typeof value.render === "function") value.render();
+    patchWorkerUi(gs);
     return true;
   }
 
@@ -511,6 +512,10 @@
   function install(){
     installStyles(); patchDebug(); suppressIncomeToast(); ensureState(state());
     window.addEventListener("click",captureBeforeTurn,true); window.addEventListener("click",handleClick,true);
+    document.addEventListener("epohi:own-unit-context-ready", function () {
+      const gs = ensureState(state());
+      if (gs) patchWorkerUi(gs);
+    });
     const turn=document.getElementById("turnValue"); if(turn)new MutationObserver(onTurnChange).observe(turn,{childList:true,characterData:true,subtree:true});
     ["cityModal","feedbackTreasuryModal","contextPanel"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});});
     lastTurn=Number(state()&&state().turn)||null; schedule();
@@ -518,7 +523,7 @@
 
   window.EpohiWorkerLearning={
     version:1,ensureState:ensureState,buildingDiscount:buildingDiscount,unitDiscount:unitDiscount,effectiveProductionCost:effectiveProductionCost,
-    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents
+    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents,patchWorkerUi:patchWorkerUi
   };
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true}); else install();
