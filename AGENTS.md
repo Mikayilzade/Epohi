@@ -2,14 +2,6 @@
 
 This is the only automatic repository entry point for ChatGPT/Codex agents. It overrides older repository startup/read-all instructions when they conflict; system instructions and the user's latest request still have higher priority.
 
-## Required first reply
-
-Once per new chat or task, after repository access and before substantive work, send this one-line receipt:
-
-`Я снова с «Эпохами». AGENTS.md прочитан: сохраняю контекст и берегу лимиты — читаю только нужное, начинаю с узкой проверки и не повторяю уже доказанную работу.`
-
-Then continue. Do not repeat the receipt inside the same task.
-
 ## Minimum-context workflow
 
 1. Treat the user's latest request plus `CODEX_NEXT_TASK.md`, the current branch/PR, diff, and CI state as the source of truth.
@@ -23,13 +15,21 @@ Then continue. Do not repeat the receipt inside the same task.
 6. Keep user updates short and factual. Ask only a blocking question.
 7. On pause or context pressure, keep `CODEX_NEXT_TASK.md` compact and put one concise current checkpoint at the top of `AUTONOMY_STATUS.md`; do not duplicate old narratives or raw logs.
 
+## Codex sandbox / branch handling
+
+1. Browser Codex may show the requested remote branch in the task header while the local checkout itself is named `work`. This local `work` name can be a sandbox alias; do not require a network fetch or branch rename solely because of that name.
+2. Before edits/tests, require a clean working tree and inspect `git rev-parse HEAD`, `git log -1 --oneline`, and the current `CODEX_NEXT_TASK.md` checkpoint.
+3. If the task was explicitly launched on the branch named in `CODEX_NEXT_TASK.md` and the preloaded files contain that current checkpoint, it is allowed to inspect, edit, and test the preloaded snapshot even when `git fetch` is blocked by the Codex network tunnel.
+4. A fetch/push 403 is a publication/network limitation, not by itself a reason to discard useful local diagnosis or test work. Continue local diagnosis/testing when the preloaded snapshot is clearly the requested checkpoint.
+5. Never create a replacement remote branch or PR to work around network failure. If publication to the existing branch is unavailable, keep the local changes intact and report the exact local commit/diff and the blocker.
+
 ## Branch / PR safety
 
-1. Work only in the branch and PR named in `CODEX_NEXT_TASK.md` or in the user's latest instruction.
-2. Never create a new branch or PR as a workaround for a missing local branch, failed fetch/push, network error, lost workspace, or uncertainty. Stop and report the blocker instead.
+1. Work only for the branch and PR named in `CODEX_NEXT_TASK.md` or in the user's latest instruction; a Codex-local `work` alias does not authorize a different remote target.
+2. Never create a new remote branch or PR as a workaround for a missing local branch, failed fetch/push, network error, lost workspace, or uncertainty.
 3. Create a branch or PR only when the user's latest instruction explicitly asks for it.
-4. Before commit/push, verify the expected branch with `git status` / `git branch --show-current` and inspect the complete intended diff.
-5. Do not publish only a partial subset of an intended multi-file change. After push, verify the resulting commit SHA and changed-file list.
+4. Before commit/publication, inspect the complete intended diff and confirm it belongs only to the requested PR scope.
+5. Do not publish only a partial subset of an intended multi-file change. After successful publication, verify the resulting commit SHA and changed-file list.
 6. Do not merge, close PRs, delete branches, force-update refs, or change protected/integration branches without explicit user approval.
 7. Do not change game code merely to satisfy a stale or incorrect test.
-8. If expected local changes are missing, do not pretend they still exist. Follow the recovery instructions in `CODEX_NEXT_TASK.md`; if recovery cannot be done safely, stop and report exactly what is missing.
+8. If the preloaded snapshot does not contain the checkpoint described by `CODEX_NEXT_TASK.md`, stop and report the mismatch instead of guessing.
