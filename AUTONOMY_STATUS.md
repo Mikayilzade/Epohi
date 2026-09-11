@@ -1,7 +1,14 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-11 UTC.
-State: GATE_G_RED / TWO_WEBKIT_FAILURES_TO_DIAGNOSE / NOT_READY_FOR_FINAL_DEVICE_TEST.
+State: LOCAL_WEBKIT_FIX_PREPARED / CI_VERIFICATION_REQUIRED / NOT_READY_FOR_FINAL_DEVICE_TEST.
+
+## Current checkpoint
+- Failure A was isolated to the test's native mobile locator click. The nearby stable map tests dispatch directly to the tile DOM node because WebKit can retarget the mobile gesture after the map rebuild. The hill test now uses that existing helper; movement/game logic is unchanged.
+- Failure B's `480` records are consistent with the observer-safety layer's capped/coalesced mutation delivery during idempotent decorator rewrites. The soak idle check now compares `#gameApp` markup across deliveries: equivalent mutation batches do not restart the quiet window, while real DOM changes still do. A real failure now reports semantic-change count and its most frequently mutating node/type/attribute targets.
+- Changed files: `tests/combat-world-stability.spec.js`, `tests/autonomous-soak.spec.js`, `AUTONOMY_STATUS.md`, and `CODEX_NEXT_TASK.md`.
+- Local WebKit execution is unavailable: the WebKit download returned HTTP 403. Installed Chromium also cannot launch because `libatk-1.0.so.0` is absent. Static syntax and diff checks passed.
+- Publication/CI: local commit prepared but unpublished. `git push origin HEAD:codex-tgmou0` failed because this sandbox has no `origin` remote. No replacement branch or PR was created.
 
 ## Scope
 - Repository: `Mikayilzade/Epohi`.
@@ -77,14 +84,10 @@ Current hypothesis, NOT yet proven:
 - before changing the threshold/time budget, identify what DOM nodes/attributes keep mutating; add failure-only diagnostics if needed.
 
 ## Exact next step
-1. Diagnose only Failure A and Failure B first; do not broadly reread repository history.
-2. For Failure A, compare the failing interaction with nearby robust map-interaction tests/helpers and reproduce the exact WebKit case. Decide whether the missing move action is test interaction, render/selection timing, or real product behavior.
-3. For Failure B, reproduce seed 30303 and identify the actual mutating nodes/attributes during the non-idle period. Do not merely increase 1.5 s / 150 ms limits without evidence.
-4. Make the smallest evidence-based fix. Avoid product/game behavior changes unless a real product defect is demonstrated.
-5. First rerun the two exact failing WebKit cases.
-6. If both are green, rerun the complete focused WebKit gate and the representative WebKit soak.
-7. Push only to existing branch `codex-tgmou0`.
-8. Record root cause per failure, changed files, exact tests/results, pushed SHA, and resulting CI run at the top of this file.
+1. Publish the preserved local commit only to existing branch `codex-tgmou0` from an environment with that remote.
+2. In CI, verify the exact hill-movement WebKit test and seed `30303`; inspect the new target diagnostics if seed `30303` still fails.
+3. If both pass, require the complete focused WebKit gate and representative WebKit soak to pass, then record the exact tested SHA/run here.
+4. Do not authorize final-device testing until all remaining acceptance checks are complete.
 
 ## Acceptance / safety
 - `READY_FOR_FINAL_DEVICE_TEST` is forbidden while CI is red or pending.

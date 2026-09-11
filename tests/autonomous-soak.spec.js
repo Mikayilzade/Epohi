@@ -171,6 +171,10 @@ async function idleDomSettled(page) {
     if (!root) return resolve({ settled: true, records: 0 });
 
     let records = 0;
+    let semanticChanges = 0;
+    let ignoredEquivalentRecords = 0;
+    let markup = root.innerHTML;
+    const mutationTargets = new Map();
     let done = false;
     let quietTimer = null;
     let hardTimer = null;
@@ -182,7 +186,11 @@ async function idleDomSettled(page) {
       if (observer) observer.disconnect();
       clearTimeout(quietTimer);
       clearTimeout(hardTimer);
-      resolve({ settled, records });
+      const targets = Array.from(mutationTargets.entries())
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 8)
+        .map(([target, count]) => `${target} (${count})`);
+      resolve({ settled, records, semanticChanges, ignoredEquivalentRecords, targets });
     };
     const armQuietWindow = () => {
       clearTimeout(quietTimer);
@@ -191,6 +199,22 @@ async function idleDomSettled(page) {
 
     observer = new MutationObserver((batch) => {
       records += batch.length;
+      const nextMarkup = root.innerHTML;
+      if (nextMarkup === markup) {
+        ignoredEquivalentRecords += batch.length;
+        return;
+      }
+      markup = nextMarkup;
+      semanticChanges += 1;
+      batch.forEach((record) => {
+        const element = record.target.nodeType === Node.ELEMENT_NODE
+          ? record.target
+          : record.target.parentElement;
+        const identity = element
+          ? `${record.type}:${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${record.attributeName ? `[${record.attributeName}]` : ''}`
+          : record.type;
+        mutationTargets.set(identity, (mutationTargets.get(identity) || 0) + 1);
+      });
       armQuietWindow();
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true, characterData: true });
@@ -302,7 +326,10 @@ test.describe('@soak deterministic autonomous player', () => {
         expect(invariants, invariants.join('\n')).toEqual([]);
 
         const idle = await idleDomSettled(page);
-        expect(idle.settled, `DOM did not become idle at seed ${seed}, turn ${current}; observed ${idle.records} mutation records`).toBe(true);
+        expect(
+          idle.settled,
+          `DOM did not become idle at seed ${seed}, turn ${current}; observed ${idle.records} mutation records across ${idle.semanticChanges} semantic changes; ignored ${idle.ignoredEquivalentRecords} equivalent records; top targets: ${idle.targets.join(', ') || 'none'}`
+        ).toBe(true);
 
         await assignStandingOrders(page);
         const result = await advanceTurn(page, seed + current);

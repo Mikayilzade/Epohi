@@ -29,8 +29,10 @@ STOP only if the preloaded files do not match this checkpoint, the working tree 
 ## Known-good base
 PR #90 SHA `2ac5522965db8bab8372632cbdd76f935f5ebd25` passed focused Chromium 60/60, focused WebKit 60/60, full Chromium 185/185, and full WebKit 185/185.
 
-## Current failing checkpoint
-The authoritative tested checkpoint is GitHub Actions run `34395162521`, exact tested SHA `042a4c89fc3c90c38c1ae7017211fac4e0632113`.
+## Current checkpoint
+The last authoritative CI failure is GitHub Actions run `34395162521`, exact tested SHA `042a4c89fc3c90c38c1ae7017211fac4e0632113`.
+
+A local test-only commit is prepared but unpublished: the hill case uses the existing direct-DOM map helper, and the soak idle contract ignores mutation batches that leave `#gameApp` markup equivalent while reporting semantic mutation targets on failure. Local browser verification is blocked because WebKit download returns 403 and Chromium lacks `libatk-1.0.so.0`; static checks pass. Publication is blocked because this sandbox has no `origin` remote.
 
 Run summary:
 - `Focused + full cross-browser regression`: FAILED in focused stage; full regression skipped.
@@ -71,15 +73,12 @@ Task:
 - add failure-only diagnostics if needed;
 - determine whether this is real WebKit render churn or a gate false positive around legitimate synchronization/render work.
 
-## Required execution order
-1. Read the current top of `AUTONOMY_STATUS.md`.
-2. Diagnose only Failure A and Failure B first.
-3. Make the smallest evidence-based fix.
-4. Run the two exact failing WebKit cases first.
-5. If both pass, run the complete focused WebKit gate and the representative WebKit soak.
-6. If normal publication to existing `codex-tgmou0` works, publish only there. If publication fails with 403, do not create anything else remotely; keep the local commit/diff and report it precisely.
-7. Update the local `AUTONOMY_STATUS.md` checkpoint with root cause, files changed, exact tests/results, and publication status. If publication succeeded, include pushed SHA/new CI run; if not, explicitly mark the local commit/diff as unpublished.
-8. Keep this file compact and rewrite `Exact next task` for whatever remains.
+## Exact next task
+1. Publish the preserved local commit only to existing `codex-tgmou0` from an environment with that remote.
+2. Do not create a replacement remote, branch, or PR.
+3. Let existing PR #91 CI run the two exact WebKit failures first, then the complete focused WebKit and representative soak gates.
+4. If seed `30303` still fails, use the new semantic target diagnostic rather than relaxing the timeout.
+5. Record the exact tested SHA/run. Do not create another branch/PR or merge.
 
 ## Stop conditions
 - Preloaded snapshot/checkpoint mismatch or unexpected dirty tree before work.
