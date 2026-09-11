@@ -2,7 +2,7 @@
 
 ## Scope
 Repository: `Mikayilzade/Epohi`.
-Work only in existing PR #91 / remote branch `codex-tgmou0`.
+Work only for existing PR #91 / remote branch `codex-tgmou0`.
 Base is PR #90 branch `codex/work-on-existing-pr-and-follow-instructions`.
 Do not create any NEW REMOTE branch, another PR, retarget a PR, force-push, or merge.
 
@@ -14,24 +14,23 @@ For this task, use only:
 3. the exact failing specs and directly relevant helpers/code;
 4. current PR #91 diff/CI only when needed to verify the fix.
 
-## BRANCH GATE — MUST HAPPEN FIRST
-The Codex checkout may start on local branch `work` and may have no `origin`. That is an environment detail, not permission to work on `work`.
+## CODEX SANDBOX GATE — MUST HAPPEN FIRST
+Browser Codex can preload the requested branch while naming the local checkout `work`. Do not fetch/rename merely to make the local branch name match.
 
-Before editing or testing:
-1. `git status --short --branch` — require a clean working tree.
-2. `git remote -v`.
-3. If `origin` is missing, add exactly: `git remote add origin https://github.com/Mikayilzade/Epohi.git`.
-4. Fetch the EXISTING branch: `git fetch origin codex-tgmou0`.
-5. Switch/create only the LOCAL tracking branch `codex-tgmou0` from `origin/codex-tgmou0`.
-6. Verify `git branch --show-current` is exactly `codex-tgmou0` and local HEAD equals `origin/codex-tgmou0` before any edits.
+Before editing/testing:
+1. Run `git status --short --branch` and require a clean working tree.
+2. Record `git rev-parse HEAD` and `git log -1 --oneline`.
+3. Confirm this file contains the current checkpoint below: run `34395162521`, Failure A = focused WebKit hill-movement timeout, Failure B = WebKit soak seed `30303` DOM-idle failure.
+4. If the Codex task itself was launched on `codex-tgmou0` and this current checkpoint is present, treat the local `work` checkout as the sandbox alias for that requested snapshot and continue local diagnosis/testing even if `git fetch` returns `CONNECT tunnel failed, response 403`.
+5. Do not create a replacement remote branch/PR. If later publication to the existing branch is blocked, preserve the local changes/commit and report the exact diff/commit plus the network blocker.
 
-If fetch/auth/network is blocked, including 403: STOP and report it. Do not create another remote branch/PR and do not modify files.
+STOP only if the preloaded files do not match this checkpoint, the working tree is unexpectedly dirty before work, or there is evidence the snapshot belongs to a different branch/task.
 
 ## Known-good base
 PR #90 SHA `2ac5522965db8bab8372632cbdd76f935f5ebd25` passed focused Chromium 60/60, focused WebKit 60/60, full Chromium 185/185, and full WebKit 185/185.
 
 ## Current failing checkpoint
-The authoritative tested checkpoint is GitHub Actions run `34395162521`, exact SHA `042a4c89fc3c90c38c1ae7017211fac4e0632113`.
+The authoritative tested checkpoint is GitHub Actions run `34395162521`, exact tested SHA `042a4c89fc3c90c38c1ae7017211fac4e0632113`.
 
 Run summary:
 - `Focused + full cross-browser regression`: FAILED in focused stage; full regression skipped.
@@ -78,17 +77,12 @@ Task:
 3. Make the smallest evidence-based fix.
 4. Run the two exact failing WebKit cases first.
 5. If both pass, run the complete focused WebKit gate and the representative WebKit soak.
-6. Push only to existing `codex-tgmou0`.
-7. Update `AUTONOMY_STATUS.md` with:
-   - root cause of each failure;
-   - files changed;
-   - exact tests/results;
-   - exact pushed SHA;
-   - new GitHub Actions run.
+6. If normal publication to existing `codex-tgmou0` works, publish only there. If publication fails with 403, do not create anything else remotely; keep the local commit/diff and report it precisely.
+7. Update the local `AUTONOMY_STATUS.md` checkpoint with root cause, files changed, exact tests/results, and publication status. If publication succeeded, include pushed SHA/new CI run; if not, explicitly mark the local commit/diff as unpublished.
 8. Keep this file compact and rewrite `Exact next task` for whatever remains.
 
 ## Stop conditions
-- Any fetch/push auth/network failure, including 403: stop and create nothing remotely.
+- Preloaded snapshot/checkpoint mismatch or unexpected dirty tree before work.
 - Do not create another PR or remote branch.
 - Do not merge.
 - Do not set `READY_FOR_FINAL_DEVICE_TEST` while CI is red/pending or before the complete PR #91 diff is independently reviewed against PR #90 and an immutable exact-SHA link is prepared.
