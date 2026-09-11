@@ -196,15 +196,19 @@ test.describe('Player feedback stabilization and treasury', () => {
     expect(after.last.name).toContain('Разведчики вольных земель');
   });
 
-  test('крупные события видны на основном экране', async ({ page }) => {
+  test('крупные события показываются текущим toast и остаются в истории', async ({ page }) => {
     await ready(page, 0);
-    await page.evaluate(() => {
+    const text = 'Ардена выросла до населения 4.';
+    await page.evaluate((eventText) => {
       const gs = window.__epohiDebug().state;
-      gs.eventLog.unshift({ eventId:'visible-event', turn:gs.turn, eventType:'city-growth', text:'Ардена выросла до населения 4.', coordinates:{x:gs.city.x,y:gs.city.y} });
-      window.__epohiDebug().render();
-    });
-    await expect(page.locator('#feedbackWorldEvents')).toHaveClass(/show/);
-    await expect(page.locator('#feedbackWorldEvents')).toContainText('Ардена выросла');
+      gs.eventLog.unshift({ eventId:'visible-event', turn:gs.turn, eventType:'city-growth', text:eventText, coordinates:{x:gs.city.x,y:gs.city.y} });
+      window.EpohiDiplomacyEventFlow.syncEvents(gs);
+    }, text);
+    await expect(page.locator('#feedbackWorldEvents')).toBeHidden();
+    await expect(page.locator('#flowEventToast')).toHaveClass(/show/);
+    await expect(page.locator('#flowEventToast')).toContainText(text);
+    const inHistory = await page.evaluate((eventText) => window.__epohiDebug().state.history.some(item => item.includes(eventText)), text);
+    expect(inHistory).toBe(true);
   });
 
   test('кнопка возвращения к карте разрешает продолжить после победы', async ({ page }) => {

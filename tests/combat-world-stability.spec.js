@@ -134,7 +134,10 @@ test.describe('Combat, AI and world stability', () => {
   test('manual hill movement uses the routed terrain cost and waits for the second turn', async ({ page }) => {
     await ready(page,0);
     await page.evaluate(()=>{const gs=window.__epohiDebug().state,u=gs.units[0];u.x=5;u.y=5;u.moves=1;u.acted=false;gs.map[5][5].terrain='plains';gs.map[5][6].terrain='hill';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();});
-    await page.locator('#map .tile[data-x="6"][data-y="5"]').click();
+    // Use the same direct DOM interaction as the adjacent map-selection tests.
+    // Mobile WebKit can retarget a synthetic touch/click after the map viewport's
+    // gesture handler rebuilds the tile tree, leaving no selected destination.
+    await clickMapTileDom(page,6,5);
     await page.locator('[data-context-action="move"]').click();
     expect(await page.evaluate(()=>{const u=window.__epohiDebug().state.units[0];return{x:u.x,bank:u.travelOrder.movementBank};})).toEqual({x:5,bank:1});
     await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
