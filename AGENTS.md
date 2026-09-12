@@ -8,10 +8,10 @@ This is the only automatic repository entry point for ChatGPT/Codex agents. It o
 2. For an autonomous “continue/go” task, read `CODEX_NEXT_TASK.md` and only the newest checkpoint at the top of `AUTONOMY_STATUS.md`; stop at the first `---` / historical marker.
 3. Do not preload repository history. Open other documents only when the task requires them:
    - `QUALITY_GATES.md` for a release/full gate;
-   - `AGENT_TESTING_POLICY.md` for browser testing or infrastructure trouble;
+   - `AGENT_TESTING_POLICY.md` whenever deciding test scope, browser coverage, CI reruns, or handling infrastructure trouble;
    - design/checklist/handoff history only for the affected feature or a real contradiction.
 4. Search narrowly first (`rg`, exact paths, focused CI step). Do not reread unchanged files, old chat history, full logs, or already-superseded checkpoints.
-5. Run the smallest relevant test first. Run full Chromium + WebKit only for the required final/full gate or when the user explicitly asks. Reuse valid green evidence for an unchanged SHA.
+5. Testing is risk-based, not “every commit = full suite”. Follow `AGENT_TESTING_POLICY.md`: docs/checkpoint-only changes do not need heavy Playwright; localized changes start with focused tests; shared/high-risk systems widen to full cross-browser; final integration/merge/release gates require the full gate. Reuse valid green evidence for an unchanged SHA.
 6. Keep user updates short and factual. Ask only a blocking question.
 7. On pause or context pressure, keep `CODEX_NEXT_TASK.md` compact and put one concise current checkpoint at the top of `AUTONOMY_STATUS.md`; do not duplicate old narratives or raw logs.
 

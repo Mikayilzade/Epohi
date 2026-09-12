@@ -1,97 +1,50 @@
 # CODEX NEXT TASK
 
 ## Scope
-Repository: `Mikayilzade/Epohi`.
-Work only on existing PR #91 / remote branch `codex-tgmou0`.
-Base is PR #90 branch `codex/work-on-existing-pr-and-follow-instructions`.
-Do not create another remote branch or PR, do not retarget, force-push, or merge.
+Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0` unless the user explicitly assigns a new scope. Do not create another PR/branch and do not merge.
 
-## Minimum-context rule
-Do not broadly reread repository history or old chat context.
-Start with this file, then inspect only:
-- `tests/camera-2.spec.js`;
-- `src/camera.js` and directly relevant layout/CSS/helpers;
-- current PR #91 CI/artifacts when needed.
-Read other files only if the evidence points there.
+## Current checkpoint
+- Camera 2.0 WebKit race fix is verified green at `8ae1ae9da6685218ae5dcd9e99deac151cd03df0` in authoritative PR #93 Actions run #210.
+- No game/runtime behavior changed after that verified fix; subsequent commits are CI-policy / agent-process work.
+- Intermediate CI-policy runs #219/#220 are not the final policy state. Do not rerun them before checking the newest finalized policy run.
+- Duplicate PR #94 is closed; PR #93 remains open/draft/unmerged.
 
-## Sandbox gate
-Before editing/testing:
-1. Run `git status --short --branch` and require a clean working tree.
-2. Record `git rev-parse HEAD` and `git log -1 --oneline`.
-3. Confirm this file contains the current checkpoint: Actions run `34619598135`, last tested source SHA `8e2ee5922a362f46c46ac1342e4ca2c14b412d6f`, and exactly two remaining WebKit Camera 2.0 failures.
-4. If Codex preloads `codex-tgmou0` under local branch name `work`, treat `work` as a sandbox alias. Do not fetch/rename merely to match the remote name.
-5. Do not create a replacement PR/branch if network publication is blocked. Preserve the local commit and report the exact commit/diff plus blocker.
+## Permanent testing policy
+Read `AGENT_TESTING_POLICY.md` whenever choosing test scope. Testing is risk-based, not “every commit = full suite”.
 
-## Known-good baseline
-PR #90 SHA `2ac5522965db8bab8372632cbdd76f935f5ebd25` previously passed the full WebKit suite `185/185`.
+- Tier 0 — docs/checkpoint/instruction only: no heavy Playwright.
+- Tier 1 — truly trivial isolated runtime edit: static/minimal focused only when useful. This is a semantic judgment; CI does not infer Tier 1 from filename alone.
+- Tier 2 — localized feature/mechanic/UI/test change: static + directly relevant focused test(s). Chromium by default; add WebKit when browser/layout/input sensitive.
+- Tier 3 — shared/high-risk or broad runtime change: static + full Chromium/WebKit; add relevant soak only for stability-sensitive areas.
+- Tier 4 — final integration/merge/release/manual final gate: full Chromium/WebKit + required soak.
+- Reuse valid green results for an unchanged SHA. Never rerun the entire expensive suite merely to “try again”.
 
-Important comparison evidence:
-- `tests/camera-2.spec.js` is unchanged between that baseline and the current tested SHA.
-- `src/camera.js` is also unchanged in PR #91.
-- PR #91 changes are workflow/test/docs/package-lock related, not production camera logic.
-- `package-lock.json` was added in PR #91 and currently resolves Playwright `1.63.0`; treat this as a possible environment variable to verify, not as a proven root cause.
+## CI implementation
+The permanent workflow is designed to enforce the above conservatively:
 
-## Current authoritative checkpoint
-GitHub Actions run: `34619598135`
-Last tested source SHA: `8e2ee5922a362f46c46ac1342e4ca2c14b412d6f`
+1. PR `synchronize` events classify only the newly pushed range. A docs-only status commit must not inherit older code changes from the PR.
+2. New/reopened/ready PRs classify the whole PR range.
+3. Docs/checkpoint-only -> Tier 0 classifier only.
+4. Localized runtime/test changes -> Tier 2 static + focused coverage; changed test files / matching feature tests are selected automatically, with a small browser smoke fallback.
+5. Browser-sensitive localized changes add WebKit; ordinary localized logic does not download/run WebKit automatically.
+6. Known shared/high-risk paths or 4+ runtime files -> Tier 3 full Chromium + WebKit.
+7. Soak jobs are separate and only run for stability-sensitive Tier 3 work or Tier 4.
+8. A Tier 3 full CI does not duplicate the same focused browser matrix first; the full regression already subsumes it.
+9. Feature-branch `push` runs are removed to prevent duplicate push + PR heavy runs. PR CI is authoritative for feature branches; `push` gating is reserved for `main`.
+10. `workflow_dispatch` / relevant `main` push is Tier 4.
+11. Superseded in-progress runs are cancelled for the same PR/ref.
+12. Unknown/unavailable change range fails safe to Tier 3.
+13. Batch checkpoint/status docs in one commit when practical.
 
-Results:
-- Focused Chromium: `60/60` PASS.
-- Focused WebKit: `60/60` PASS.
-- Full Chromium: `185/185` PASS.
-- Chromium long soak: PASS.
-- WebKit representative soak: PASS.
-- Full WebKit: `183/185` PASS, exactly 2 failures.
+## Camera root cause retained for reference
+- The earlier `waitForMapFit` could accept the synchronous click-time fit before WebKit completed a later responsive layout pass.
+- The viewport then changed by 13 px and queued ResizeObserver reconciliation updated the fitted camera state.
+- The two failures were the same race: 13 px in fit geometry and 6.5 px in vertical centering.
+- Fix waits for the production `camera-smooth` lifecycle to finish, then polls the existing exact fit predicate. No sleeps/tolerance weakening/production camera change.
 
-The previous hill-movement and WebKit soak seed `30303` failures are therefore closed. Do not reopen them unless a new run regresses.
-
-### Remaining failure 1
-`tests/camera-2.spec.js:176:3`
-`Camera 2.0 › large map can fit short portrait and landscape viewports below legacy minimum`
-
-Observed assertion:
-- expected current scale to equal current `bounds.min`;
-- received scale: `0.1865348980852378`;
-- current `bounds.min`: `0.17850525015441632`;
-- difference: about `0.00803`, larger than the current precision allowance.
-
-### Remaining failure 2
-`tests/camera-2.spec.js:198:3`
-`Camera 2.0 › show entire map centers map and center control targets selected unit or capital`
-
-Observed Y-centering assertion:
-- expected: `18.99999999999997`;
-- received: `25.49999999999997`;
-- difference: exactly `6.5 px`.
-
-A `6.5 px` center shift corresponds to a `13 px` change in effective viewport height. Combined with failure 1, the leading hypothesis is that WebKit layout geometry changes after the fit/center calculation, leaving camera state based on an earlier viewport size. This is a hypothesis to prove, not an instruction to change production code.
-
-## Exact next task
-1. Reproduce only these two Camera 2.0 cases on WebKit first. Also run them on Chromium as a control.
-2. Add temporary or failure-only geometry diagnostics around `#showMapBtn`, sampling before click and over several animation frames after click. Record at minimum:
-   - `mapViewport.clientWidth/clientHeight` and `getBoundingClientRect()`;
-   - computed paddings and resulting content width/height;
-   - `contextPanel` rect/height;
-   - map `offsetWidth/offsetHeight` and rect;
-   - camera `x/y/scale` and current scale bounds.
-3. Determine whether the effective viewport changes after `showEntireMap()`, especially whether height shifts by about `13 px`.
-4. Classify the root cause before editing behavior:
-   - real product camera/layout defect;
-   - test asserting before WebKit layout stabilizes;
-   - browser/Playwright-version behavior change.
-5. If possible, compare the exact Playwright/browser version used by the known-good run `34328409818` at SHA `2ac552...` with the current run. Do not downgrade/pin a browser merely to hide a valid defect.
-6. Make the smallest evidence-based fix.
-   - Do not broadly loosen `toBeCloseTo` tolerances; `6.5 px` is not floating-point noise.
-   - Do not change production camera logic unless the diagnostics prove the user-visible camera should re-fit/re-center after the layout shift.
-   - If this is only WebKit post-click layout settling, stabilize the test around the actual semantic state rather than adding arbitrary sleeps.
-7. Verification order after the fix:
-   - the two Camera 2.0 tests, Chromium + WebKit;
-   - full non-soak Chromium + WebKit regression;
-   - do not rerun long soaks unless the fix touches runtime/layout behavior that can affect them or CI automatically requires it.
-8. Record the exact tested SHA/run and concise root-cause evidence in `AUTONOMY_STATUS.md` and refresh this file for the next step.
-
-## Stop conditions
-- Stop if the preloaded snapshot/checkpoint does not match this task or the tree is unexpectedly dirty before work.
-- Do not create another PR or remote branch.
-- Do not merge.
-- Do not declare `READY_FOR_FINAL_DEVICE_TEST` until permanent CI is green and the complete PR #91 diff is independently reviewed against PR #90.
+## NEXT ACTION
+1. Inspect only the newest Actions run produced by the finalized CI-policy commit.
+2. One full validation is expected because the workflow itself changed. Do not manually start another full run first.
+3. If green: update `CODEX_NEXT_TASK.md` + `AUTONOMY_STATUS.md` together in one docs-only commit and verify that only the lightweight classifier runs / heavy jobs skip.
+4. If red: inspect the exact failed job/test and root cause. If evidence indicates a flake, rerun only the failed scope; otherwise make the minimal necessary fix and then validate that changed state.
+5. Do not merge PR #93 until the user explicitly instructs it.
