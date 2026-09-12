@@ -19,6 +19,8 @@ concurrency:
   group: epohi-playwright-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Heavy browser jobs are selected by the newly pushed change range. Docs-only
+# synchronizations still get a lightweight classifier, but skip Playwright.
 jobs:
   classify-change:
     name: Classify CI scope
