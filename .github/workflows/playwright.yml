@@ -2,6 +2,8 @@ name: Epohi Permanent Playwright Gate
 
 on:
   push:
+    branches:
+      - main
     paths:
       - .github/workflows/playwright.yml
       - playwright.config.js
@@ -19,24 +21,30 @@ concurrency:
   group: epohi-playwright-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
-# Heavy browser jobs are selected by the newly pushed change range. Docs-only
-# synchronizations still get a lightweight classifier, but skip Playwright.
+# CI is risk-based. Feature-branch pushes are validated by the PR event only,
+# avoiding duplicate push + pull_request heavy runs for the same commit.
 jobs:
   classify-change:
     name: Classify CI scope
     runs-on: ubuntu-latest
     outputs:
-      run_heavy: ${{ steps.scope.outputs.run_heavy }}
+      tier: ${{ steps.scope.outputs.tier }}
       reason: ${{ steps.scope.outputs.reason }}
+      run_static: ${{ steps.scope.outputs.run_static }}
+      run_focused: ${{ steps.scope.outputs.run_focused }}
+      run_focused_webkit: ${{ steps.scope.outputs.run_focused_webkit }}
+      run_full: ${{ steps.scope.outputs.run_full }}
+      run_soak: ${{ steps.scope.outputs.run_soak }}
+      focused_tests: ${{ steps.scope.outputs.focused_tests }}
 
     steps:
-      - name: Checkout PR head for change classification
+      - name: Checkout exact revision for classification
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
-      - name: Decide whether heavy Playwright is needed
+      - name: Decide risk tier and test scope
         id: scope
         shell: bash
         env:
@@ -44,66 +52,240 @@ jobs:
           EVENT_ACTION: ${{ github.event.action }}
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
-          # Manual runs and relevant push events always execute the full gate.
-          # The push trigger is already path-filtered above.
+          emit() {
+            echo "tier=$1" >> "$GITHUB_OUTPUT"
+            echo "reason=$2" >> "$GITHUB_OUTPUT"
+            echo "run_static=$3" >> "$GITHUB_OUTPUT"
+            echo "run_focused=$4" >> "$GITHUB_OUTPUT"
+            echo "run_focused_webkit=$5" >> "$GITHUB_OUTPUT"
+            echo "run_full=$6" >> "$GITHUB_OUTPUT"
+            echo "run_soak=$7" >> "$GITHUB_OUTPUT"
+            echo "focused_tests=${8:-}" >> "$GITHUB_OUTPUT"
+          }
+
+          # Manual final gate and pushes to main are Tier 4.
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
-            echo "reason=manual-or-relevant-push" >> "$GITHUB_OUTPUT"
+            emit 4 "final-or-main-gate" true false false true true ""
             exit 0
           fi
 
-          # Opening/reopening/marking ready must establish a complete baseline.
-          if [[ "$EVENT_ACTION" != "synchronize" ]]; then
-            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
-            echo "reason=pull-request-baseline" >> "$GITHUB_OUTPUT"
+          # Synchronize events classify only the newly pushed range so a later
+          # docs/checkpoint-only commit does not inherit older code changes in the PR.
+          if [[ "$EVENT_ACTION" == "synchronize" ]]; then
+            base_sha="${BEFORE_SHA:-}"
+            head_sha="${AFTER_SHA:-}"
+            scope_reason="new-pr-sync-range"
+          else
+            # For a new/reopened/ready PR, classify the whole PR once.
+            base_sha="${PR_BASE_SHA:-}"
+            head_sha="${PR_HEAD_SHA:-}"
+            scope_reason="whole-pr-range"
+          fi
+
+          # Missing/unavailable range must fail safe to a full cross-browser gate.
+          if [[ -z "$base_sha" || -z "$head_sha" || "$base_sha" =~ ^0+$ ]]; then
+            emit 3 "missing-range-fail-safe" true false false true true ""
+            exit 0
+          fi
+          if ! git cat-file -e "${base_sha}^{commit}" 2>/dev/null || ! git cat-file -e "${head_sha}^{commit}" 2>/dev/null; then
+            emit 3 "unavailable-range-fail-safe" true false false true true ""
             exit 0
           fi
 
-          # For synchronize events, classify only the newly pushed range.
-          # If GitHub does not provide a usable range, fail safe and run heavy.
-          if [[ -z "${BEFORE_SHA:-}" || -z "${AFTER_SHA:-}" || "$BEFORE_SHA" =~ ^0+$ ]]; then
-            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
-            echo "reason=missing-sync-range-fail-safe" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null || ! git cat-file -e "${AFTER_SHA}^{commit}" 2>/dev/null; then
-            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
-            echo "reason=sync-range-unavailable-fail-safe" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+          changed_files="$(git diff --name-only "$base_sha" "$head_sha")"
           printf '%s\n' "$changed_files"
 
-          if printf '%s\n' "$changed_files" | grep -Eq '^(src/|tests/|\.github/workflows/playwright\.yml$|playwright\.config\.js$|package\.json$|package-lock\.json$|index\.html$|sw\.js$)'; then
-            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
-            echo "reason=runtime-test-or-ci-change" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_heavy=false" >> "$GITHUB_OUTPUT"
-            echo "reason=docs-or-checkpoint-only" >> "$GITHUB_OUTPUT"
+          if [[ -z "$changed_files" ]]; then
+            emit 0 "empty-change-range" false false false false false ""
+            exit 0
           fi
+
+          runtime_regex='^(src/|tests/|\.github/workflows/playwright\.yml$|playwright\.config\.js$|package\.json$|package-lock\.json$|index\.html$|sw\.js$)'
+          if ! printf '%s\n' "$changed_files" | grep -Eq "$runtime_regex"; then
+            emit 0 "docs-or-checkpoint-only" false false false false false ""
+            exit 0
+          fi
+
+          # CI/dependency/global entry-point and known shared-system changes have a
+          # broad blast radius and therefore require the full cross-browser gate.
+          high_risk_regex='^(\.github/workflows/playwright\.yml|playwright\.config\.js|package\.json|package-lock\.json|index\.html|sw\.js|src/(app|camera|camera-storage|config|data|save-utils|storage|selectors|utils)\.js|src/humans-(autonomy(-fix)?|camera-layout-guard|capture-state|combat-world-stability|observer|pathing-(core|ui)|performance|runtime-invalidation|turn-label-stability)\.js)$'
+          stability_regex='^(\.github/workflows/playwright\.yml|playwright\.config\.js|package\.json|package-lock\.json|src/humans-(autonomy(-fix)?|camera-layout-guard|combat-world-stability|observer|performance|runtime-invalidation|turn-label-stability)\.js|tests/autonomous-soak\.spec\.js)$'
+
+          runtime_count="$(printf '%s\n' "$changed_files" | grep -Ec '^(src/|index\.html$|sw\.js$)' || true)"
+          if printf '%s\n' "$changed_files" | grep -Eq "$high_risk_regex" || [[ "$runtime_count" -ge 4 ]]; then
+            soak=false
+            if printf '%s\n' "$changed_files" | grep -Eq "$stability_regex"; then
+              soak=true
+            fi
+            emit 3 "${scope_reason}:shared-high-risk-or-wide-change" true false false true "$soak" ""
+            exit 0
+          fi
+
+          # A soak-test-only edit should validate soak behavior, not rerun every
+          # ordinary browser regression.
+          non_soak_runtime="$(printf '%s\n' "$changed_files" | grep -Ev '^(tests/autonomous-soak\.spec\.js|.*\.md$)' || true)"
+          if printf '%s\n' "$changed_files" | grep -q '^tests/autonomous-soak\.spec\.js$' && [[ -z "$non_soak_runtime" ]]; then
+            emit 2 "${scope_reason}:soak-test-only" true false false false true ""
+            exit 0
+          fi
+
+          # Tier 1 is intentionally not guessed from filenames: "trivial" is a
+          # semantic judgment. CI conservatively treats remaining runtime changes
+          # as Tier 2 and runs only directly relevant focused coverage.
+          focused_tests=""
+          add_focus() {
+            local candidate="$1"
+            [[ -f "$candidate" ]] || return 0
+            case " $focused_tests " in
+              *" $candidate "*) ;;
+              *) focused_tests="${focused_tests:+$focused_tests }$candidate" ;;
+            esac
+          }
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+            if [[ "$file" =~ ^tests/.*\.spec\.js$ && "$file" != "tests/autonomous-soak.spec.js" ]]; then
+              add_focus "$file"
+            fi
+            if [[ "$file" =~ ^src/(.*)\.js$ ]]; then
+              stem="${BASH_REMATCH[1]}"
+              add_focus "tests/${stem}.spec.js"
+              if [[ "$stem" == humans-* ]]; then
+                add_focus "tests/${stem#humans-}.spec.js"
+              fi
+            fi
+          done <<< "$changed_files"
+
+          # When no exact feature test exists, use the small browser smoke test
+          # rather than escalating automatically to the full suite.
+          if [[ -z "$focused_tests" ]]; then
+            add_focus "tests/browser.spec.js"
+          fi
+
+          browser_sensitive=false
+          if printf '%s\n' "$changed_files" | grep -Eiq '(ui|visual|mobile|layout|input|gesture|player-feedback|camera)'; then
+            browser_sensitive=true
+          fi
+
+          emit 2 "${scope_reason}:localized-runtime-or-test-change" true true "$browser_sensitive" false false "$focused_tests"
 
       - name: Report CI scope
         run: |
-          echo "Heavy Playwright: ${{ steps.scope.outputs.run_heavy }}"
+          echo "Tier: ${{ steps.scope.outputs.tier }}"
           echo "Reason: ${{ steps.scope.outputs.reason }}"
+          echo "Static: ${{ steps.scope.outputs.run_static }}"
+          echo "Focused: ${{ steps.scope.outputs.run_focused }}"
+          echo "Focused WebKit: ${{ steps.scope.outputs.run_focused_webkit }}"
+          echo "Full: ${{ steps.scope.outputs.run_full }}"
+          echo "Soak: ${{ steps.scope.outputs.run_soak }}"
+          echo "Focused tests: ${{ steps.scope.outputs.focused_tests }}"
 
-  regression:
-    name: Focused + full cross-browser regression
+  static-checks:
+    name: Static integrity
     needs: classify-change
-    if: needs.classify-change.outputs.run_heavy == 'true'
+    if: needs.classify-change.outputs.run_static == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Syntax and diff integrity
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check playwright.config.js
+          node --check sw.js
+          if [[ -n "${PR_BASE_SHA:-}" ]] && git cat-file -e "${PR_BASE_SHA}^{commit}" 2>/dev/null; then
+            git diff --check "$PR_BASE_SHA" HEAD
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          fi
+
+  focused-browser:
+    name: Focused browser regression
+    needs: [classify-change, static-checks]
+    if: needs.classify-change.outputs.run_focused == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Install WebKit when browser-sensitive
+        if: needs.classify-change.outputs.run_focused_webkit == 'true'
+        run: npx playwright install --with-deps webkit
+
+      - name: Focused Chromium
+        shell: bash
+        env:
+          FOCUSED_TESTS: ${{ needs.classify-change.outputs.focused_tests }}
+        run: |
+          set -euo pipefail
+          read -r -a tests <<< "$FOCUSED_TESTS"
+          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
+
+      - name: Focused WebKit
+        if: needs.classify-change.outputs.run_focused_webkit == 'true'
+        shell: bash
+        env:
+          FOCUSED_TESTS: ${{ needs.classify-change.outputs.focused_tests }}
+        run: |
+          set -euo pipefail
+          read -r -a tests <<< "$FOCUSED_TESTS"
+          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
+
+      - name: Upload focused diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epohi-focused-results
+          path: |
+            focused-chromium.txt
+            focused-webkit.txt
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  full-regression:
+    name: Full Chromium + WebKit regression
+    needs: [classify-change, static-checks]
+    if: needs.classify-change.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 65
 
     steps:
       - name: Checkout exact revision
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: Setup Node.js LTS
         uses: actions/setup-node@v4
@@ -116,45 +298,6 @@ jobs:
 
       - name: Install Chromium and WebKit
         run: npx playwright install --with-deps chromium webkit
-
-      - name: Static integrity
-        shell: bash
-        run: |
-          set -euo pipefail
-          find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
-          node --check playwright.config.js
-          node --check sw.js
-          git diff --check HEAD^ HEAD
-
-      - name: Focused mobile runtime — Chromium and WebKit
-        shell: bash
-        run: |
-          set +e
-          tests=(
-            tests/runtime-invalidation.spec.js
-            tests/runtime-invalidation-cadence.spec.js
-            tests/turn-label-idempotence.spec.js
-            tests/legacy-observer-containment.spec.js
-            tests/explicit-legacy-refresh-bridge.spec.js
-            tests/mobile-performance-stability.spec.js
-            tests/observer-startup-attribution.spec.js
-            tests/observer-delivery-latency.spec.js
-            tests/coherence-capture-learning.spec.js
-            tests/diplomacy-activity-events.spec.js
-            tests/context-review-cleanup.spec.js
-            tests/humans-strategy-ux.spec.js
-            tests/combat-world-stability.spec.js
-          )
-
-          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
-          chromium_code=${PIPESTATUS[0]}
-
-          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
-          webkit_code=${PIPESTATUS[0]}
-
-          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
-            exit 1
-          fi
 
       - name: Full mobile regression — Chromium and WebKit
         shell: bash
@@ -177,8 +320,6 @@ jobs:
         with:
           name: epohi-regression-results
           path: |
-            focused-chromium.txt
-            focused-webkit.txt
             full-chromium.txt
             full-webkit.txt
             playwright-report/
@@ -188,8 +329,8 @@ jobs:
 
   soak-chromium:
     name: Autonomous soak — Chromium long matrix
-    needs: classify-change
-    if: needs.classify-change.outputs.run_heavy == 'true'
+    needs: [classify-change, static-checks]
+    if: needs.classify-change.outputs.run_soak == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -225,8 +366,8 @@ jobs:
 
   soak-webkit:
     name: Autonomous soak — WebKit representative matrix
-    needs: classify-change
-    if: needs.classify-change.outputs.run_heavy == 'true'
+    needs: [classify-change, static-checks]
+    if: needs.classify-change.outputs.run_soak == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
 

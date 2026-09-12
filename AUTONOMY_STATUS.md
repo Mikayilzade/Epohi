@@ -1,48 +1,50 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-12 UTC.
-State: PR_93_CAMERA_FIX_VERIFIED_GREEN / CI_POLICY_OPTIMIZED / AWAITING_NEXT_TASK.
+State: PR_93_CAMERA_FIX_VERIFIED_GREEN / RISK_BASED_CI_FINALIZATION_PENDING_SINGLE_VALIDATION / NO_MERGE.
 
 ## Current checkpoint
 - Active scope: existing PR #93 / `codex/-full-webkit-camera-2.0`.
-- Camera 2.0 fix commit verified in CI: `8ae1ae9da6685218ae5dcd9e99deac151cd03df0`.
-- Authoritative PR #93 Actions run: `34682720551` (run #210).
-- `Focused + full cross-browser regression` — GREEN, job `103524208430`.
-- `Autonomous soak — Chromium long matrix` — GREEN, job `103524208440`.
-- `Autonomous soak — WebKit representative matrix` — GREEN, job `103524208475`.
-- The two previously stable Full WebKit Camera 2.0 failures are resolved in the complete PR #93 gate.
-- Commits after the verified Camera fix are process/CI-policy/documentation changes only; no additional game/runtime behavior has been changed.
+- Camera 2.0 game/test fix commit verified green in authoritative PR #93 run #210: `8ae1ae9da6685218ae5dcd9e99deac151cd03df0`.
+- No game/runtime behavior has been changed after that verified Camera fix; subsequent work is CI policy + agent/process documentation only.
+- Intermediate CI-policy runs #219/#220 are superseded for decision-making. Do not rerun them before the finalized policy commit is validated.
+- PR #93 remains open, draft, and unmerged by instruction.
 
-## Confirmed Camera 2.0 root cause and fix
-- The earlier `waitForMapFit` could complete on the synchronous click-time fit before WebKit's later responsive layout pass.
-- WebKit then changed the effective viewport height by 13 px; the queued production `ResizeObserver` reconciliation updated the camera afterwards.
-- The first failure encoded the 13 px fit-geometry change; the second encoded the corresponding 6.5 px vertical-center shift.
-- Minimal fix: synchronize the test with the production `camera-smooth` lifecycle before polling the existing exact fit predicate.
-- No arbitrary sleep, production camera/game-logic change, weakened assertion, or broadened tolerance was introduced.
+## Permanent risk-based testing model
+- `AGENT_TESTING_POLICY.md` is the source of truth for test scope.
+- Tier 0: docs/checkpoint-only -> no heavy Playwright.
+- Tier 1: genuinely trivial isolated runtime edit -> static/minimal focused only when useful; CI does not guess Tier 1 from filenames.
+- Tier 2: localized feature/test change -> static + directly relevant focused Playwright; add WebKit only for browser/layout/input-sensitive work.
+- Tier 3: shared/high-risk or broad runtime change -> static + full Chromium/WebKit; relevant soak only for stability-sensitive areas.
+- Tier 4: final integration/merge/release/manual gate -> full Chromium/WebKit + required soak.
+- Reuse valid green evidence for an unchanged SHA. Do not full-rerun unchanged work without a reason.
 
-## Permanent testing/CI policy now in repository
-- `AGENT_TESTING_POLICY.md` defines risk-based tiers instead of “every commit = full suite”.
-- Docs/checkpoint/instruction-only updates require no heavy Playwright.
-- Small/localized changes start with static/focused tests and widen only when justified.
-- Shared/high-risk systems require focused tests followed by full Chromium + WebKit and relevant soak coverage.
-- Final integration/merge/release gates require the full gate regardless of the last change size.
-- Valid green evidence for an unchanged SHA should be reused rather than rerunning expensive identical suites without a reason.
-- `AGENTS.md` points every future agent to this policy when deciding test scope.
-- `.github/workflows/playwright.yml` now classifies the newly pushed PR synchronization range: docs-only changes skip heavy regression/soak jobs; runtime/test/CI changes run them; ambiguous scope fails safe to heavy.
-- Superseded runs for the same PR/ref are cancelled so only the newest SHA consumes the expensive gate.
+## CI efficiency model being finalized
+- PR synchronize events classify only the newly pushed range, so a later docs-only commit does not inherit older game-code changes from the PR.
+- Localized runtime changes no longer automatically mean the entire browser suite.
+- Known shared/high-risk paths and 4+ runtime-file changes escalate automatically to Tier 3.
+- Focused Tier 2 coverage auto-selects changed test files / matching feature tests, with a small browser fallback.
+- Browser-sensitive Tier 2 changes add WebKit; ordinary localized logic defaults to Chromium focused coverage.
+- Full Tier 3 CI does not duplicate the same focused matrix before the full suite.
+- Soak is separated from ordinary full regression and runs only when stability risk warrants it (or Tier 4).
+- Feature-branch `push` CI duplication is removed: an open PR gets one authoritative PR run; automatic push gating is reserved for `main`.
+- Superseded in-progress runs for the same PR/ref are cancelled.
+- Status/checkpoint edits should be batched into one commit where practical.
+- If scope cannot be determined safely, CI fails safe to a heavier gate.
 
-## Repository / PR housekeeping
-- The Camera fix was fast-forwarded onto the existing PR #93 branch.
-- Duplicate PR #94 is closed; its single commit was already present on the PR #93 branch, so no separate integration work remains.
-- PR #93 remains unmerged by instruction.
+## Camera 2.0 retained reference
+- Root cause: the old wait could accept synchronous click-time fit before WebKit's later 13 px responsive viewport-height update and ResizeObserver reconciliation.
+- Fix: wait for the production `camera-smooth` lifecycle to settle, then poll the existing exact fit predicate.
+- No arbitrary sleep, tolerance relaxation, or production camera/game-logic change.
 
 ## NEXT ACTION
-1. Confirm the new classifier behavior once: workflow-change commit gets a full gate; subsequent docs-only commit(s) should show only the lightweight classifier with heavy jobs skipped.
-2. If confirmed, no further Camera 2.0 or CI-policy work is needed.
-3. Await the user's next task or integration decision.
-4. Do not create a new PR/branch or merge without explicit instruction.
+1. Validate only the newest finalized CI-policy commit/run. Do not rerun #219/#220 first.
+2. Because the finalized change touches the workflow itself, one Tier 3/full validation is expected. This should be the last required heavy run for the policy change.
+3. If the newest run is green, update this checkpoint and `CODEX_NEXT_TASK.md` together in one docs-only commit; that update must skip heavy Playwright.
+4. If the newest run is red, inspect the exact failed test/job first. Rerun only the failed scope if a flake is suspected; do not blindly rerun the whole suite.
+5. Do not create a new PR/branch and do not merge without explicit user instruction.
 
 ---
 
 ## Historical note
-Earlier PR #91 / `codex-tgmou0` Camera 2.0 checkpoints are superseded by the verified PR #93 state above. Consult git history if the detailed pre-fix chronology is needed.
+Detailed pre-fix and intermediate CI-policy chronology is intentionally not duplicated here. Use git/Actions history only when a concrete investigation requires it.
