@@ -12,24 +12,88 @@ on:
       - index.html
       - sw.js
   pull_request:
-    paths:
-      - .github/workflows/playwright.yml
-      - playwright.config.js
-      - package.json
-      - package-lock.json
-      - src/**
-      - tests/**
-      - index.html
-      - sw.js
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
-  group: epohi-playwright-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: epohi-playwright-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  classify-change:
+    name: Classify CI scope
+    runs-on: ubuntu-latest
+    outputs:
+      run_heavy: ${{ steps.scope.outputs.run_heavy }}
+      reason: ${{ steps.scope.outputs.reason }}
+
+    steps:
+      - name: Checkout PR head for change classification
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Decide whether heavy Playwright is needed
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          set -euo pipefail
+
+          # Manual runs and relevant push events always execute the full gate.
+          # The push trigger is already path-filtered above.
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "reason=manual-or-relevant-push" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Opening/reopening/marking ready must establish a complete baseline.
+          if [[ "$EVENT_ACTION" != "synchronize" ]]; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "reason=pull-request-baseline" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # For synchronize events, classify only the newly pushed range.
+          # If GitHub does not provide a usable range, fail safe and run heavy.
+          if [[ -z "${BEFORE_SHA:-}" || -z "${AFTER_SHA:-}" || "$BEFORE_SHA" =~ ^0+$ ]]; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "reason=missing-sync-range-fail-safe" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null || ! git cat-file -e "${AFTER_SHA}^{commit}" 2>/dev/null; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "reason=sync-range-unavailable-fail-safe" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only "$BEFORE_SHA" "$AFTER_SHA")"
+          printf '%s\n' "$changed_files"
+
+          if printf '%s\n' "$changed_files" | grep -Eq '^(src/|tests/|\.github/workflows/playwright\.yml$|playwright\.config\.js$|package\.json$|package-lock\.json$|index\.html$|sw\.js$)'; then
+            echo "run_heavy=true" >> "$GITHUB_OUTPUT"
+            echo "reason=runtime-test-or-ci-change" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_heavy=false" >> "$GITHUB_OUTPUT"
+            echo "reason=docs-or-checkpoint-only" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report CI scope
+        run: |
+          echo "Heavy Playwright: ${{ steps.scope.outputs.run_heavy }}"
+          echo "Reason: ${{ steps.scope.outputs.reason }}"
+
   regression:
     name: Focused + full cross-browser regression
+    needs: classify-change
+    if: needs.classify-change.outputs.run_heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 65
 
@@ -122,6 +186,8 @@ jobs:
 
   soak-chromium:
     name: Autonomous soak — Chromium long matrix
+    needs: classify-change
+    if: needs.classify-change.outputs.run_heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -157,6 +223,8 @@ jobs:
 
   soak-webkit:
     name: Autonomous soak — WebKit representative matrix
+    needs: classify-change
+    if: needs.classify-change.outputs.run_heavy == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
 
