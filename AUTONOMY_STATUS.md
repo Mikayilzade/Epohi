@@ -1,6 +1,26 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-11 UTC.
+State: PR_93_CAMERA_WAIT_FIX_COMMITTED / CI_VERIFICATION_REQUIRED.
+
+## Current checkpoint
+- Scope is existing PR #93 / `codex/-full-webkit-camera-2.0`; local `work` is its Codex alias. Starting HEAD: `772e06afa99486c1bf317c398b20511507e1f9ed`.
+- Run `34628187407`, rerun job `103378601679`: Full WebKit `183 passed, 2 failed`; focused suite and both soaks green. Only the two Camera 2.0 fit/center tests failed.
+- Root cause is confirmed as a test synchronization race: the old `waitForMapFit` accepted the synchronous click-time fit before WebKit changed the viewport height by 13 px and the existing `ResizeObserver` reconciliation ran. The two failures encode the same change (13 px from scale geometry; 6.5 px from centering).
+- Minimal change: wait for the production `camera-smooth` fit lifecycle to finish, then poll the original exact fit predicate. No sleep, production change, tolerance change, or weakened assertion.
+- The fix is committed locally. Local WebKit verification is unavailable because `webkit-2359` is absent. Focused PR CI must run first.
+
+## NEXT ACTION
+1. Update only existing PR #93 with the prepared commit.
+2. Run exactly `tests/camera-2.spec.js:188` and `tests/camera-2.spec.js:210` on `webkit-mobile`.
+3. If green, run Full WebKit/CI and replace this checkpoint with the exact tested SHA/run/job/results.
+4. Do not merge, create another PR/branch, or publish to `codex-tgmou0`.
+
+---
+
+## Historical checkpoint (superseded PR #91 material)
+
+Updated: 2026-09-11 UTC.
 State: CAMERA_2_TEST_FIX_PREPARED / CI_VERIFICATION_REQUIRED / NOT_READY_FOR_FINAL_DEVICE_TEST.
 
 ## Current checkpoint

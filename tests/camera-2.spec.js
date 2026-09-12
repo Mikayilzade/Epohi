@@ -60,6 +60,13 @@ async function waitForStableMapLayout(page) {
 }
 
 async function waitForMapFit(page) {
+  // A locator click resolves before WebKit has necessarily completed the
+  // responsive layout triggered in the same rendering cycle.  The fit action
+  // keeps this class for the lifetime of its production camera transition;
+  // wait for that lifecycle boundary before accepting a fitted sample.  This
+  // also gives the viewport ResizeObserver's queued reconciliation frame a
+  // chance to apply the fit for the final viewport dimensions.
+  await page.waitForFunction(() => !document.getElementById('map').classList.contains('camera-smooth'));
   await expect.poll(async () => {
     const info = await cameraState(page);
     return Math.max(
