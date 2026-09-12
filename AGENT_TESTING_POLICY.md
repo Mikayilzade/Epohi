@@ -7,6 +7,53 @@ Do not stop useful development merely because the temporary local agent/containe
 
 A local infrastructure limitation is not automatically a game-code failure.
 
+## Core testing principle: test by risk, not by habit
+Do not run the entire browser suite after every change just because a commit exists. Choose the smallest test set that is strong enough for the actual blast radius, then widen only when the risk or gate requires it.
+
+### Tier 0 — docs / checkpoint / agent-instruction only
+Examples: `*.md`, handoff/status files, planning notes, comments that cannot affect runtime.
+
+- No heavy Playwright run is required.
+- CI may perform only a lightweight classification/static check.
+- Do not spend browser time merely because a PR already contains older code changes.
+
+### Tier 1 — trivial isolated runtime change
+Examples: wording, label/help text, non-behavioral presentation detail, a very small isolated fix whose dependencies and selectors are unchanged.
+
+- Run static checks.
+- Run the smallest directly relevant focused test(s) when useful.
+- Full Chromium + WebKit is not automatic.
+
+### Tier 2 — localized feature/mechanic/UI change
+Examples: one mechanic, one panel, one bounded interaction, one feature-specific path.
+
+- Run static checks.
+- Run the directly affected focused tests.
+- Add neighboring regression tests when the change can affect adjacent behavior.
+- Use both browser engines when the affected behavior is browser/layout/input sensitive.
+- Do not escalate to the full suite unless evidence or risk justifies it.
+
+### Tier 3 — shared/high-risk system change
+Examples: camera, map/layout, movement/pathfinding, turn flow, state/save-load, shared runtime observers, global DOM/layout, global CSS, common helpers, Playwright config, dependencies, service worker, or other infrastructure with broad reach.
+
+- Run focused tests first for fast feedback.
+- Then run full Chromium + WebKit regression.
+- Run relevant soak/performance/observer stability coverage when the touched system can fail over time or repeated turns.
+
+### Tier 4 — final integration / merge / release gate
+Before a user-approved merge into an integration/protected branch, release, or other explicit final gate:
+
+- Require the full cross-browser gate regardless of how small the last individual change was.
+- Include relevant soak/stability coverage required by `QUALITY_GATES.md`.
+- Reuse valid green evidence for the exact unchanged SHA; do not rerun identical expensive suites without a reason.
+
+## CI efficiency rules
+- A docs/checkpoint-only PR synchronization must not rerun heavy Playwright jobs. The workflow should classify the newly pushed change range and skip expensive jobs when it contains no runtime/test/CI files.
+- Rapid successive commits should cancel superseded in-progress CI for the same PR/ref so only the newest SHA consumes the full gate.
+- If a workflow or classifier cannot determine change scope safely, fail safe by running the heavier gate rather than silently skipping required coverage.
+- Do not rerun the same unchanged red/green full suite merely to "try again" unless investigating a suspected flake or explicitly requested.
+- Prefer rerunning only the failed job/test when that is enough to answer the current question.
+
 ## Browser-test execution policy
 1. Run static and non-browser checks locally whenever available (`node --check`, `git diff --check`, unit/static checks).
 2. Attempt focused Playwright tests locally when the environment already supports them.
@@ -26,7 +73,7 @@ If repository/package constraints require another equivalent supported Playwrigh
 ## CI feedback loop
 Normal autonomous loop for browser-dependent work:
 
-`inspect task -> implement -> local static/available tests -> push -> GitHub Actions browser tests -> inspect exact CI failure -> fix -> push again`
+`inspect task -> implement -> local static/available tests -> focused tests -> widen only if risk/gate requires -> inspect exact CI failure -> fix -> verify`
 
 Do not guess a CI failure reason. Read the workflow/job/log when access is available.
 
@@ -49,6 +96,7 @@ Example that MAY stop development:
 
 ## Reporting
 When this policy is used, record succinctly:
+- risk tier chosen and why;
 - checks that actually ran and their results;
 - local infrastructure blocker, if any;
 - CI run/result if available;
