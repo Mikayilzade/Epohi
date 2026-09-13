@@ -132,7 +132,14 @@ function uniqueOverrides(overrides) {
   return [...new Map(overrides.map((override) => [override.id, override])).values()];
 }
 
-function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } = {}) {
+function isEscalationCondition(area, neighbor) {
+  return (neighbor.minimumTier || 0) > area.minimumTier ||
+    (neighbor.browsers && BROWSER_POLICY_PRIORITY.indexOf(neighbor.browsers) > BROWSER_POLICY_PRIORITY.indexOf(area.browsers)) ||
+    (neighbor.fullRegression === true && !area.fullRegression) ||
+    (neighbor.soakRelevant === true && !area.soakRelevant);
+}
+
+function selectTests({ changedPaths = [], semanticAreas = [], conditions = [], ci = false } = {}) {
   const paths = unique(changedPaths.filter(Boolean));
   const semantics = unique(semanticAreas.filter(Boolean));
   const requestedConditions = new Set(conditions);
@@ -140,10 +147,10 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
   const unknownSemantics = semantics.filter((id) => !knownSemanticIds.has(id));
 
   if (paths.length === 0 && semantics.length === 0) {
-    return fullPlan('No change paths or semantic ownership were supplied.');
+    return fullPlan('No change paths or semantic ownership were supplied.', [], true);
   }
   if (unknownSemantics.length) {
-    return fullPlan(`Unknown semantic area: ${unknownSemantics.join(', ')}.`);
+    return fullPlan(`Unknown semantic area: ${unknownSemantics.join(', ')}.`, [], true);
   }
   if (semantics.length === 0 && paths.length > 0 && paths.every((path) => DOC_PATTERNS.some((pattern) => pattern.test(path)))) {
     return {
@@ -165,14 +172,14 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
     return fullPlan(`${runtimeCount} runtime files meet the broad-change threshold of ${manifest.runtimeFileThreshold}.`, matched);
   }
   if (unknownPaths.length) {
-    return fullPlan(`Unknown path ownership: ${unknownPaths.join(', ')}.`, matched);
+    return fullPlan(`Unknown path ownership: ${unknownPaths.join(', ')}.`, matched, true);
   }
   if (matched.length === 0 && changedSpecs.length === 0) {
-    return fullPlan('No manifest owner matched the supplied change.');
+    return fullPlan('No manifest owner matched the supplied change.', [], true);
   }
 
   const neighbors = matched.flatMap((area) => area.conditionalNeighbors
-    .filter((neighbor) => requestedConditions.has(neighbor.condition))
+    .filter((neighbor) => requestedConditions.has(neighbor.condition) || (ci && isEscalationCondition(area, neighbor)))
     .map((neighbor) => ({ area: area.id, ...neighbor })));
   const fullRegression = matched.some((area) => area.fullRegression) || neighbors.some((item) => item.fullRegression);
   const minimumTier = Math.max(changedSpecs.length ? 2 : 0, ...matched.map((area) => area.minimumTier), ...neighbors.map((item) => item.minimumTier || 0));
@@ -199,12 +206,13 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
 }
 
 function parseArguments(argv) {
-  const options = { changedPaths: [], semanticAreas: [], conditions: [] };
+  const options = { changedPaths: [], semanticAreas: [], conditions: [], ci: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--changed') options.changedPaths.push(argv[++index]);
     else if (argument === '--semantic') options.semanticAreas.push(argv[++index]);
     else if (argument === '--condition') options.conditions.push(argv[++index]);
+    else if (argument === '--ci') options.ci = true;
     else if (argument === '--help') options.help = true;
     else if (argument.startsWith('-')) throw new Error(`Unknown option: ${argument}`);
     else options.changedPaths.push(argument);
@@ -213,7 +221,7 @@ function parseArguments(argv) {
 }
 
 function usage() {
-  return 'Usage: node scripts/select-tests.js [--changed PATH]... [--semantic AREA]... [--condition NAME]...';
+  return 'Usage: node scripts/select-tests.js [--ci] [--changed PATH]... [--semantic AREA]... [--condition NAME]...';
 }
 
 if (require.main === module) {

@@ -4,6 +4,8 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const manifest = require('../scripts/test-selection-manifest.json');
 const { combineBrowserPolicies, selectTests, validateManifest } = require('../scripts/select-tests');
+const { classify, failSafe, mapPlan } = require('../scripts/map-ci-test-plan');
+const workflow = require('node:fs').readFileSync(require('node:path').join(__dirname, '../.github/workflows/playwright.yml'), 'utf8');
 
 function manifestWith(mutate) {
   const candidate = structuredClone(manifest);
@@ -77,6 +79,14 @@ test('layout condition adds mandatory WebKit to component UI coverage', () => {
   assert.equal(plan.fullRegression, false);
 });
 
+test('automatic CI conservatively applies component layout browser escalation', () => {
+  const plan = classify(['src/humans-context-review-cleanup.js']);
+  assert.equal(plan.tier, 2);
+  assert.equal(plan.runFocused, true);
+  assert.equal(plan.runFocusedWebKit, true);
+  assert.equal(plan.runFull, false);
+});
+
 for (const condition of ['shared-schema', 'turn-yields']) {
   test(`worker ${condition} condition escalates to full cross-browser stability coverage`, () => {
     const plan = selectTests({
@@ -88,6 +98,16 @@ for (const condition of ['shared-schema', 'turn-yields']) {
     assert.equal(plan.soakRelevant, true);
   });
 }
+
+test('automatic CI conservatively applies every worker escalation-capable condition', () => {
+  const selected = selectTests({ changedPaths: ['src/humans-population-workforce.js'], ci: true });
+  assert.deepEqual(selected.conditionalNeighbors.map(({ condition }) => condition), ['turn-yields', 'shared-schema']);
+  const plan = classify(['src/humans-population-workforce.js']);
+  assert.equal(plan.tier, 3);
+  assert.equal(plan.runFull, true);
+  assert.equal(plan.runSoak, true);
+  assert.equal(plan.runFocused, false);
+});
 
 test('workflow changes follow infrastructure Tier 3 policy', () => {
   const plan = selectTests({ changedPaths: ['.github/workflows/playwright.yml'] });
@@ -151,13 +171,23 @@ test('the shared Playwright helper still escalates to Tier 3 full', () => {
   assert.equal(plan.fullRegression, true);
 });
 
+test('a soak-test-only change runs the soak gates without ordinary browser duplication', () => {
+  const plan = classify(['tests/autonomous-soak.spec.js']);
+  assert.equal(plan.tier, 1);
+  assert.equal(plan.runStatic, true);
+  assert.equal(plan.runFocused, false);
+  assert.equal(plan.runFull, false);
+  assert.equal(plan.runSoak, true);
+});
+
 test('selector tooling declares cheap checks and no gameplay browser by itself', () => {
   const plan = selectTests({ changedPaths: ['scripts/select-tests.js'] });
   assert.equal(plan.tier, 0);
   assert.equal(plan.browsers, 'none');
   assert.equal(plan.fullRegression, false);
   assert.deepEqual(plan.checks, [
-    'node --check scripts/select-tests.js', 'node --test tests/test-selection.contract.test.js'
+    'node --check scripts/select-tests.js', 'node --check scripts/map-ci-test-plan.js',
+    'node --test tests/test-selection.contract.test.js'
   ]);
 });
 
@@ -166,7 +196,7 @@ test('selector tooling cannot weaken a runtime plan', () => {
   assert.equal(plan.tier, 3);
   assert.equal(plan.browsers, 'chromium+webkit');
   assert.equal(plan.fullRegression, true);
-  assert.equal(plan.checks.length, 2);
+  assert.equal(plan.checks.length, 3);
 });
 
 test('browser policies compose without downgrading stronger requirements', () => {
@@ -174,6 +204,57 @@ test('browser policies compose without downgrading stronger requirements', () =>
   assert.equal(combineBrowserPolicies(['none', 'chromium']), 'chromium');
   assert.equal(combineBrowserPolicies(['chromium', 'policy-driven']), 'policy-driven');
   assert.equal(combineBrowserPolicies(['policy-driven', 'chromium+webkit']), 'chromium+webkit');
+});
+
+test('CI mapping preserves focused and full routing without duplicate browser work', () => {
+  assert.deepEqual(classify(['CODEX_NEXT_TASK.md']), {
+    tier: 0, reason: 'selector:documentation', runStatic: false, runSelectorChecks: false,
+    runFocused: false, runFocusedWebKit: false, runFull: false, runSoak: false, focusedTests: []
+  });
+  const ordinary = classify(['tests/turn-label-idempotence.spec.js']);
+  assert.deepEqual(ordinary.focusedTests, ['tests/turn-label-idempotence.spec.js']);
+  assert.equal(ordinary.runFocused, true);
+  assert.equal(ordinary.runFocusedWebKit, false);
+  const sensitive = classify(['tests/camera-2.spec.js']);
+  assert.equal(sensitive.runFocusedWebKit, true);
+  const full = classify(['src/camera.js']);
+  assert.equal(full.runFull, true);
+  assert.equal(full.runFocused, false);
+  assert.equal(full.runSoak, true);
+});
+
+test('selector-tooling CI runs whitelisted checks without gameplay browsers', () => {
+  const plan = classify(['scripts/select-tests.js']);
+  assert.equal(plan.runStatic, true);
+  assert.equal(plan.runSelectorChecks, true);
+  assert.equal(plan.runFocused, false);
+  assert.equal(plan.runFull, false);
+});
+
+test('invalid selector plans fail safe to full cross-browser and soak', () => {
+  for (const invalid of [null, {}, {
+    tier: 2, browsers: 'none', focusedSpecs: [], checks: [], fullRegression: false, soakRelevant: false
+  }, {
+    tier: 3, browsers: 'chromium+webkit', focusedSpecs: [], checks: [], fullRegression: false, soakRelevant: false
+  }]) {
+    const plan = mapPlan(invalid);
+    assert.equal(plan.runFull, true);
+    assert.equal(plan.runSoak, true);
+    assert.equal(plan.runFocused, false);
+  }
+  assert.equal(failSafe('crash').tier, 3);
+});
+
+test('workflow retains event/range semantics and hard-coded safe execution', () => {
+  assert.match(workflow, /push:\n    branches:\n      - main/);
+  assert.match(workflow, /EVENT_ACTION[\s\S]*== "synchronize"[\s\S]*base_sha="\$\{BEFORE_SHA:-\}"[\s\S]*head_sha="\$\{AFTER_SHA:-\}"/);
+  assert.match(workflow, /git diff --name-only -z/);
+  assert.match(workflow, /selector-fail-safe:workflow-or-range-error/);
+  assert.match(workflow, /node scripts\/map-ci-test-plan\.js "\$\{changed_paths\[@\]\}"/);
+  assert.doesNotMatch(workflow, /\beval\b|bash -c/);
+  assert.match(workflow, /node --test tests\/test-selection\.contract\.test\.js/);
+  assert.match(workflow, /if: needs\.classify-change\.outputs\.run_full == 'true'/);
+  assert.match(workflow, /if: needs\.classify-change\.outputs\.run_soak == 'true'/);
 });
 
 test('0-AI smoke override selects a stable generated title only', () => {
@@ -213,16 +294,16 @@ test('manifest validation rejects missing specs and malformed or duplicate case 
 
 test('manifest validation rejects unknown and malformed condition effects', () => {
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[3].conditionalNeighbors[0].browser = 'chromium+webkit';
+    candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors[0].browser = 'chromium+webkit';
   })), /unknown effect field/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[3].conditionalNeighbors[0].minimumTier = '3';
+    candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors[0].minimumTier = '3';
   })), /invalid tier/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[3].conditionalNeighbors[0].fullRegression = 'yes';
+    candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors[0].fullRegression = 'yes';
   })), /must be boolean/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[3].conditionalNeighbors[0].reason = 42;
+    candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors[0].reason = 42;
   })), /reason must be a string/);
 });
 
@@ -251,7 +332,7 @@ test('manifest validation rejects malformed top-level and area structures', () =
 
 test('manifest validation rejects duplicate condition IDs and malformed optional checks', () => {
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[3].conditionalNeighbors.push(structuredClone(candidate.areas[3].conditionalNeighbors[0]));
+    candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors.push(structuredClone(candidate.areas.find(({ id }) => id === 'app-bootstrap').conditionalNeighbors[0]));
   })), /Duplicate condition ID/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
     candidate.areas[0].checks = [''];
