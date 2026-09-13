@@ -1,30 +1,45 @@
 # CODEX NEXT TASK
 
 ## Scope
-Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0`. Do not create another PR/branch and do not merge.
+Work only on existing PR #100 / branch `codex/fix-github-actions-output-issue`. Do not create another PR/branch and do not merge.
 
-## Current checkpoint — selector Phase 1 complete
-- Ordinary changed `tests/*.spec.js` files select themselves at Tier 2 instead of falling through to a full regression. Known browser-sensitive specs add WebKit; multiple spec-only edits remain focused; `tests/helpers.js` remains Tier 3/full.
-- Selector/manifest/contract-test changes have explicit Tier 0 ownership, declare the selector static and contract checks, and require no gameplay browser unless combined with a stronger area.
-- Browser-policy composition preserves `none`, `chromium`, `policy-driven`, and `chromium+webkit` deterministically; full regression remains Chromium + WebKit.
-- Manifest startup validation covers the runtime threshold, area paths/booleans/optional arrays, per-area condition uniqueness, optional effect/check types, referenced specs, and override IDs.
-- All 27 selector contract tests, syntax validation, the existing one-case 0-AI Playwright discovery check, and diff whitespace validation are green.
-- No runtime/game code, existing Playwright assertions/behavior, Playwright config, dependencies, or mass case metadata changed in Phase 1.
-- Accidental child PR #98 is no longer an active work stream; its Phase 1 commit is contained in the existing PR #93 branch. Continue only in PR #93.
+## Current checkpoint — authoritative scoped CI green
+The two failures originally seen in Actions run `34770696737` were diagnosed, fixed, and verified in the authoritative PR #100 Actions environment.
 
-## Review decision
-Phase 1 is accepted as ready for controlled CI integration.
+- CI contract failure: `tests/ci-push-gate.spec.js` no longer couples workflow YAML to selector-owned reason strings. It checks the actual PR range-selection and selector-invocation contract.
+- WebKit soak seed `30303`: the 25 ms cross-protocol polling loop was replaced with a browser-side semantic wait. No gameplay/runtime code, assertion, tolerance, or arbitrary sleep was changed.
 
-The main remaining safety issue is not the selector itself but path-only CI integration: optional conditional rules that can raise browsers/tier/full/soak must never be silently omitted just because CI has no human `--condition` input.
+## Authoritative validation
+PR #100 Actions run `34775550869` / run #252 at head `d9b840232bee3dbbcd3bdd7b34359706247ce485` completed successfully for the classifier-selected scope:
+- `Classify CI scope` — green.
+- `Static integrity` — green.
+- `Focused browser regression` — green in Chromium and WebKit.
+- `Autonomous soak — Chromium long matrix` — green.
+- `Autonomous soak — WebKit representative matrix` — green, 2/2; this explicitly includes seed `30303` and it passed.
+- `Full Chromium + WebKit regression` — skipped by the risk classifier, not failed.
 
-## NEXT ACTION — Phase 2 CI integration
-Read and fully execute:
+A prior child PR #101 was accidental. Its single fix commit is now contained directly in PR #100; #101 is closed and is not a separate work stream.
 
-`CODEX_TEST_SELECTION_PHASE2_CI_INTEGRATION.md`
+## Planned next work package — CI v2
+A staged implementation plan is now stored in `CI_V2_PLAN.md`.
 
-Integrate the selector into the authoritative workflow while preserving current event/range/fail-safe behavior. Audit every escalation-capable conditional rule and give it deterministic conservative CI behavior before trusting path-only selection.
+Its purpose is to make CI both faster and much easier to diagnose by:
+- preserving useful evidence on first browser failure;
+- producing structured failure context for long/stateful tests;
+- splitting soak by browser/seed;
+- splitting full regression by browser and conservative shards;
+- experimenting with extra Playwright workers only after independence is proven;
+- auditing the classifier so risk-based behavior and coverage are preserved;
+- measuring before/after wall-clock time without using a brittle numeric target as a fake success gate.
 
-Do not create a new PR/branch. Do not merge PR #93.
-Do not change game/runtime behavior, Playwright assertions/tolerances, or mass-tag the 187 tests.
+`CI_V2_PLAN.md` contains phase-by-phase exit criteria plus an adaptive phase rule so Codex can execute the whole package autonomously without getting stuck on wording that stops matching repository reality.
 
-The workflow change itself must receive authoritative heavy CI validation. After a fully green result, update this checkpoint and `AUTONOMY_STATUS.md` with the run ID/results and stop for review.
+## Current action
+Stop for review. Do not start CI v2 merely because the plan exists. Do not rerun CI blindly and do not merge.
+
+When the user explicitly starts CI v2, read `CI_V2_PLAN.md`, `AGENT_TESTING_POLICY.md`, and `AUTONOMY_STATUS.md`, then follow the requested mode:
+- one named phase only;
+- continue from the first unfinished phase;
+- or full autonomous pass through all phases.
+
+Before marking PR #100 Ready for review, make one explicit policy decision: whether the successful classifier-selected authoritative run is sufficient, or whether an explicit full Chromium + WebKit regression is still required despite the classifier skipping it. If a full run is required, trigger it deliberately according to `AGENT_TESTING_POLICY.md`; do not weaken tests or change scope merely to force green.
