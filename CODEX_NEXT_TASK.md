@@ -6,7 +6,7 @@ Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0` unl
 ## Current checkpoint
 - Camera 2.0 WebKit race fix is verified green at `8ae1ae9da6685218ae5dcd9e99deac151cd03df0` in authoritative PR #93 Actions run #210.
 - No game/runtime behavior changed after that verified fix; subsequent commits are CI-policy / agent-process work.
-- Intermediate CI-policy runs #219/#220 are not the final policy state. Do not rerun them before checking the newest finalized policy run.
+- Risk-based Playwright policy is documented in `AGENT_TESTING_POLICY.md` and the CI contract was aligned with it.
 - Duplicate PR #94 is closed; PR #93 remains open/draft/unmerged.
 
 ## Permanent testing policy
@@ -42,9 +42,13 @@ The permanent workflow is designed to enforce the above conservatively:
 - The two failures were the same race: 13 px in fit geometry and 6.5 px in vertical centering.
 - Fix waits for the production `camera-smooth` lifecycle to finish, then polls the existing exact fit predicate. No sleeps/tolerance weakening/production camera change.
 
-## NEXT ACTION
-1. Inspect only the newest Actions run produced by the finalized CI-policy commit.
-2. One full validation is expected because the workflow itself changed. Do not manually start another full run first.
-3. If green: update `CODEX_NEXT_TASK.md` + `AUTONOMY_STATUS.md` together in one docs-only commit and verify that only the lightweight classifier runs / heavy jobs skip.
-4. If red: inspect the exact failed job/test and root cause. If evidence indicates a flake, rerun only the failed scope; otherwise make the minimal necessary fix and then validate that changed state.
-5. Do not merge PR #93 until the user explicitly instructs it.
+## NEXT ACTION — suite-based testing inventory
+The missing layer is classification of the tests themselves, not only classification of changes.
+
+Read and execute `CODEX_TEST_SUITE_INVENTORY_TASK.md`.
+
+This is an analysis/documentation task only. Inventory the complete current Playwright test surface, establish the actual test count, classify every test by functional suite / cost / browser sensitivity, and build the change-to-suite selection matrix requested in that file.
+
+Do not modify runtime code, test behavior, assertions, Playwright config, CI workflows, dependencies, or test-selection implementation during this task. Implementation comes only after the user reviews the inventory and matrix.
+
+When complete, update this checkpoint with the actual count, created docs, key findings, ambiguities, and recommended follow-up. Do not merge PR #93.
