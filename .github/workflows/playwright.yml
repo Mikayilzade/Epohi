@@ -93,7 +93,7 @@ jobs:
           const plan = JSON.parse(process.env.PLAN);
           const fields = {
             tier: plan.tier,
-            reason: String(plan.reason).replace(/[\\r\\n]/g, ' '),
+            reason: String(plan.reason).replace(/[\r\n]/g, ' '),
             run_static: plan.runStatic,
             run_selector_checks: plan.runSelectorChecks,
             run_focused: plan.runFocused,
@@ -103,7 +103,7 @@ jobs:
             focused_tests_json: JSON.stringify(plan.focusedTests)
           };
           fs.appendFileSync(process.env.GITHUB_OUTPUT,
-            Object.entries(fields).map(([key, value]) => `${key}=${value}\\n`).join(''));
+            Object.entries(fields).map(([key, value]) => `${key}=${value}\n`).join(''));
           NODE
 
       - name: Report CI scope

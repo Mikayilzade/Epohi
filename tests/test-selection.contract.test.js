@@ -1,11 +1,15 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 const manifest = require('../scripts/test-selection-manifest.json');
 const { combineBrowserPolicies, selectTests, validateManifest } = require('../scripts/select-tests');
 const { classify, failSafe, mapPlan } = require('../scripts/map-ci-test-plan');
-const workflow = require('node:fs').readFileSync(require('node:path').join(__dirname, '../.github/workflows/playwright.yml'), 'utf8');
+const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/playwright.yml'), 'utf8');
 
 function manifestWith(mutate) {
   const candidate = structuredClone(manifest);
@@ -255,6 +259,46 @@ test('workflow retains event/range semantics and hard-coded safe execution', () 
   assert.match(workflow, /node --test tests\/test-selection\.contract\.test\.js/);
   assert.match(workflow, /if: needs\.classify-change\.outputs\.run_full == 'true'/);
   assert.match(workflow, /if: needs\.classify-change\.outputs\.run_soak == 'true'/);
+});
+
+test('workflow writes one GitHub output per line and strips actual CR/LF from reason', () => {
+  const heredoc = workflow.match(/          PLAN="\$plan" node <<'NODE'\n([\s\S]*?)          NODE/);
+  assert.ok(heredoc, 'workflow output script must remain available to the contract test');
+  const script = heredoc[1].replace(/^          /gm, '');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'epohi-github-output-'));
+  const outputPath = path.join(directory, 'output');
+  const plan = {
+    tier: 3,
+    reason: 'workflow\r\nchange',
+    runStatic: true,
+    runSelectorChecks: true,
+    runFocused: false,
+    runFocusedWebKit: false,
+    runFull: true,
+    runSoak: true,
+    focusedTests: []
+  };
+
+  try {
+    execFileSync(process.execPath, ['-e', script], {
+      env: { ...process.env, PLAN: JSON.stringify(plan), GITHUB_OUTPUT: outputPath }
+    });
+    const output = fs.readFileSync(outputPath, 'utf8');
+    assert.deepEqual(output.trimEnd().split('\n'), [
+      'tier=3',
+      'reason=workflow  change',
+      'run_static=true',
+      'run_selector_checks=true',
+      'run_focused=false',
+      'run_focused_webkit=false',
+      'run_full=true',
+      'run_soak=true',
+      'focused_tests_json=[]'
+    ]);
+    assert.doesNotMatch(output, /\\n/);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test('0-AI smoke override selects a stable generated title only', () => {
