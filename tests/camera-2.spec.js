@@ -59,6 +59,24 @@ async function waitForStableMapLayout(page) {
   });
 }
 
+async function waitForMapFit(page) {
+  // A locator click resolves before WebKit has necessarily completed the
+  // responsive layout triggered in the same rendering cycle.  The fit action
+  // keeps this class for the lifetime of its production camera transition;
+  // wait for that lifecycle boundary before accepting a fitted sample.  This
+  // also gives the viewport ResizeObserver's queued reconciliation frame a
+  // chance to apply the fit for the final viewport dimensions.
+  await page.waitForFunction(() => !document.getElementById('map').classList.contains('camera-smooth'));
+  await expect.poll(async () => {
+    const info = await cameraState(page);
+    return Math.max(
+      Math.abs(info.camera.scale - info.bounds.min),
+      Math.abs(info.camera.x - (info.viewport.width - info.map.width * info.camera.scale) / 2),
+      Math.abs(info.camera.y - (info.viewport.height - info.map.height * info.camera.scale) / 2)
+    );
+  }, { timeout: 2000, intervals: [16, 32, 64, 100] }).toBeLessThan(0.01);
+}
+
 async function tileScreenCenter(page, x, y) {
   return page.evaluate(({ x, y }) => {
     const viewport = document.getElementById('mapViewport');
@@ -145,6 +163,7 @@ async function expectLargeMapFitsViewport(page, viewportSize) {
   await createGame(page, 0, 'large');
   await waitForStableMapLayout(page);
   await page.locator('#showMapBtn').click();
+  await waitForMapFit(page);
   const info = await cameraState(page);
   const requiredFitScale = Math.min(info.viewport.width / info.map.width, info.viewport.height / info.map.height);
 
@@ -199,6 +218,7 @@ test.describe('Camera 2.0', () => {
     await clearStorage(page);
     await createGame(page, 0, 'normal');
     await page.locator('#showMapBtn').click();
+    await waitForMapFit(page);
     let info = await cameraState(page);
     expect(info.camera.x).toBeCloseTo((info.viewport.width - info.map.width * info.camera.scale) / 2, 1);
     expect(info.camera.y).toBeCloseTo((info.viewport.height - info.map.height * info.camera.scale) / 2, 1);
