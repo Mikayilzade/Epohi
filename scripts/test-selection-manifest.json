@@ -70,7 +70,7 @@
       "primarySpecs": ["tests/context-review-cleanup.spec.js", "tests/mobile-context.spec.js"],
       "conditionalNeighbors": [
         {"condition": "selection", "specs": ["tests/stack-reentry-selection.spec.js"], "reason": "Selection controls share context state."},
-        {"condition": "layout", "specs": ["tests/map-inspection.spec.js"], "reason": "Overflow or stacking can affect inspection UI."}
+        {"condition": "layout", "specs": ["tests/map-inspection.spec.js"], "browsers": "chromium+webkit", "reason": "Overflow or stacking can affect inspection UI and requires cross-browser layout coverage."}
       ],
       "browsers": "chromium",
       "minimumTier": 2,
@@ -111,8 +111,8 @@
       "primarySpecs": ["tests/population-workforce.spec.js", "tests/resource-worker.spec.js"],
       "conditionalNeighbors": [
         {"condition": "autonomous-orders", "specs": ["tests/humans-autonomy.spec.js"], "reason": "Include only when autonomous worker orders are implicated."},
-        {"condition": "turn-yields", "specs": ["tests/turn-unlock.spec.js"], "reason": "Include only when end-turn yield processing is implicated."},
-        {"condition": "shared-schema", "specs": ["tests/browser.spec.js"], "reason": "Persisted workforce fields require save/load coverage."}
+        {"condition": "turn-yields", "specs": ["tests/turn-unlock.spec.js"], "browsers": "chromium+webkit", "minimumTier": 3, "fullRegression": true, "soakRelevant": true, "reason": "The shared economy and end-turn tick require full cross-browser stability coverage."},
+        {"condition": "shared-schema", "specs": ["tests/browser.spec.js"], "browsers": "chromium+webkit", "minimumTier": 3, "fullRegression": true, "soakRelevant": true, "reason": "Persisted workforce fields are shared schema and require full cross-browser save/load coverage."}
       ],
       "browsers": "chromium",
       "minimumTier": 2,

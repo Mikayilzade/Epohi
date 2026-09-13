@@ -2,9 +2,77 @@
 'use strict';
 
 const manifest = require('./test-selection-manifest.json');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const DOC_PATTERNS = [/\.md$/i, /^docs\//, /^\.github\/codex\//];
-const RUNTIME_PATTERNS = [/^src\//, /^styles\//, /^tests\//, /^index\.html$/, /^sw\.js$/];
+const RUNTIME_PATTERNS = [/^src\//, /^styles\//, /^index\.html$/, /^sw\.js$/];
+const VALID_TIERS = new Set([0, 1, 2, 3, 4]);
+const VALID_BROWSER_POLICIES = new Set(['none', 'chromium', 'chromium+webkit', 'policy-driven']);
+const CONDITION_FIELDS = new Set([
+  'condition', 'specs', 'reason', 'browsers', 'minimumTier', 'fullRegression', 'soakRelevant'
+]);
+
+function validateManifest(candidate, { rootDir = path.resolve(__dirname, '..') } = {}) {
+  if (!candidate || !Array.isArray(candidate.areas)) throw new Error('Manifest areas must be an array.');
+  const areaIds = new Set();
+  const overrideIds = new Set();
+  const assertTier = (tier, label) => {
+    if (!VALID_TIERS.has(tier)) throw new Error(`${label} has invalid tier: ${tier}.`);
+  };
+  const assertBrowsers = (browsers, label) => {
+    if (!VALID_BROWSER_POLICIES.has(browsers)) throw new Error(`${label} has invalid browser policy: ${browsers}.`);
+  };
+  const assertSpec = (spec, label) => {
+    if (typeof spec !== 'string' || !spec.endsWith('.spec.js') || !fs.existsSync(path.join(rootDir, spec))) {
+      throw new Error(`${label} references missing or invalid spec: ${spec}.`);
+    }
+  };
+
+  for (const area of candidate.areas) {
+    if (typeof area.id !== 'string' || !area.id.trim()) throw new Error('Area ID must be a non-empty string.');
+    if (areaIds.has(area.id)) throw new Error(`Duplicate area ID: ${area.id}.`);
+    areaIds.add(area.id);
+    assertTier(area.minimumTier, `Area ${area.id}`);
+    assertBrowsers(area.browsers, `Area ${area.id}`);
+    if (!Array.isArray(area.primarySpecs)) throw new Error(`Area ${area.id} primarySpecs must be an array.`);
+    area.primarySpecs.forEach((spec) => assertSpec(spec, `Area ${area.id}`));
+
+    for (const neighbor of area.conditionalNeighbors || []) {
+      const unknownFields = Object.keys(neighbor).filter((field) => !CONDITION_FIELDS.has(field));
+      if (unknownFields.length) {
+        throw new Error(`Condition ${area.id}/${neighbor.condition || '<missing>'} has unknown effect field(s): ${unknownFields.join(', ')}.`);
+      }
+      if (typeof neighbor.condition !== 'string' || !neighbor.condition.trim()) {
+        throw new Error(`Area ${area.id} has a condition with a malformed ID.`);
+      }
+      if (!Array.isArray(neighbor.specs)) throw new Error(`Condition ${area.id}/${neighbor.condition} specs must be an array.`);
+      neighbor.specs.forEach((spec) => assertSpec(spec, `Condition ${area.id}/${neighbor.condition}`));
+      if (neighbor.minimumTier !== undefined) assertTier(neighbor.minimumTier, `Condition ${area.id}/${neighbor.condition}`);
+      if (neighbor.browsers !== undefined) assertBrowsers(neighbor.browsers, `Condition ${area.id}/${neighbor.condition}`);
+      for (const field of ['fullRegression', 'soakRelevant']) {
+        if (neighbor[field] !== undefined && typeof neighbor[field] !== 'boolean') {
+          throw new Error(`Condition ${area.id}/${neighbor.condition} ${field} must be boolean.`);
+        }
+      }
+    }
+
+    for (const override of area.caseOverrides || []) {
+      if (typeof override.id !== 'string' || !override.id.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(override.id)) {
+        throw new Error(`Area ${area.id} has a case override with a malformed ID.`);
+      }
+      if (overrideIds.has(override.id)) throw new Error(`Duplicate case override ID: ${override.id}.`);
+      overrideIds.add(override.id);
+      assertSpec(override.spec, `Case override ${override.id}`);
+      if (typeof override.grep !== 'string' || !override.grep.trim()) {
+        throw new Error(`Case override ${override.id} grep must be a non-empty string.`);
+      }
+    }
+  }
+  return candidate;
+}
+
+validateManifest(manifest);
 
 function matches(pattern, file) {
   const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
@@ -46,7 +114,7 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
   if (unknownSemantics.length) {
     return fullPlan(`Unknown semantic area: ${unknownSemantics.join(', ')}.`);
   }
-  if (paths.length > 0 && paths.every((path) => DOC_PATTERNS.some((pattern) => pattern.test(path)))) {
+  if (semantics.length === 0 && paths.length > 0 && paths.every((path) => DOC_PATTERNS.some((pattern) => pattern.test(path)))) {
     return {
       tier: 0, focusedSpecs: [], caseOverrides: [], conditionalNeighbors: [], browsers: 'none',
       fullRegression: false, soakRelevant: false, fallbackReason: null, matchedAreas: ['documentation']
@@ -73,9 +141,11 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
   const neighbors = matched.flatMap((area) => area.conditionalNeighbors
     .filter((neighbor) => requestedConditions.has(neighbor.condition))
     .map((neighbor) => ({ area: area.id, ...neighbor })));
-  const fullRegression = matched.some((area) => area.fullRegression);
-  const tier = fullRegression ? 3 : Math.max(...matched.map((area) => area.minimumTier));
-  const browsers = fullRegression || matched.some((area) => area.browsers === 'chromium+webkit')
+  const fullRegression = matched.some((area) => area.fullRegression) || neighbors.some((item) => item.fullRegression);
+  const minimumTier = Math.max(...matched.map((area) => area.minimumTier), ...neighbors.map((item) => item.minimumTier || 0));
+  const tier = fullRegression ? Math.max(3, minimumTier) : minimumTier;
+  const browsers = fullRegression || matched.some((area) => area.browsers === 'chromium+webkit') ||
+    neighbors.some((item) => item.browsers === 'chromium+webkit')
     ? 'chromium+webkit'
     : matched.some((area) => area.browsers === 'policy-driven') ? 'policy-driven' : 'chromium';
 
@@ -86,7 +156,7 @@ function selectTests({ changedPaths = [], semanticAreas = [], conditions = [] } 
     conditionalNeighbors: neighbors,
     browsers,
     fullRegression,
-    soakRelevant: matched.some((area) => area.soakRelevant),
+    soakRelevant: matched.some((area) => area.soakRelevant) || neighbors.some((item) => item.soakRelevant),
     fallbackReason: null,
     matchedAreas: matched.map((area) => area.id)
   };
@@ -122,4 +192,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { selectTests };
+module.exports = { selectTests, validateManifest };
