@@ -1,65 +1,44 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-13 UTC.
-State: PR_93_TEST_SUITE_INVENTORY_COMPLETE / REVIEW_PENDING / NO_MERGE.
+State: PR_93_TEST_SUITE_INVENTORY_REVIEWED / IMPLEMENTATION_PENDING / NO_MERGE.
 
 ## Current checkpoint
-- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`; baseline `75c6101282db6858f5708535fe80b4f304893ce4`.
-- Playwright discovery establishes 187 functional cases in 39 files (374 executions across Chromium mobile and WebKit mobile).
-- `TEST_SUITE_INVENTORY.md` accounts for every case by domain, secondary relationships, estimated cost, browser sensitivity, production relationship, and gate role.
-- `TEST_SELECTION_MATRIX.md` maps source/semantic changes to minimum suites, conditional neighbors, browsers, policy tier, and full/soak escalation.
-- Documentation-only Tier 0 work: no runtime, test behavior, Playwright config, CI workflow, or dependencies changed.
-- Ambiguities: cost is estimated without timing history; browser-sensitivity boundaries need CI evidence; the desired 0-AI-only smoke case needs case-level selection.
-- Recommended follow-up after review: add machine-readable case tags and an ownership manifest, capture timings, then update CI selection while retaining fail-safe Tier 3/full and separate soak gates.
-- PR #93 remains unmerged.
+- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`.
+- Playwright discovery establishes 187 functional cases in 39 files (374 project executions across Chromium mobile and WebKit mobile).
+- `TEST_SUITE_INVENTORY.md` reconciles all 187 cases and is accepted as the current human-readable inventory.
+- `TEST_SELECTION_MATRIX.md` is accepted as the current selection design: semantic change -> minimum suite(s) -> conditional neighbors -> browser/escalation rules.
+- Documentation-only CI classification was verified: run #225 completed green with only `Classify CI scope`; static, focused, full regression, and both soak jobs were skipped.
+- No runtime code, test behavior, Playwright config, CI workflow, or dependencies changed in the inventory work.
+- PR #93 remains open/draft/unmerged.
+
+## Review notes
+- The 187 count is well-supported: 185 static `test(...)` declarations expand to 187 functional cases because of parameterized declarations.
+- The main value of the inventory is the cross-domain map; filename-only selection is insufficient for several shared mechanics.
+- Cost labels are estimates, not measured timings. Do not hard-code CI budgets from them yet.
+- Browser-sensitivity labels are a useful first pass, but some file-level classifications are intentionally conservative and need real CI history/timing evidence before becoming automatic policy.
+- `tests/smoke.spec.js` is currently a zero-test placeholder; the actual smoke candidates live mainly in `browser.spec.js`.
+- Overlap candidates are not proven duplicates. Do not delete/consolidate tests merely because scenarios look similar.
+
+## Implementation direction after review
+1. Do not immediately edit/tag all 187 cases across 39 files; that would create large churn before the selector design is proven.
+2. First create a small machine-readable ownership/selection manifest derived from the reviewed inventory: source/semantic areas -> primary suites/files, conditional neighbors, browser sensitivity, and escalation rules. Allow case-level overrides only where file-level selection is too broad (for example 0-AI smoke).
+3. Add a selector/dry-run utility that reports what would run for representative change sets, without changing the authoritative CI gate yet.
+4. Validate the manifest/selector against representative historical changes and the matrix. Unknown ownership must fail safe to Tier 3/full.
+5. Reuse existing timing evidence if available. Do not start a new full cross-browser run solely to measure timings; collect measured timings when a full run is naturally required.
+6. Only after dry-run review should CI consume the selector. Keep the existing full cross-browser and soak gates available throughout migration.
+7. Consider source-level test annotations/tags later only where they materially improve case-level selection; avoid mass tagging for its own sake.
 
 ---
 
-# AUTONOMY STATUS — CURRENT
-
-Updated: 2026-09-12 UTC.
+## Previous checkpoint — 2026-09-12
 State: PR_93_CAMERA_FIX_VERIFIED_GREEN / RISK_BASED_CI_FINALIZATION_PENDING_SINGLE_VALIDATION / NO_MERGE.
 
-## Current checkpoint
-- Active scope: existing PR #93 / `codex/-full-webkit-camera-2.0`.
-- Camera 2.0 game/test fix commit verified green in authoritative PR #93 run #210: `8ae1ae9da6685218ae5dcd9e99deac151cd03df0`.
-- No game/runtime behavior has been changed after that verified Camera fix; subsequent work is CI policy + agent/process documentation only.
-- Intermediate CI-policy runs #219/#220 are superseded for decision-making. Do not rerun them before the finalized policy commit is validated.
-- PR #93 remains open, draft, and unmerged by instruction.
-
-## Permanent risk-based testing model
-- `AGENT_TESTING_POLICY.md` is the source of truth for test scope.
-- Tier 0: docs/checkpoint-only -> no heavy Playwright.
-- Tier 1: genuinely trivial isolated runtime edit -> static/minimal focused only when useful; CI does not guess Tier 1 from filenames.
-- Tier 2: localized feature/test change -> static + directly relevant focused Playwright; add WebKit only for browser/layout/input-sensitive work.
-- Tier 3: shared/high-risk or broad runtime change -> static + full Chromium/WebKit; relevant soak only for stability-sensitive areas.
-- Tier 4: final integration/merge/release/manual gate -> full Chromium/WebKit + required soak.
-- Reuse valid green evidence for an unchanged SHA. Do not full-rerun unchanged work without a reason.
-
-## CI efficiency model being finalized
-- PR synchronize events classify only the newly pushed range, so a later docs-only commit does not inherit older game-code changes from the PR.
-- Localized runtime changes no longer automatically mean the entire browser suite.
-- Known shared/high-risk paths and 4+ runtime-file changes escalate automatically to Tier 3.
-- Focused Tier 2 coverage auto-selects changed test files / matching feature tests, with a small browser fallback.
-- Browser-sensitive Tier 2 changes add WebKit; ordinary localized logic defaults to Chromium focused coverage.
-- Full Tier 3 CI does not duplicate the same focused matrix before the full suite.
-- Soak is separated from ordinary full regression and runs only when stability risk warrants it (or Tier 4).
-- Feature-branch `push` CI duplication is removed: an open PR gets one authoritative PR run; automatic push gating is reserved for `main`.
-- Superseded in-progress runs for the same PR/ref are cancelled.
-- Status/checkpoint edits should be batched into one commit where practical.
-- If scope cannot be determined safely, CI fails safe to a heavier gate.
-
-## Camera 2.0 retained reference
-- Root cause: the old wait could accept synchronous click-time fit before WebKit's later 13 px responsive viewport-height update and ResizeObserver reconciliation.
-- Fix: wait for the production `camera-smooth` lifecycle to settle, then poll the existing exact fit predicate.
-- No arbitrary sleep, tolerance relaxation, or production camera/game-logic change.
-
-## NEXT ACTION
-1. Validate only the newest finalized CI-policy commit/run. Do not rerun #219/#220 first.
-2. Because the finalized change touches the workflow itself, one Tier 3/full validation is expected. This should be the last required heavy run for the policy change.
-3. If the newest run is green, update this checkpoint and `CODEX_NEXT_TASK.md` together in one docs-only commit; that update must skip heavy Playwright.
-4. If the newest run is red, inspect the exact failed test/job first. Rerun only the failed scope if a flake is suspected; do not blindly rerun the whole suite.
-5. Do not create a new PR/branch and do not merge without explicit user instruction.
+- Camera 2.0 fix was verified green in authoritative PR #93 run #210 at `8ae1ae9da6685218ae5dcd9e99deac151cd03df0`.
+- Risk-based CI policy was finalized in `AGENT_TESTING_POLICY.md`.
+- CI model classifies only the relevant pushed range, avoids duplicate feature-branch push runs, separates soak from ordinary regression, cancels superseded runs, and fails safe when scope is unknown.
+- Camera root cause: WebKit could apply a later 13 px responsive viewport-height update after the synchronous fit; the fix waits for the production camera lifecycle to settle before checking exact fit.
+- No arbitrary sleep, tolerance relaxation, or production camera/game-logic change was used.
 
 ---
 
