@@ -1,5 +1,22 @@
 # AUTONOMY STATUS — CURRENT
 
+Updated: 2026-09-13 UTC.
+State: PR_93_TEST_SUITE_INVENTORY_COMPLETE / REVIEW_PENDING / NO_MERGE.
+
+## Current checkpoint
+- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`; baseline `75c6101282db6858f5708535fe80b4f304893ce4`.
+- Playwright discovery establishes 187 functional cases in 39 files (374 executions across Chromium mobile and WebKit mobile).
+- `TEST_SUITE_INVENTORY.md` accounts for every case by domain, secondary relationships, estimated cost, browser sensitivity, production relationship, and gate role.
+- `TEST_SELECTION_MATRIX.md` maps source/semantic changes to minimum suites, conditional neighbors, browsers, policy tier, and full/soak escalation.
+- Documentation-only Tier 0 work: no runtime, test behavior, Playwright config, CI workflow, or dependencies changed.
+- Ambiguities: cost is estimated without timing history; browser-sensitivity boundaries need CI evidence; the desired 0-AI-only smoke case needs case-level selection.
+- Recommended follow-up after review: add machine-readable case tags and an ownership manifest, capture timings, then update CI selection while retaining fail-safe Tier 3/full and separate soak gates.
+- PR #93 remains unmerged.
+
+---
+
+# AUTONOMY STATUS — CURRENT
+
 Updated: 2026-09-12 UTC.
 State: PR_93_CAMERA_FIX_VERIFIED_GREEN / RISK_BASED_CI_FINALIZATION_PENDING_SINGLE_VALIDATION / NO_MERGE.
 
