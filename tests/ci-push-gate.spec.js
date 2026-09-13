@@ -47,8 +47,15 @@ test('permanent Playwright workflow uses PR risk classification and avoids dupli
   expect(workflow).toContain('cancel-in-progress: true');
   expect(workflow).toContain('name: Classify CI scope');
   expect(workflow).toContain('Decide risk tier and test scope');
-  expect(workflow).toContain('docs-or-checkpoint-only');
-  expect(workflow).toContain('new-pr-sync-range');
+  // Classification reasons are owned by map-ci-test-plan.js, not by this YAML.
+  // Assert the workflow contract: PR synchronizations classify only the pushed
+  // range, other PR events classify the whole PR, and both use the selector.
+  expect(workflow).toContain('if [[ "$EVENT_ACTION" == "synchronize" ]]');
+  expect(workflow).toContain('base_sha="${BEFORE_SHA:-}"');
+  expect(workflow).toContain('head_sha="${AFTER_SHA:-}"');
+  expect(workflow).toContain('base_sha="${PR_BASE_SHA:-}"');
+  expect(workflow).toContain('head_sha="${PR_HEAD_SHA:-}"');
+  expect(workflow).toContain('node scripts/map-ci-test-plan.js "${changed_paths[@]}"');
   expect(workflow).toContain('final-or-main-gate');
 
   expect(workflow).not.toContain('codex/work-on-existing-pr-and-follow-instructions');

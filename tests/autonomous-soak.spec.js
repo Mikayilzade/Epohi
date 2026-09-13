@@ -249,24 +249,36 @@ async function advanceTurn(page, seed) {
       return null;
     });
 
-    for (let poll = 0; poll < 480; poll += 1) {
-      await page.waitForTimeout(25);
-      const snapshot = await page.evaluate(() => {
+    for (let transition = 0; transition < 24; transition += 1) {
+      const handle = await page.waitForFunction((previousTurn) => {
         const debug = window.__epohiDebug && window.__epohiDebug();
-        return debug && debug.state ? {
+        if (!debug || !debug.state) return { kind: 'missing' };
+        const snapshot = {
           turn: Number(debug.state.turn || 0),
           processing: Boolean(debug.isTurnProcessing()),
           victory: Boolean(debug.state.victory),
           defeat: Boolean(debug.state.defeat)
-        } : null;
-      });
+        };
+        if (snapshot.victory || snapshot.defeat || document.querySelector('#victoryModal.show')) {
+          return { kind: 'outcome', ...snapshot };
+        }
+        if (snapshot.turn > previousTurn && !snapshot.processing) {
+          return { kind: 'advanced', ...snapshot };
+        }
+        if (!snapshot.processing && snapshot.turn === previousTurn) {
+          return { kind: 'idle', ...snapshot };
+        }
+        return false;
+      }, before, { timeout: 12_000 });
+      const snapshot = await handle.jsonValue();
       if (!snapshot) throw new Error('game state disappeared during turn processing');
-      if (snapshot.victory || snapshot.defeat || await visible(page.locator('#victoryModal.show'))) {
+      if (snapshot.kind === 'missing') throw new Error('game state disappeared during turn processing');
+      if (snapshot.kind === 'outcome') {
         return { outcome: true, turn: snapshot.turn };
       }
-      if (snapshot.turn > before && !snapshot.processing) return { outcome: false, turn: snapshot.turn };
-      if (!snapshot.processing && snapshot.turn === before) {
-        const resolved = await resolveBlockingInteraction(page, seed + attempt + poll);
+      if (snapshot.kind === 'advanced') return { outcome: false, turn: snapshot.turn };
+      if (snapshot.kind === 'idle') {
+        const resolved = await resolveBlockingInteraction(page, seed + attempt + transition);
         if (resolved === 'outcome') return { outcome: true, turn: snapshot.turn };
         if (resolved !== 'none') break;
       }

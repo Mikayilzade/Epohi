@@ -1,27 +1,23 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-13 UTC.
-State: PR_93_TEST_SELECTOR_PHASE_1_COMPLETE / PHASE_2_NOT_STARTED / NO_MERGE.
+State: PR_100_TWO_FAILURES_FIXED_LOCALLY / AUTHORITATIVE_CI_PENDING / NO_MERGE.
 
 ## Current checkpoint
-- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`; PR remains unmerged.
-- Phase 1's final pre-CI gaps are closed. Ordinary changed specs select themselves at Tier 2; known browser-sensitive specs add WebKit; multiple spec-only edits stay focused; shared `tests/helpers.js` remains Tier 3/full.
-- Selector tooling has explicit Tier 0 ownership and declares both required cheap checks. It requests no gameplay browser alone and cannot weaken a combined runtime plan.
-- Browser-policy composition preserves all four supported values deterministically, with Chromium + WebKit dominant and `policy-driven` never downgraded to Chromium.
-- Manifest startup validation now also covers the positive-integer runtime threshold, area paths/booleans/optional arrays, unique condition IDs per area, and optional effect/check types.
-- Unknown non-spec paths continue to fail safe. A changed spec referenced by a cross-browser owner conservatively inherits WebKit sensitivity; otherwise an unowned spec defaults to focused Chromium.
-- No runtime/game code, existing Playwright assertions/behavior, Playwright config, dependency, or authoritative workflow changed.
+- Scope is existing PR #100 / `codex/fix-github-actions-output-issue`; no branch/PR creation and no merge.
+- CI contract root cause: the workflow contract test coupled workflow YAML to reason strings owned by the selector. It now checks the authoritative range-selection and selector-invocation behavior instead.
+- WebKit seed 30303 root cause: the harness's 25 ms loop crossed the Playwright protocol for locator visibility on every poll. WebKit protocol overhead accumulated to the test timeout. Turn waiting is now a browser-side semantic wait that reports only meaningful state transitions.
+- No gameplay/runtime code, assertion, tolerance, or arbitrary sleep changed.
 
 ## Files and validation
-- Updated: `scripts/test-selection-manifest.json`, `scripts/select-tests.js`, `tests/test-selection.contract.test.js`, `CODEX_NEXT_TASK.md`, `AUTONOMY_STATUS.md`.
-- Green: `node --check scripts/select-tests.js`.
-- Green: `node --test tests/test-selection.contract.test.js` (27/27).
-- Green: Playwright `--list` with the manifest smoke grep (exactly 1 case, no browser launch).
-- Green: `git diff --check`.
+- Updated: `tests/ci-push-gate.spec.js`, `tests/autonomous-soak.spec.js`, `CODEX_NEXT_TASK.md`, `AUTONOMY_STATUS.md`.
+- Green: syntax checks for both changed specs.
+- Green: focused CI contract suite (2/2) and `git diff --check`.
+- Local WebKit is blocked because browser download returns HTTP 403. Cached Chromium is blocked by missing `libatk-1.0.so.0`.
 
 ## Stop / recommended next action
-- Stop for review before phase 2. Do not change the authoritative workflow without a new explicit instruction.
-- Preserve the existing full cross-browser and soak gates, and do not mass-tag the 187 cases.
+- Publish to existing PR #100 and use its Actions environment for isolated WebKit seed 30303, full Chromium + WebKit regression, and the representative WebKit soak matrix.
+- Keep the PR draft until those authoritative jobs are green. Do not merge.
 
 ---
 
