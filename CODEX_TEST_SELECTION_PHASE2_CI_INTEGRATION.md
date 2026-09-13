@@ -4,6 +4,13 @@
 Work only on existing PR #93 / branch `codex/-full-webkit-camera-2.0`.
 Do not create another PR or branch. Do not merge.
 
+Before coding, clean up three accidental remote branches created by ChatGPT connector if your authenticated Git access allows it:
+- `codex/-tmp-do-not-use`
+- `codex/-phase2-placeholder-avoid`
+- `codex/-phase2-ci-integration`
+
+These are not workstreams and all were created from the Phase 1 head by mistake. Delete only these three refs; do not touch any other branch. If remote branch deletion is unavailable, report it and continue on `codex/-full-webkit-camera-2.0`.
+
 ## Goal
 Integrate the already-reviewed test selector into the authoritative GitHub Actions workflow so CI uses the smallest sufficient test scope while preserving all existing fail-safe guarantees.
 
