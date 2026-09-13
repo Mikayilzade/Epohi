@@ -20,7 +20,26 @@ PR #100 Actions run `34775550869` / run #252 at head `d9b840232bee3dbbcd3bdd7b34
 
 A prior child PR #101 was accidental. Its single fix commit is now contained directly in PR #100; #101 is closed and is not a separate work stream.
 
-## Next action
-Stop for review. Do not rerun CI blindly and do not merge.
+## Planned next work package — CI v2
+A staged implementation plan is now stored in `CI_V2_PLAN.md`.
+
+Its purpose is to make CI both faster and much easier to diagnose by:
+- preserving useful evidence on first browser failure;
+- producing structured failure context for long/stateful tests;
+- splitting soak by browser/seed;
+- splitting full regression by browser and conservative shards;
+- experimenting with extra Playwright workers only after independence is proven;
+- auditing the classifier so risk-based behavior and coverage are preserved;
+- measuring before/after wall-clock time without using a brittle numeric target as a fake success gate.
+
+`CI_V2_PLAN.md` contains phase-by-phase exit criteria plus an adaptive phase rule so Codex can execute the whole package autonomously without getting stuck on wording that stops matching repository reality.
+
+## Current action
+Stop for review. Do not start CI v2 merely because the plan exists. Do not rerun CI blindly and do not merge.
+
+When the user explicitly starts CI v2, read `CI_V2_PLAN.md`, `AGENT_TESTING_POLICY.md`, and `AUTONOMY_STATUS.md`, then follow the requested mode:
+- one named phase only;
+- continue from the first unfinished phase;
+- or full autonomous pass through all phases.
 
 Before marking PR #100 Ready for review, make one explicit policy decision: whether the successful classifier-selected authoritative run is sufficient, or whether an explicit full Chromium + WebKit regression is still required despite the classifier skipping it. If a full run is required, trigger it deliberately according to `AGENT_TESTING_POLICY.md`; do not weaken tests or change scope merely to force green.
