@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "runtimeFileThreshold": 4,
+  "areas": [
+    {
+      "id": "ci-workflow",
+      "paths": [".github/workflows/playwright.yml"],
+      "primarySpecs": ["tests/ci-push-gate.spec.js"],
+      "conditionalNeighbors": [],
+      "browsers": "policy-driven",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": true,
+      "escalation": "Workflow policy requires one full validation; soak routing changes also require soak."
+    },
+    {
+      "id": "test-infrastructure",
+      "paths": ["playwright.config.js", "package.json", "package-lock.json", "tests/helpers.js"],
+      "primarySpecs": ["tests/ci-push-gate.spec.js"],
+      "conditionalNeighbors": [],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": true,
+      "escalation": "Configuration, dependencies, and shared fixtures have a broad test blast radius."
+    },
+    {
+      "id": "app-bootstrap",
+      "paths": ["index.html", "src/app.js", "src/config.js", "sw.js"],
+      "primarySpecs": ["tests/browser.spec.js", "tests/prototype-baseline.spec.js", "tests/new-game-settled-lifecycle.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "startup-state", "specs": ["tests/turn-unlock.spec.js"], "reason": "Startup state or schema can affect the first turn."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": false,
+      "escalation": "Global initialization and service registration require full coverage."
+    },
+    {
+      "id": "global-layout",
+      "paths": ["styles/app.css", "styles/humans.css", "styles/humans*.css"],
+      "primarySpecs": ["tests/camera-2.spec.js", "tests/mobile-context.spec.js", "tests/browser.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "observer-geometry", "specs": ["tests/camera-layout-guard-runtime.spec.js"], "reason": "Geometry changes can affect resize-observer ownership."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": false,
+      "escalation": "Global CSS and viewport shell changes are shared layout changes."
+    },
+    {
+      "id": "camera-layout",
+      "paths": ["src/camera.js", "src/camera-storage.js", "src/humans-camera-layout-guard.js"],
+      "primarySpecs": ["tests/camera-2.spec.js", "tests/camera-layout-guard-runtime.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "hit-testing", "specs": ["tests/map-inspection.spec.js", "tests/stack-reentry-selection.spec.js"], "reason": "Hit testing and centering share camera transforms."},
+        {"condition": "observer-ownership", "specs": ["tests/humans-art-observer.spec.js", "tests/legacy-observer-containment.spec.js"], "reason": "Resize and observer ownership can interact."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": true,
+      "escalation": "Camera, map geometry, and resize lifecycle are shared high-risk systems."
+    },
+    {
+      "id": "component-ui",
+      "paths": ["src/humans-context-review-cleanup.js"],
+      "primarySpecs": ["tests/context-review-cleanup.spec.js", "tests/mobile-context.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "selection", "specs": ["tests/stack-reentry-selection.spec.js"], "reason": "Selection controls share context state."},
+        {"condition": "layout", "specs": ["tests/map-inspection.spec.js"], "reason": "Overflow or stacking can affect inspection UI."}
+      ],
+      "browsers": "chromium",
+      "minimumTier": 2,
+      "fullRegression": false,
+      "soakRelevant": false,
+      "escalation": "Escalate when common renderers, selectors, or global layout are changed."
+    },
+    {
+      "id": "pathfinding-core",
+      "paths": ["src/humans-pathing-core.js", "src/territory.js"],
+      "primarySpecs": ["tests/humans-pathing-performance.spec.js", "tests/combat-world-stability.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "ai-orders", "specs": ["tests/humans-autonomy.spec.js"], "reason": "Autonomous orders consume shared routes."},
+        {"condition": "poi-completion", "specs": ["tests/resource-worker.spec.js"], "reason": "Worker and POI completion depend on destination semantics."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": false,
+      "escalation": "Route cost, passability, occupancy, and destination semantics are shared."
+    },
+    {
+      "id": "save-schema",
+      "paths": ["src/storage.js", "src/save-utils.js", "src/data.js"],
+      "primarySpecs": ["tests/browser.spec.js", "tests/turn-unlock.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "population-fields", "specs": ["tests/population-workforce.spec.js"], "reason": "Changed population fields require their migration owner."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": true,
+      "escalation": "Shared serialization, versioning, migration, and state shape require full coverage."
+    },
+    {
+      "id": "worker-population",
+      "paths": ["src/humans-population-workforce.js", "src/humans-worker-learning.js", "src/economy.js"],
+      "primarySpecs": ["tests/population-workforce.spec.js", "tests/resource-worker.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "autonomous-orders", "specs": ["tests/humans-autonomy.spec.js"], "reason": "Include only when autonomous worker orders are implicated."},
+        {"condition": "turn-yields", "specs": ["tests/turn-unlock.spec.js"], "reason": "Include only when end-turn yield processing is implicated."},
+        {"condition": "shared-schema", "specs": ["tests/browser.spec.js"], "reason": "Persisted workforce fields require save/load coverage."}
+      ],
+      "browsers": "chromium",
+      "minimumTier": 2,
+      "fullRegression": false,
+      "soakRelevant": false,
+      "escalation": "Escalate for the shared economy tick or persisted population schema."
+    },
+    {
+      "id": "runtime-observers",
+      "paths": ["src/humans-runtime-invalidation.js", "src/humans-observer.js", "src/humans-performance.js", "src/humans-turn-label-stability.js"],
+      "primarySpecs": ["tests/runtime-invalidation.spec.js", "tests/legacy-observer-containment.spec.js", "tests/explicit-legacy-refresh-bridge.spec.js"],
+      "conditionalNeighbors": [
+        {"condition": "cadence", "specs": ["tests/observer-delivery-latency.spec.js", "tests/runtime-invalidation-cadence.spec.js"], "reason": "Scheduling changes require cadence coverage."}
+      ],
+      "browsers": "chromium+webkit",
+      "minimumTier": 3,
+      "fullRegression": true,
+      "soakRelevant": true,
+      "escalation": "Shared scheduling and observer ownership require full stability coverage."
+    },
+    {
+      "id": "browser-smoke",
+      "paths": [],
+      "primarySpecs": ["tests/browser.spec.js"],
+      "caseOverrides": [
+        {"id": "new-game-0-ai", "spec": "tests/browser.spec.js", "grep": "creates a new game with 0 AI and starts the map$", "reason": "Selects the one generated 0-AI case by its stable title without editing the parameterized source."}
+      ],
+      "conditionalNeighbors": [],
+      "browsers": "chromium",
+      "minimumTier": 2,
+      "fullRegression": false,
+      "soakRelevant": false,
+      "escalation": "A semantic-only composition for dry-run smoke planning."
+    }
+  ]
+}

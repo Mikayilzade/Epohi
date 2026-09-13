@@ -1,32 +1,18 @@
 # CODEX NEXT TASK
 
 ## Scope
-Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0` unless the user explicitly assigns a new scope. Do not create another PR/branch and do not merge.
+Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0`. Do not create another PR/branch and do not merge.
 
-## Current checkpoint — inventory reviewed
-- Playwright discovery establishes **187 functional cases in 39 files**. Two configured projects produce 374 project executions; this is not 374 distinct tests.
-- `TEST_SUITE_INVENTORY.md` reconciles all 187 cases.
-- `TEST_SELECTION_MATRIX.md` maps semantic/source changes to minimum focused coverage, conditional neighbors, browser needs, and full/soak escalation.
-- Inventory review is accepted as a strong working map, with two important cautions: cost bands are estimates, and some browser-sensitivity labels are conservative until supported by timing/failure history.
-- `tests/smoke.spec.js` contains no cases; real smoke candidates live mainly in `browser.spec.js`.
-- Documentation-only classifier behavior was verified green in run #225: only classification ran; static, focused, full regression, and soak jobs were skipped.
-- The accidental inventory PR #95 is no longer an active work stream; its inventory commit is now contained in the existing PR #93 branch. Continue only in PR #93.
-- PR #93 remains open/draft/unmerged.
+## Current checkpoint — selector phase 1 complete
+- Added `scripts/test-selection-manifest.json`: compact path/semantic ownership, primary specs, conditional neighbors, browser policy, minimum tier/full escalation, soak relevance, and one stable-title 0-AI smoke override.
+- Added `scripts/select-tests.js`: a deterministic Node dry-run planner accepting changed paths plus optional `--semantic` and `--condition` inputs. It never launches Playwright.
+- Unknown paths/semantic areas and missing ownership fail safe to Tier 3/full Chromium + WebKit. Four or more runtime files also fail safe to Tier 3/full.
+- Added 10 cheap Node contract tests covering every required representative scenario. All pass.
+- Playwright discovery confirmed the smoke grep selects exactly the generated 0-AI case without changing its parameterized source.
+- Synthetic cases match `TEST_SELECTION_MATRIX.md`. Historical change sets `14a3ec1` (bootstrap/save/service worker) and `bf2a26d` (workflow policy) also resolve to Tier 3/full as expected. No mismatch was found.
+- No reliable stored per-case/project timing artifact was found in the working tree or reachable Git filename history. Cost labels remain documentation estimates and are not encoded as budgets.
+- Ambiguity retained explicitly: `soakRelevant` reports that soak may apply; phase 1 does not infer whether a workflow edit changed soak routing, nor alter CI behavior.
+- No runtime/game code, existing Playwright behavior/assertions, Playwright config, dependencies, or authoritative workflow changed.
 
-## Review decision
-Do **not** immediately mass-tag/edit all 187 cases or switch CI to the new map.
-
-The safer next step is a small machine-readable manifest plus a deterministic dry-run selector. Prove selection behavior first; only then integrate it into authoritative CI.
-
-Do not hard-code estimated cost bands into CI yet. Reuse existing timing evidence if available, but do not start a fresh full cross-browser run only to collect timings.
-
-## NEXT ACTION — selector phase 1
-Read and fully execute:
-
-`CODEX_TEST_SELECTION_IMPLEMENTATION_TASK.md`
-
-This phase may add the ownership manifest, a dry-run selector, and cheap non-browser selector contract tests. It must **not** change runtime/game code, existing Playwright assertions/behavior, Playwright config, or the authoritative GitHub Actions workflow.
-
-Unknown/ambiguous ownership must fail safe to Tier 3/full. Keep existing full cross-browser and soak gates unchanged.
-
-When complete, update this file and `AUTONOMY_STATUS.md` together with the result. Do not create another PR/branch and do not merge PR #93.
+## Next action — stop before phase 2
+Phase 1 is sound and phase 2 CI integration can be recommended, but do not integrate the selector into `.github/workflows/playwright.yml` until explicitly assigned. Keep the authoritative full cross-browser and soak gates unchanged.

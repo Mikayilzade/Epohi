@@ -1,33 +1,31 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-13 UTC.
-State: PR_93_TEST_SUITE_INVENTORY_REVIEWED / IMPLEMENTATION_PENDING / NO_MERGE.
+State: PR_93_TEST_SELECTOR_PHASE_1_COMPLETE / PHASE_2_NOT_STARTED / NO_MERGE.
 
 ## Current checkpoint
-- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`.
-- Playwright discovery establishes 187 functional cases in 39 files (374 project executions across Chromium mobile and WebKit mobile).
-- `TEST_SUITE_INVENTORY.md` reconciles all 187 cases and is accepted as the current human-readable inventory.
-- `TEST_SELECTION_MATRIX.md` is accepted as the current selection design: semantic change -> minimum suite(s) -> conditional neighbors -> browser/escalation rules.
-- Documentation-only CI classification was verified: run #225 completed green with only `Classify CI scope`; static, focused, full regression, and both soak jobs were skipped.
-- No runtime code, test behavior, Playwright config, CI workflow, or dependencies changed in the inventory work.
-- PR #93 remains open/draft/unmerged.
+- Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`; PR remains unmerged.
+- Selector phase 1 is complete: compact JSON ownership manifest, deterministic Node dry-run selector, and 10 cheap non-browser contract tests.
+- Plans report tier, focused specs, included conditional neighbors/reasons, browser requirement, full-regression decision, soak relevance, matched areas, and fail-safe reason.
+- Unknown/ambiguous ownership and four or more runtime files resolve to Tier 3/full Chromium + WebKit.
+- A stable title grep was discovery-validated to select only the generated 0-AI browser smoke case. Existing Playwright sources were not modified.
+- Synthetic matrix scenarios all matched. Historical sets `14a3ec1` (bootstrap/save/service worker) and `bf2a26d` (workflow) both produced the expected Tier 3/full plan; no mismatch was found.
+- No reliable stored timing artifacts were found in the tree or reachable Git filename history, so estimated cost bands were not automated.
+- No runtime/game code, existing Playwright assertions/behavior, Playwright config, dependency, or authoritative workflow changed.
 
-## Review notes
-- The 187 count is well-supported: 185 static `test(...)` declarations expand to 187 functional cases because of parameterized declarations.
-- The main value of the inventory is the cross-domain map; filename-only selection is insufficient for several shared mechanics.
-- Cost labels are estimates, not measured timings. Do not hard-code CI budgets from them yet.
-- Browser-sensitivity labels are a useful first pass, but some file-level classifications are intentionally conservative and need real CI history/timing evidence before becoming automatic policy.
-- `tests/smoke.spec.js` is currently a zero-test placeholder; the actual smoke candidates live mainly in `browser.spec.js`.
-- Overlap candidates are not proven duplicates. Do not delete/consolidate tests merely because scenarios look similar.
+## Files and validation
+- Added: `scripts/test-selection-manifest.json`, `scripts/select-tests.js`, `tests/test-selection.contract.test.js`.
+- Updated: `CODEX_NEXT_TASK.md`, `AUTONOMY_STATUS.md`.
+- Green: `node --check scripts/select-tests.js`.
+- Green: `node --test tests/test-selection.contract.test.js` (10/10).
+- Green: Playwright `--list` with the manifest smoke grep (exactly 1 case, no browser launch).
+- Green: `git diff --check`.
 
-## Implementation direction after review
-1. Do not immediately edit/tag all 187 cases across 39 files; that would create large churn before the selector design is proven.
-2. First create a small machine-readable ownership/selection manifest derived from the reviewed inventory: source/semantic areas -> primary suites/files, conditional neighbors, browser sensitivity, and escalation rules. Allow case-level overrides only where file-level selection is too broad (for example 0-AI smoke).
-3. Add a selector/dry-run utility that reports what would run for representative change sets, without changing the authoritative CI gate yet.
-4. Validate the manifest/selector against representative historical changes and the matrix. Unknown ownership must fail safe to Tier 3/full.
-5. Reuse existing timing evidence if available. Do not start a new full cross-browser run solely to measure timings; collect measured timings when a full run is naturally required.
-6. Only after dry-run review should CI consume the selector. Keep the existing full cross-browser and soak gates available throughout migration.
-7. Consider source-level test annotations/tags later only where they materially improve case-level selection; avoid mass tagging for its own sake.
+## Stop / recommended next action
+- Stop before phase 2. Phase 1 is sound enough to recommend a separately assigned CI-integration review.
+- Do not change the authoritative workflow yet. Preserve the existing full cross-browser and soak gates.
+- Keep `soakRelevant` advisory until phase 2 defines explicit conditions (notably workflow command/routing changes).
+- Do not mass-tag all 187 cases; add case-level metadata later only where it materially narrows execution.
 
 ---
 
