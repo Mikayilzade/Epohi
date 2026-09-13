@@ -88,3 +88,8 @@ Add stability/soak separately when the change can accumulate failure across turn
 4. Implement and validate the tiny smoke composition, including a way to select only the 0-AI parameterized case.
 5. Update the classifier to consume the reviewed map, falling safe to Tier 3 when ownership is unknown.
 6. Preserve the existing full cross-browser and separate soak gates throughout migration.
+## Automatic CI composition
+
+The workflow passes NUL-delimited Git paths as separate arguments to the selector's deterministic CI mode. CI automatically applies every conditional neighbor that can raise tier, browser policy, full regression, or soak coverage; non-escalating neighbors remain available for explicit semantic planning. This intentionally means component UI uses Chromium + WebKit in CI, while worker/population ownership conservatively selects full cross-browser regression and soak because a path alone cannot distinguish layout, turn-yield, or persisted-schema risk.
+
+Selector output is mapped by a fixed JavaScript adapter rather than executed as shell. Invalid selector output, invalid manifests, missing ranges, unsupported policies, and inconsistent focused/full plans route to static checks plus full Chromium + WebKit and both soak jobs. The `policy-driven` browser value maps conservatively to Chromium + WebKit when focused coverage is requested. Tier 3/full plans never also schedule the focused matrix.

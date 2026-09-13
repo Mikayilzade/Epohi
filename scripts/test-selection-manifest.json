@@ -4,9 +4,9 @@
   "areas": [
     {
       "id": "selector-tooling",
-      "paths": ["scripts/select-tests.js", "scripts/test-selection-manifest.json", "tests/test-selection.contract.test.js"],
+      "paths": ["scripts/select-tests.js", "scripts/map-ci-test-plan.js", "scripts/test-selection-manifest.json", "tests/test-selection.contract.test.js"],
       "primarySpecs": [],
-      "checks": ["node --check scripts/select-tests.js", "node --test tests/test-selection.contract.test.js"],
+      "checks": ["node --check scripts/select-tests.js", "node --check scripts/map-ci-test-plan.js", "node --test tests/test-selection.contract.test.js"],
       "conditionalNeighbors": [],
       "browsers": "none",
       "minimumTier": 0,
@@ -24,6 +24,17 @@
       "fullRegression": true,
       "soakRelevant": true,
       "escalation": "Workflow policy requires one full validation; soak routing changes also require soak."
+    },
+    {
+      "id": "soak-test",
+      "paths": ["tests/autonomous-soak.spec.js"],
+      "primarySpecs": ["tests/autonomous-soak.spec.js"],
+      "conditionalNeighbors": [],
+      "browsers": "none",
+      "minimumTier": 1,
+      "fullRegression": false,
+      "soakRelevant": true,
+      "escalation": "A soak-test-only change runs static validation and the dedicated soak jobs without duplicating ordinary regression."
     },
     {
       "id": "test-infrastructure",
@@ -88,7 +99,7 @@
       "minimumTier": 2,
       "fullRegression": false,
       "soakRelevant": false,
-      "escalation": "Escalate when common renderers, selectors, or global layout are changed."
+      "escalation": "Automatic CI conservatively enables the layout escalation because paths alone cannot distinguish layout impact."
     },
     {
       "id": "pathfinding-core",
@@ -130,7 +141,7 @@
       "minimumTier": 2,
       "fullRegression": false,
       "soakRelevant": false,
-      "escalation": "Escalate for the shared economy tick or persisted population schema."
+      "escalation": "Automatic CI conservatively enables turn-yields and shared-schema because paths alone cannot distinguish those risks."
     },
     {
       "id": "runtime-observers",
