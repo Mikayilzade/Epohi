@@ -3,23 +3,30 @@
 ## Scope
 Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0` unless the user explicitly assigns a new scope. Do not create another PR/branch and do not merge.
 
-## Current checkpoint — suite inventory complete
-- Baseline inspected: `75c6101282db6858f5708535fe80b4f304893ce4`.
-- `npx playwright test --list --project=chromium-mobile` establishes **187 functional cases in 39 files**. The two configured projects produce 374 executions; 185 static declarations expand to 187 cases through two parameterized declarations.
-- Created `TEST_SUITE_INVENTORY.md`: every case is assigned once to a primary domain and classified by secondary relationships, estimated cost, browser sensitivity, production relationship, and gate role.
-- Created `TEST_SELECTION_MATRIX.md`: source/semantic change types map to minimum suites, conditional neighbors, browser coverage, cost/tier, and full/soak escalation.
-- No runtime code, test behavior/assertions/tolerances, Playwright config, workflow, or dependencies changed.
+## Current checkpoint — inventory reviewed
+- Playwright discovery establishes **187 functional cases in 39 files**. Two configured projects produce 374 project executions; this is not 374 distinct tests.
+- `TEST_SUITE_INVENTORY.md` reconciles all 187 cases.
+- `TEST_SELECTION_MATRIX.md` maps semantic/source changes to minimum focused coverage, conditional neighbors, browser needs, and full/soak escalation.
+- Inventory review is accepted as a strong working map, with two important cautions: cost bands are estimates, and some browser-sensitivity labels are conservative until supported by timing/failure history.
+- `tests/smoke.spec.js` contains no cases; real smoke candidates live mainly in `browser.spec.js`.
+- Documentation-only classifier behavior was verified green in run #225: only classification ran; static, focused, full regression, and soak jobs were skipped.
+- The accidental inventory PR #95 is no longer an active work stream; its inventory commit is now contained in the existing PR #93 branch. Continue only in PR #93.
+- PR #93 remains open/draft/unmerged.
 
-## Key findings
-- Current suites are cross-domain; filename matching alone cannot reliably select sufficient focused coverage.
-- `tests/smoke.spec.js` contains no tests; the actual smoke surface is chiefly `browser.spec.js` (8 discovered cases).
-- Strong overlap clusters exist around worker production, camps, POI completion, stack selection, outcomes, and observer containment, but their scenarios are not proven duplicates.
-- Camera/layout/input and observer timing have the strongest evidence for WebKit sensitivity. Full regression remains a gate composition, not a functional domain; soak remains separate.
+## Review decision
+Do **not** immediately mass-tag/edit all 187 cases or switch CI to the new map.
 
-## Ambiguities
-- Cost bands are structural estimates because no per-case historical timing artifact exists in the repository.
-- Browser-neutral/cross-browser boundaries lack aggregated failure history; they should be calibrated with CI timing and failure evidence.
-- A minimal smoke gate needs case-level selection to choose only the 0-AI parameterized startup case.
+The safer next step is a small machine-readable manifest plus a deterministic dry-run selector. Prove selection behavior first; only then integrate it into authoritative CI.
 
-## Recommended next action
-After user review, implement machine-readable case tags plus a reviewed source/semantic ownership manifest, collect per-project timings, and then teach CI to select by that map while failing safe to Tier 3. Keep full cross-browser and soak gates unchanged during migration. Do not merge PR #93 without explicit approval.
+Do not hard-code estimated cost bands into CI yet. Reuse existing timing evidence if available, but do not start a fresh full cross-browser run only to collect timings.
+
+## NEXT ACTION — selector phase 1
+Read and fully execute:
+
+`CODEX_TEST_SELECTION_IMPLEMENTATION_TASK.md`
+
+This phase may add the ownership manifest, a dry-run selector, and cheap non-browser selector contract tests. It must **not** change runtime/game code, existing Playwright assertions/behavior, Playwright config, or the authoritative GitHub Actions workflow.
+
+Unknown/ambiguous ownership must fail safe to Tier 3/full. Keep existing full cross-browser and soak gates unchanged.
+
+When complete, update this file and `AUTONOMY_STATUS.md` together with the result. Do not create another PR/branch and do not merge PR #93.
