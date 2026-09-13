@@ -3,6 +3,18 @@
   "runtimeFileThreshold": 4,
   "areas": [
     {
+      "id": "selector-tooling",
+      "paths": ["scripts/select-tests.js", "scripts/test-selection-manifest.json", "tests/test-selection.contract.test.js"],
+      "primarySpecs": [],
+      "checks": ["node --check scripts/select-tests.js", "node --test tests/test-selection.contract.test.js"],
+      "conditionalNeighbors": [],
+      "browsers": "none",
+      "minimumTier": 0,
+      "fullRegression": false,
+      "soakRelevant": false,
+      "escalation": "Selector changes require their static and contract checks but no gameplay browser by themselves."
+    },
+    {
       "id": "ci-workflow",
       "paths": [".github/workflows/playwright.yml"],
       "primarySpecs": ["tests/ci-push-gate.spec.js"],

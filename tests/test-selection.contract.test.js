@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const manifest = require('../scripts/test-selection-manifest.json');
-const { selectTests, validateManifest } = require('../scripts/select-tests');
+const { combineBrowserPolicies, selectTests, validateManifest } = require('../scripts/select-tests');
 
 function manifestWith(mutate) {
   const candidate = structuredClone(manifest);
@@ -114,15 +114,66 @@ test('four runtime files fail safe to Tier 3 full', () => {
   assert.match(plan.fallbackReason, /broad-change threshold/);
 });
 
-test('four test-only files do not count toward the broad runtime threshold', () => {
+test('multiple test-only files stay focused and do not count toward the broad runtime threshold', () => {
   const plan = selectTests({ changedPaths: [
-    'tests/browser.spec.js', 'tests/camera-2.spec.js',
-    'tests/mobile-context.spec.js', 'tests/turn-unlock.spec.js'
+    'tests/population-workforce.spec.js', 'tests/resource-worker.spec.js',
+    'tests/context-review-cleanup.spec.js', 'tests/turn-label-idempotence.spec.js'
   ] });
+  assert.equal(plan.tier, 2);
+  assert.equal(plan.fullRegression, false);
+  assert.equal(plan.fallbackReason, null);
+  assert.deepEqual(plan.focusedSpecs, [
+    'tests/population-workforce.spec.js', 'tests/resource-worker.spec.js',
+    'tests/context-review-cleanup.spec.js', 'tests/turn-label-idempotence.spec.js'
+  ]);
+});
+
+test('an isolated ordinary spec edit selects that exact spec in Chromium', () => {
+  const plan = selectTests({ changedPaths: ['tests/turn-label-idempotence.spec.js'] });
+  assert.equal(plan.tier, 2);
+  assert.equal(plan.browsers, 'chromium');
+  assert.deepEqual(plan.focusedSpecs, ['tests/turn-label-idempotence.spec.js']);
+  assert.equal(plan.fullRegression, false);
+});
+
+test('a known WebKit-sensitive spec edit stays focused and adds WebKit', () => {
+  const plan = selectTests({ changedPaths: ['tests/camera-2.spec.js'] });
+  assert.equal(plan.tier, 2);
+  assert.equal(plan.browsers, 'chromium+webkit');
+  assert.deepEqual(plan.focusedSpecs, ['tests/camera-2.spec.js']);
+  assert.equal(plan.fullRegression, false);
+});
+
+test('the shared Playwright helper still escalates to Tier 3 full', () => {
+  const plan = selectTests({ changedPaths: ['tests/helpers.js'] });
   assert.equal(plan.tier, 3);
+  assert.equal(plan.browsers, 'chromium+webkit');
   assert.equal(plan.fullRegression, true);
-  assert.match(plan.fallbackReason, /Unknown path ownership/);
-  assert.doesNotMatch(plan.fallbackReason, /broad-change threshold/);
+});
+
+test('selector tooling declares cheap checks and no gameplay browser by itself', () => {
+  const plan = selectTests({ changedPaths: ['scripts/select-tests.js'] });
+  assert.equal(plan.tier, 0);
+  assert.equal(plan.browsers, 'none');
+  assert.equal(plan.fullRegression, false);
+  assert.deepEqual(plan.checks, [
+    'node --check scripts/select-tests.js', 'node --test tests/test-selection.contract.test.js'
+  ]);
+});
+
+test('selector tooling cannot weaken a runtime plan', () => {
+  const plan = selectTests({ changedPaths: ['scripts/select-tests.js', 'src/camera.js'] });
+  assert.equal(plan.tier, 3);
+  assert.equal(plan.browsers, 'chromium+webkit');
+  assert.equal(plan.fullRegression, true);
+  assert.equal(plan.checks.length, 2);
+});
+
+test('browser policies compose without downgrading stronger requirements', () => {
+  assert.equal(combineBrowserPolicies(['none']), 'none');
+  assert.equal(combineBrowserPolicies(['none', 'chromium']), 'chromium');
+  assert.equal(combineBrowserPolicies(['chromium', 'policy-driven']), 'policy-driven');
+  assert.equal(combineBrowserPolicies(['policy-driven', 'chromium+webkit']), 'chromium+webkit');
 });
 
 test('0-AI smoke override selects a stable generated title only', () => {
@@ -162,12 +213,47 @@ test('manifest validation rejects missing specs and malformed or duplicate case 
 
 test('manifest validation rejects unknown and malformed condition effects', () => {
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[2].conditionalNeighbors[0].browser = 'chromium+webkit';
+    candidate.areas[3].conditionalNeighbors[0].browser = 'chromium+webkit';
   })), /unknown effect field/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[2].conditionalNeighbors[0].minimumTier = '3';
+    candidate.areas[3].conditionalNeighbors[0].minimumTier = '3';
   })), /invalid tier/);
   assert.throws(() => validateManifest(manifestWith((candidate) => {
-    candidate.areas[2].conditionalNeighbors[0].fullRegression = 'yes';
+    candidate.areas[3].conditionalNeighbors[0].fullRegression = 'yes';
   })), /must be boolean/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[3].conditionalNeighbors[0].reason = 42;
+  })), /reason must be a string/);
+});
+
+test('manifest validation rejects malformed top-level and area structures', () => {
+  for (const value of [0, -1, 1.5, '4']) {
+    assert.throws(() => validateManifest(manifestWith((candidate) => {
+      candidate.runtimeFileThreshold = value;
+    })), /positive integer/);
+  }
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].paths = [''];
+  })), /paths must be an array of non-empty strings/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].fullRegression = 'false';
+  })), /fullRegression must be boolean/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].soakRelevant = null;
+  })), /soakRelevant must be boolean/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].conditionalNeighbors = {};
+  })), /conditionalNeighbors must be an array/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].caseOverrides = {};
+  })), /caseOverrides must be an array/);
+});
+
+test('manifest validation rejects duplicate condition IDs and malformed optional checks', () => {
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[3].conditionalNeighbors.push(structuredClone(candidate.areas[3].conditionalNeighbors[0]));
+  })), /Duplicate condition ID/);
+  assert.throws(() => validateManifest(manifestWith((candidate) => {
+    candidate.areas[0].checks = [''];
+  })), /checks must be an array of non-empty strings/);
 });

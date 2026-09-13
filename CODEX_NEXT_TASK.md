@@ -3,26 +3,15 @@
 ## Scope
 Work only on existing PR #93 / remote branch `codex/-full-webkit-camera-2.0`. Do not create another PR/branch and do not merge.
 
-## Current checkpoint — selector phase 1 review fixes complete
-- Phase 1 now supports generic conditional effects for browser policy, minimum tier, full regression, and soak relevance as well as neighboring specs.
-- Reviewed layout, shared-schema, and turn-yields conditions now escalate to their required coverage.
-- Documentation-only paths no longer suppress an explicit runtime semantic override.
-- The four-file broad-runtime threshold excludes ordinary `tests/**` edits; `tests/helpers.js` remains explicitly Tier 3.
-- Startup validation rejects invalid manifest tiers/browser policies, missing referenced specs, duplicate/malformed case-override IDs, and malformed/unknown condition effects.
-- 19 selector contract tests and required static/discovery checks are green.
-- PR #97 was an accidental child PR; its commit is now contained in the existing PR #93 branch. Continue only in PR #93.
+## Current checkpoint — selector Phase 1 complete
+- Ordinary changed `tests/*.spec.js` files now select themselves at Tier 2 instead of falling through to a full regression. Known browser-sensitive specs add WebKit; multiple spec-only edits remain focused; `tests/helpers.js` remains Tier 3/full.
+- Selector/manifest/contract-test changes have explicit Tier 0 ownership, declare the selector static and contract checks, and require no gameplay browser unless combined with a stronger area.
+- Browser-policy composition now preserves `none`, `chromium`, `policy-driven`, and `chromium+webkit` in deterministic strength order; full regression remains Chromium + WebKit.
+- Manifest startup validation now covers the runtime threshold, area paths/booleans/optional arrays, per-area condition uniqueness, and optional effect/check types.
+- All 27 selector contract tests, syntax validation, the existing one-case 0-AI Playwright discovery check, and diff whitespace validation are green.
 - No authoritative workflow, runtime/game code, existing Playwright behavior, Playwright config, dependencies, or mass case metadata changed.
 
-## Final review finding before Phase 2
-A final pre-CI pass is required because ordinary changed Playwright spec files still fall through as unknown ownership and therefore trigger Tier 3/full. This is safe but unnecessarily expensive and contradicts the reviewed test-only policy. Selector/tooling self-changes also need an explicit no-gameplay-browser policy, browser-policy composition should fully support all declared policy values, and manifest validation should cover the remaining safety-critical structure.
+## NEXT ACTION — review before Phase 2
+Stop for review. Phase 1 is complete; do not start Phase 2 or edit `.github/workflows/playwright.yml` without a new explicit instruction.
 
-## NEXT ACTION — final Phase 1 gaps
-Read and fully execute:
-
-`CODEX_TEST_SELECTION_PHASE1_FINAL_PRECI_GAPS.md`
-
-Do not start Phase 2 and do not edit `.github/workflows/playwright.yml`.
-Do not change game/runtime code, existing Playwright assertions/behavior, Playwright config, or dependencies.
-Do not mass-tag the 187 tests.
-
-When complete, update this file and `AUTONOMY_STATUS.md`, commit only to the existing PR #93 branch, and stop for review before CI integration.
+Remaining conservative behavior: a changed spec inherits WebKit sensitivity when it is referenced by any cross-browser manifest owner; genuinely unowned specs default to Chromium rather than zero coverage. Unknown non-spec paths still fail safe to Tier 3/full.

@@ -1,21 +1,21 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-13 UTC.
-State: PR_93_TEST_SELECTOR_PHASE_1_REVIEW_FIXES_COMPLETE / PHASE_2_NOT_STARTED / NO_MERGE.
+State: PR_93_TEST_SELECTOR_PHASE_1_COMPLETE / PHASE_2_NOT_STARTED / NO_MERGE.
 
 ## Current checkpoint
 - Active scope remains existing PR #93 / `codex/-full-webkit-camera-2.0`; PR remains unmerged.
-- Selector phase 1 review fixes are complete: conditions can generically affect browser policy, minimum tier, full regression, and soak relevance in addition to adding specs.
-- Component layout now requires WebKit; worker shared-schema and turn-yields conditions escalate to Tier 3/full Chromium + WebKit with soak relevance.
-- Explicit runtime semantics are honored for documentation-only paths. Ordinary test files no longer count toward the four-runtime-file threshold; unknown ownership still fails safe and `tests/helpers.js` remains Tier 3.
-- The manifest is validated for unique areas, tiers, browser policies, referenced specs, case-override IDs, and supported/well-formed condition effects.
-- A stable title grep was discovery-validated to select only the generated 0-AI browser smoke case. Existing Playwright sources were not modified.
+- Phase 1's final pre-CI gaps are closed. Ordinary changed specs select themselves at Tier 2; known browser-sensitive specs add WebKit; multiple spec-only edits stay focused; shared `tests/helpers.js` remains Tier 3/full.
+- Selector tooling has explicit Tier 0 ownership and declares both required cheap checks. It requests no gameplay browser alone and cannot weaken a combined runtime plan.
+- Browser-policy composition preserves all four supported values deterministically, with Chromium + WebKit dominant and `policy-driven` never downgraded to Chromium.
+- Manifest startup validation now also covers the positive-integer runtime threshold, area paths/booleans/optional arrays, unique condition IDs per area, and optional effect/check types.
+- Unknown non-spec paths continue to fail safe. A changed spec referenced by a cross-browser owner conservatively inherits WebKit sensitivity; otherwise an unowned spec defaults to focused Chromium.
 - No runtime/game code, existing Playwright assertions/behavior, Playwright config, dependency, or authoritative workflow changed.
 
 ## Files and validation
 - Updated: `scripts/test-selection-manifest.json`, `scripts/select-tests.js`, `tests/test-selection.contract.test.js`, `CODEX_NEXT_TASK.md`, `AUTONOMY_STATUS.md`.
 - Green: `node --check scripts/select-tests.js`.
-- Green: `node --test tests/test-selection.contract.test.js` (19/19).
+- Green: `node --test tests/test-selection.contract.test.js` (27/27).
 - Green: Playwright `--list` with the manifest smoke grep (exactly 1 case, no browser launch).
 - Green: `git diff --check`.
 
