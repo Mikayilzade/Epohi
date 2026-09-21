@@ -15,6 +15,20 @@ This is the only automatic repository entry point for ChatGPT/Codex agents. It o
 6. Keep user updates short and factual. Ask only a blocking question.
 7. On pause or context pressure, keep `CODEX_NEXT_TASK.md` compact and put one concise current checkpoint at the top of `AUTONOMY_STATUS.md`; do not duplicate old narratives or raw logs.
 
+## Mandatory startup handshake
+
+Before doing any edit, test, commit, push, or publication work, confirm the exact remote target for the task.
+
+1. Resolve the target PR and branch from the user's latest instruction and/or `CODEX_NEXT_TASK.md`.
+2. Verify that the target is consistent with the available repository/PR metadata or with the preloaded Codex task header + checkpoint. A local sandbox branch named `work` is allowed only as an alias for the verified remote target.
+3. A new Codex chat/task does **not** imply a new branch or PR. Continue on the existing target when one is named.
+4. If the target is verified, the first user-facing response must be a single concise confirmation in the user's language, for example:
+   `Понял. Работаю только в PR #102 / ветке codex/-ci-v2, новую ветку/PR не создаю, merge не делаю. Приступаю.`
+   Adapt the PR/branch and merge restriction to the actual task.
+5. Do not send that confirmation if the target cannot be verified or if repository state contradicts the task. Instead stop before edits and report the exact mismatch/blocker.
+6. Never silently choose a replacement branch/PR. Creating either requires an explicit instruction such as “create a new branch/PR”; general requests like “continue”, “fix”, “work on this”, “new chat”, or “do the task” are not permission.
+7. If the Codex UI/workflow attempts to create a new PR/branch despite an existing-target instruction, do not treat that as success. Stop publication and report it rather than continuing onto a replacement work stream.
+
 ## Codex sandbox / branch handling
 
 1. Browser Codex may show the requested remote branch in the task header while the local checkout itself is named `work`. This local `work` name can be a sandbox alias; do not require a network fetch or branch rename solely because of that name.
