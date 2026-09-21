@@ -75,18 +75,36 @@ test('permanent workflow maps risk tiers to static, focused, full and soak gates
   expect(workflow).toContain('Focused WebKit');
   expect(workflow).toContain("if: needs.classify-change.outputs.run_focused_webkit == 'true'");
 
-  expect(workflow).toContain('name: Full Chromium + WebKit regression');
+  expect(workflow).toContain('name: Full — ${{ matrix.browser }} — shard ${{ matrix.shard }}/3');
   expect(workflow).toContain("if: needs.classify-change.outputs.run_full == 'true'");
-  expect(workflow).toContain('npx playwright test --grep-invert @soak --project=chromium-mobile');
-  expect(workflow).toContain('npx playwright test --grep-invert @soak --project=webkit-mobile');
+  expect(workflow).toContain('browser: [chromium, webkit]');
+  expect(workflow).toContain('shard: [1, 2, 3]');
+  expect(workflow).toContain('--shard=${{ matrix.shard }}/3');
+  expect(workflow).toContain('--workers=1');
 
-  expect(workflow).toContain('Autonomous soak — Chromium long matrix');
-  expect(workflow).toContain('EPOHI_SOAK_MODE=long npx playwright test tests/autonomous-soak.spec.js --project=chromium-mobile');
-  expect(workflow).toContain('Autonomous soak — WebKit representative matrix');
-  expect(workflow).toContain('EPOHI_SOAK_MODE=short npx playwright test tests/autonomous-soak.spec.js --project=webkit-mobile');
+  expect(workflow).toContain('name: Soak — Chromium — seed ${{ matrix.seed }}');
+  expect(workflow).toContain('seed: [10101, 20202, 30303, 40404, 50505]');
+  expect(workflow).toContain('EPOHI_SOAK_MODE=long EPOHI_SOAK_SEED=${{ matrix.seed }}');
+  expect(workflow).toContain('name: Soak — WebKit — seed ${{ matrix.seed }}');
+  expect(workflow).toContain('seed: [10101, 30303]');
+  expect(workflow).toContain('EPOHI_SOAK_MODE=short EPOHI_SOAK_SEED=${{ matrix.seed }}');
   expect(workflow).toContain("if: needs.classify-change.outputs.run_soak == 'true'");
+  expect(workflow).toContain('fail-fast: false');
+  expect(workflow).toContain('playwright-report/');
+  expect(workflow).toContain('test-results/');
 
-  expect(workflow).toContain('npx playwright install --with-deps chromium webkit');
+  expect(workflow).toContain('npx playwright install --with-deps ${{ matrix.browser }}');
   expect(workflow).toContain('npx playwright install --with-deps chromium');
   expect(workflow).toContain('npx playwright install --with-deps webkit');
+});
+
+test('first browser failure keeps structured and visual diagnostics', async () => {
+  const config = fs.readFileSync(path.join(process.cwd(), 'playwright.config.js'), 'utf8');
+  const workflow = fs.readFileSync(workflowPath, 'utf8');
+  expect(config).toContain("trace: 'retain-on-failure'");
+  expect(config).toContain("screenshot: 'only-on-failure'");
+  expect(config).toContain("video: 'retain-on-failure'");
+  expect(config).toContain("['html', { open: 'never' }]");
+  expect(config).toContain("['./scripts/failure-diagnostics-reporter.js']");
+  expect(workflow).not.toContain('--reporter=line');
 });

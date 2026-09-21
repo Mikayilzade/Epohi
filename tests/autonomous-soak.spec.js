@@ -8,9 +8,14 @@ const {
 
 const mode = process.env.EPOHI_SOAK_MODE || 'short';
 const longMode = mode === 'long';
-const seeds = longMode
+const configuredSeed = process.env.EPOHI_SOAK_SEED ? Number(process.env.EPOHI_SOAK_SEED) : null;
+const modeSeeds = longMode
   ? [10101, 20202, 30303, 40404, 50505]
   : [10101, 30303];
+if (configuredSeed !== null && (!Number.isInteger(configuredSeed) || !modeSeeds.includes(configuredSeed))) {
+  throw new Error(`EPOHI_SOAK_SEED ${process.env.EPOHI_SOAK_SEED} is not part of the ${mode} soak matrix.`);
+}
+const seeds = configuredSeed === null ? modeSeeds : [configuredSeed];
 const targetTurns = Number(process.env.EPOHI_SOAK_TURNS || (longMode ? 150 : 30));
 const saveEvery = Number(process.env.EPOHI_SOAK_SAVE_EVERY || (longMode ? 30 : 15));
 
@@ -308,15 +313,46 @@ async function saveReloadCurrentCampaign(page) {
 test.describe('@soak deterministic autonomous player', () => {
   test.describe.configure({ mode: 'serial' });
 
+  test.afterEach(async ({ page }, testInfo) => {
+    if (testInfo.status === testInfo.expectedStatus) return;
+    const snapshot = await page.evaluate(() => {
+      const debug = window.__epohiDebug && window.__epohiDebug();
+      const state = debug && debug.state;
+      const visible = (id) => document.getElementById(id)?.classList.contains('show') || false;
+      return {
+        turn: Number(state?.turn || 0),
+        processing: Boolean(debug?.isTurnProcessing?.()),
+        victory: Boolean(state?.victory),
+        defeat: Boolean(state?.defeat),
+        blockingModals: ['stabilityDecisionModal', 'coherenceProposalModal', 'captureChoiceModal', 'routePoiModal', 'victoryModal'].filter(visible),
+        selectedUnitId: state?.selectedUnitId || null,
+        selectedCityId: state?.selectedCityId || null
+      };
+    }).catch((error) => ({ unavailable: error.message }));
+    await testInfo.attach('game-state.json', {
+      body: Buffer.from(`${JSON.stringify(snapshot, null, 2)}\n`),
+      contentType: 'application/json'
+    });
+  });
+
   for (const seed of seeds) {
-    test(`seed ${seed} survives ${targetTurns} turns or reaches a legitimate outcome`, async ({ page }) => {
+    test(`seed ${seed} survives ${targetTurns} turns or reaches a legitimate outcome`, async ({ page }, testInfo) => {
       test.setTimeout(longMode ? 900_000 : 240_000);
+      testInfo.annotations.push({ type: 'seed', description: String(seed) });
+      const boundary = (description) => {
+        const existing = testInfo.annotations.find((item) => item.type === 'last-boundary');
+        if (existing) existing.description = description;
+        else testInfo.annotations.push({ type: 'last-boundary', description });
+      };
       const problems = watchConsole(page);
 
+      boundary('clear-storage');
       await clearStorage(page);
       await installSeededRandom(page, seed);
+      boundary('create-game');
       await createGame(page, 1, 'small');
       await waitForGame(page);
+      boundary('standing-orders-assigned');
       await assignStandingOrders(page);
 
       const startTurn = await page.evaluate(() => Number(window.__epohiDebug().state.turn || 1));
@@ -344,17 +380,22 @@ test.describe('@soak deterministic autonomous player', () => {
         ).toBe(true);
 
         await assignStandingOrders(page);
+        boundary(`before-end-turn:${current}`);
         const result = await advanceTurn(page, seed + current);
+        boundary(`after-end-turn:${result.turn}`);
         reachedOutcome = result.outcome;
 
         if (!reachedOutcome && saveEvery > 0 && (result.turn - startTurn) > 0 && (result.turn - startTurn) % saveEvery === 0) {
           await resolveBlockingInteraction(page, seed + result.turn);
+          boundary(`save-started:${result.turn}`);
           await saveReloadCurrentCampaign(page);
+          boundary(`reload-completed:${result.turn}`);
           await assignStandingOrders(page);
         }
       }
 
       const finalInvariants = await stateInvariantProblems(page);
+      boundary(reachedOutcome ? 'outcome-reached' : 'target-turn-reached');
       expect(finalInvariants, finalInvariants.join('\n')).toEqual([]);
       await expectNoConsoleProblems(problems);
 

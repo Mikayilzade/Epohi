@@ -142,6 +142,7 @@ jobs:
         run: |
           set -euo pipefail
           find src tests -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+          find scripts -type f -name '*.js' -print0 | xargs -0 -n1 node --check
           node --check playwright.config.js
           node --check sw.js
           node --check scripts/select-tests.js
@@ -149,6 +150,7 @@ jobs:
           if [[ "${{ needs.classify-change.outputs.run_selector_checks }}" == "true" ]]; then
             node --test tests/test-selection.contract.test.js
           fi
+          node --test tests/failure-diagnostics.contract.test.js
           if [[ -n "${PR_BASE_SHA:-}" ]] && git cat-file -e "${PR_BASE_SHA}^{commit}" 2>/dev/null; then
             git diff --check "$PR_BASE_SHA" HEAD
           elif git rev-parse HEAD^ >/dev/null 2>&1; then
@@ -189,7 +191,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t tests < <(node -e 'for (const value of JSON.parse(process.env.FOCUSED_TESTS_JSON)) console.log(value)')
-          npx playwright test "${tests[@]}" --project=chromium-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
+          npx playwright test "${tests[@]}" --project=chromium-mobile --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-chromium.txt
 
       - name: Focused WebKit
         if: needs.classify-change.outputs.run_focused_webkit == 'true'
@@ -199,7 +201,7 @@ jobs:
         run: |
           set -euo pipefail
           mapfile -t tests < <(node -e 'for (const value of JSON.parse(process.env.FOCUSED_TESTS_JSON)) console.log(value)')
-          npx playwright test "${tests[@]}" --project=webkit-mobile --reporter=line --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
+          npx playwright test "${tests[@]}" --project=webkit-mobile --timeout=20000 --workers=1 --max-failures=20 2>&1 | tee focused-webkit.txt
 
       - name: Upload focused diagnostics
         if: always()
@@ -215,11 +217,16 @@ jobs:
           retention-days: 7
 
   full-regression:
-    name: Full Chromium + WebKit regression
+    name: Full — ${{ matrix.browser }} — shard ${{ matrix.shard }}/3
     needs: [classify-change, static-checks]
     if: needs.classify-change.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+        shard: [1, 2, 3]
 
     steps:
       - name: Checkout exact revision
@@ -234,43 +241,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium and WebKit
-        run: npx playwright install --with-deps chromium webkit
+      - name: Install selected browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
 
-      - name: Full mobile regression — Chromium and WebKit
+      - name: Full mobile regression shard
         shell: bash
         run: |
-          set +e
-
-          npx playwright test --grep-invert @soak --project=chromium-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-chromium.txt
-          chromium_code=${PIPESTATUS[0]}
-
-          npx playwright test --grep-invert @soak --project=webkit-mobile --reporter=line --workers=1 --max-failures=30 2>&1 | tee full-webkit.txt
-          webkit_code=${PIPESTATUS[0]}
-
-          if [ "$chromium_code" -ne 0 ] || [ "$webkit_code" -ne 0 ]; then
-            exit 1
-          fi
+          set -euo pipefail
+          npx playwright test --grep-invert @soak \
+            --project=${{ matrix.browser }}-mobile \
+            --shard=${{ matrix.shard }}/3 \
+            --workers=1 --max-failures=30 2>&1 | tee full-${{ matrix.browser }}-${{ matrix.shard }}.txt
 
       - name: Upload regression diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: epohi-regression-results
+          name: epohi-full-${{ matrix.browser }}-shard-${{ matrix.shard }}
           path: |
-            full-chromium.txt
-            full-webkit.txt
+            full-${{ matrix.browser }}-${{ matrix.shard }}.txt
             playwright-report/
             test-results/
           if-no-files-found: ignore
           retention-days: 7
 
   soak-chromium:
-    name: Autonomous soak — Chromium long matrix
+    name: Soak — Chromium — seed ${{ matrix.seed }}
     needs: [classify-change, static-checks]
     if: needs.classify-change.outputs.run_soak == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [10101, 20202, 30303, 40404, 50505]
 
     steps:
       - name: Checkout exact revision
@@ -288,14 +292,14 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Autonomous soak — Chromium long matrix
-        run: EPOHI_SOAK_MODE=long npx playwright test tests/autonomous-soak.spec.js --project=chromium-mobile --reporter=line --workers=1
+      - name: Autonomous soak — Chromium seed ${{ matrix.seed }}
+        run: EPOHI_SOAK_MODE=long EPOHI_SOAK_SEED=${{ matrix.seed }} npx playwright test tests/autonomous-soak.spec.js --project=chromium-mobile --workers=1
 
       - name: Upload Chromium soak diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: epohi-soak-chromium
+          name: epohi-soak-chromium-${{ matrix.seed }}
           path: |
             playwright-report/
             test-results/
@@ -303,11 +307,15 @@ jobs:
           retention-days: 7
 
   soak-webkit:
-    name: Autonomous soak — WebKit representative matrix
+    name: Soak — WebKit — seed ${{ matrix.seed }}
     needs: [classify-change, static-checks]
     if: needs.classify-change.outputs.run_soak == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [10101, 30303]
 
     steps:
       - name: Checkout exact revision
@@ -325,14 +333,14 @@ jobs:
       - name: Install WebKit
         run: npx playwright install --with-deps webkit
 
-      - name: Autonomous soak — WebKit representative matrix
-        run: EPOHI_SOAK_MODE=short npx playwright test tests/autonomous-soak.spec.js --project=webkit-mobile --reporter=line --workers=1
+      - name: Autonomous soak — WebKit seed ${{ matrix.seed }}
+        run: EPOHI_SOAK_MODE=short EPOHI_SOAK_SEED=${{ matrix.seed }} npx playwright test tests/autonomous-soak.spec.js --project=webkit-mobile --workers=1
 
       - name: Upload WebKit soak diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: epohi-soak-webkit
+          name: epohi-soak-webkit-${{ matrix.seed }}
           path: |
             playwright-report/
             test-results/

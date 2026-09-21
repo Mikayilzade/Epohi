@@ -59,6 +59,13 @@ The permanent Playwright workflow implements the policy conservatively:
 - Tier 4: manual workflow dispatch or a relevant push to `main` -> static + full Chromium/WebKit + both soak jobs.
 - If the classifier cannot establish a safe change range, it fails safe to Tier 3 instead of silently skipping coverage.
 
+The permanent full gate runs Chromium and WebKit as separate three-shard matrices. The
+soak gate runs each supported browser/seed pair as its own matrix job. Both matrices
+use `fail-fast: false`; full shards retain one Playwright worker until a separate,
+authoritative concurrency experiment proves that a higher count is stable. Together,
+the shards cover the same non-`@soak` suite, while the soak matrices preserve the five
+long Chromium seeds and two representative WebKit seeds.
+
 The path classifier is intentionally conservative. Agents still own the semantic risk judgment and should mention the chosen tier in their report.
 
 ## CI efficiency rules
@@ -80,6 +87,11 @@ The path classifier is intentionally conservative. Agents still own the semantic
 5. Do not weaken, skip, delete, or rewrite valid browser tests merely because the local container cannot launch the browser.
 6. Push coherent code with the strongest checks that can actually run, then use GitHub Actions as the authoritative browser-test environment.
 7. Full release gates still require Chromium + WebKit results in CI. A local infrastructure bypass does not mean the browser gate is passed.
+
+All Playwright gates retain trace, screenshot, and video evidence on the first failure
+and upload `test-results/` plus `playwright-report/`. A structured diagnostics reporter
+also writes `failure.json`; stateful tests should annotate meaningful action boundaries
+and attach a compact game-state snapshot when one is safely available.
 
 ## Preferred Playwright installation in CI
 GitHub Actions should install only the browsers required by the selected tier/job, using `npx playwright install --with-deps ...`.

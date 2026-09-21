@@ -5,7 +5,7 @@ const mobileUse = {
   viewport: { width: 390, height: 844 },
   isMobile: true,
   hasTouch: true,
-  trace: 'on-first-retry',
+  trace: 'retain-on-failure',
   screenshot: 'only-on-failure',
   video: 'retain-on-failure'
 };
@@ -15,6 +15,7 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
+  reporter: [['line'], ['html', { open: 'never' }], ['./scripts/failure-diagnostics-reporter.js']],
   use: mobileUse,
   projects: [
     {

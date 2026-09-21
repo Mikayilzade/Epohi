@@ -1,6 +1,14 @@
 # CI v2 — faster, more diagnostic Playwright gates
 
-Status: planned work package. Do not implement merely because this file exists. Start only from an explicit user/Codex instruction.
+Status: implemented locally on PR #100; authoritative GitHub Actions validation is pending publication/access (see `AUTONOMY_STATUS.md`).
+
+## Implemented architecture
+- First failures retain trace/screenshots/video and receive a machine-readable `failure.json` from the shared diagnostics reporter.
+- Stateful soak cases annotate seed and last meaningful boundary and attach a compact game-state snapshot on failure.
+- Chromium soak is split across seeds `10101`, `20202`, `30303`, `40404`, `50505`; WebKit across `10101`, `30303`, all with `fail-fast: false`.
+- Full non-soak regression is split by browser and three Playwright shards, also with `fail-fast: false`.
+- Full shards intentionally remain at one worker. The repository snapshot has no authenticated GitHub route for the required stability experiment, so increasing workers would not meet Phase 4's evidence requirement.
+- Local `--list` comparison proves the three-shard union is exactly the unsharded 186-test Chromium set (186 entries, 186 unique); the partition is project-independent and the same command shape is used for WebKit.
 
 ## Why this exists
 The current CI is safer than before, but it still has two practical weaknesses:
