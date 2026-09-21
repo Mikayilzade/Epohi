@@ -33,19 +33,13 @@ Artifact from the failed job:
 `epohi-full-webkit-shard-1` (artifact ID `10651331454`).
 
 ## Task
-Use the new CI v2 diagnostics (failure.json, trace, screenshot, video, error context, logs) to establish the exact root cause of both failures before changing code.
+Publish and validate the minimum root-caused test stabilization already prepared in the current snapshot.
 
-### Camera
-Do not assume the historical 13 px WebKit race is the cause merely because 6.5 px matches half of 13. Prove or disprove it from the current camera/viewport/layout timeline and state.
+### Camera root cause and fix
+The diagnostic timeline shows the final WebKit viewport height arriving 13 px after the fit sample. The old center is therefore 6.5 px from the final center. Wait for the existing stable-layout boundary before clicking Fit; do not change tolerance or timeout.
 
-### Combat movement
-Determine why tile (6,5) became an attack target instead of a move destination. Distinguish among:
-- deterministic test setup contamination/insufficient isolation;
-- an enemy/neutral unit or other world state occupying/affecting the tile;
-- selection/UI semantic mismatch;
-- an actual runtime/pathing/combat regression.
-
-Do not change gameplay just to make the test green.
+### Combat movement root cause and fix
+Random world generation may place a camp on hard-coded tile `(6,5)`. Attack is the correct UI semantic for that hostile target, so this is insufficient fixture isolation rather than a runtime/pathing regression. Clear camp/barbarian state from the focused route target; do not change gameplay.
 
 ## Guardrails
 - No arbitrary sleep.
@@ -56,12 +50,11 @@ Do not change gameplay just to make the test green.
 - Preserve CI v2 diagnostics and parallelization unless evidence shows a defect in them.
 
 ## Validation order
-1. Diagnose both failures from the existing authoritative artifact/log first.
-2. Make the minimum correct fix only after root cause is known.
-3. Run the two exact failing WebKit tests first.
-4. Run any directly affected neighboring tests required by the proven root cause.
-5. Only then publish the coherent fix to this same PR #102 branch and use authoritative GitHub Actions.
-6. Inspect any new red job before another edit/rerun.
+1. Run static checks on the prepared diff.
+2. Run the two exact failing WebKit tests first through authoritative CI (local browser infrastructure is unavailable).
+3. Run any directly affected neighboring tests required by the proven root cause.
+4. Only then publish the coherent fix to this same PR #102 branch and use authoritative GitHub Actions.
+5. Inspect any new red job before another edit/rerun.
 
 ## Completion criteria
 - Both root causes are written down, not guessed.

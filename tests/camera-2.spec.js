@@ -217,6 +217,11 @@ test.describe('Camera 2.0', () => {
   test('show entire map centers map and center control targets selected unit or capital', async ({ page }) => {
     await clearStorage(page);
     await createGame(page, 0, 'normal');
+    // WebKit can finish the responsive game-shell reflow after the first map
+    // paint. Fit only after the viewport and map geometry describe the same
+    // layout; otherwise a 13 px late height change leaves the old center 6.5 px
+    // away from the final center even though the camera transition completed.
+    await waitForStableMapLayout(page);
     await page.locator('#showMapBtn').click();
     await waitForMapFit(page);
     let info = await cameraState(page);

@@ -1,7 +1,7 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-21 UTC.
-State: PR_102_CI_V2_AUTHORITATIVE_RUN_258_ONE_RED_SHARD / TWO_WEBKIT_FAILURES_UNDER_INVESTIGATION / NO_MERGE.
+State: PR_102_CI_V2_RUN_258_ROOT_CAUSED / MINIMUM_TEST_FIX_READY / AUTHORITATIVE_CI_PENDING / NO_MERGE.
 
 ## Current scope
 - Active work is existing PR #102 / branch `codex/-ci-v2`, stacked on PR #100.
@@ -41,7 +41,7 @@ Red:
 Observed:
 - expected centering error < 0.01
 - received 6.5 px after 2000 ms
-- this resembles the historical late 13 px WebKit viewport-height change, but current root cause is not yet proven and must be established from the new artifact/trace/state.
+- the layout timeline identifies a late 13 px WebKit viewport-height change; fitting against the earlier height leaves the camera exactly 6.5 px from the final center.
 
 ### Failure B — manual hill movement
 `tests/combat-world-stability.spec.js:134`
@@ -50,14 +50,17 @@ Observed:
 Observed:
 - timed out waiting for `[data-context-action="move"]`
 - diagnostics indicate target tile (6,5) was presented as an attack target / attack action instead of move
-- exact cause is not yet established: test setup/world-state contamination, occupant/hostile state, selection semantics, or runtime bug remain to be distinguished from evidence.
+- generated camp state occupied the hard-coded target tile, so the runtime correctly chose attack semantics; this is fixture isolation, not a pathing/combat regression.
 
 Failed-job artifact:
 - `epohi-full-webkit-shard-1`, artifact ID `10651331454`
 
 ## Exact next action
-Follow `CODEX_NEXT_TASK.md`.
-Use the existing diagnostics first, establish both exact root causes, then make the minimum correct fix. Validate the two exact WebKit failures before widening. Do not rerun the full matrix blindly. Update this checkpoint after meaningful progress and stop on final authoritative evidence for review.
+The two failures are test-boundary defects, not gameplay regressions:
+- Camera: the final WebKit viewport height arrived 13 px after the fit sample. The camera remained centered for the old geometry, producing the exact half-delta (6.5 px) error. Waiting for the existing three-frame stable-layout boundary before clicking Fit makes the action consume final geometry; no tolerance or timeout changed.
+- Movement: the generated world may place a hostile camp on the hard-coded `(6,5)` fixture tile. `canAttack` correctly prioritizes a camp on that adjacent tile, so the UI correctly exposed Attack rather than Move. The focused movement fixture now removes generated hostile camp/barbarian state from its route target; gameplay/pathing is unchanged.
+
+Risk tier: Tier 2 test-only stabilization, browser/layout-sensitive. Local focused browser execution is blocked because Chromium lacks `libatk-1.0.so.0`, and WebKit installation is blocked by CDN HTTP 403. Static checks remain required. Publish the coherent test/status fix to existing PR #102 / `codex/-ci-v2`, run the exact two WebKit tests through authoritative Actions first, then allow the classifier-selected gate. Inspect any red job before another change; stop for review when final SHA is green. Do not merge.
 
 
 ---

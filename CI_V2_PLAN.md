@@ -1,6 +1,6 @@
 # CI v2 — faster, more diagnostic Playwright gates
 
-Status: implemented locally on PR #100; authoritative GitHub Actions validation is pending publication/access (see `AUTONOMY_STATUS.md`).
+Status: implemented on PR #102; authoritative run #258 validated every matrix job except WebKit shard 1/3, whose two fixture/layout failures now have minimum fixes pending final CI (see `AUTONOMY_STATUS.md`).
 
 ## Implemented architecture
 - First failures retain trace/screenshots/video and receive a machine-readable `failure.json` from the shared diagnostics reporter.
