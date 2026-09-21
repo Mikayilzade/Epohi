@@ -1,45 +1,73 @@
 # CODEX NEXT TASK
 
 ## Scope
-Work only on existing PR #100 / branch `codex/fix-github-actions-output-issue`. Do not create another PR/branch and do not merge.
+Work only on existing PR #102 / branch `codex/-ci-v2`.
 
-## Current checkpoint — authoritative scoped CI green
-The two failures originally seen in Actions run `34770696737` were diagnosed, fixed, and verified in the authoritative PR #100 Actions environment.
+PR #102 is an accidental child PR created during CI v2 work. For this task, finish the CI v2 investigation/fix inside this existing PR only. Do not create another branch or PR. Do not merge. Do not close PR #102. Cleanup/transfer back to PR #100 will be handled separately after this work is proven green.
 
-- CI contract failure: `tests/ci-push-gate.spec.js` no longer couples workflow YAML to selector-owned reason strings. It checks the actual PR range-selection and selector-invocation contract.
-- WebKit soak seed `30303`: the 25 ms cross-protocol polling loop was replaced with a browser-side semantic wait. No gameplay/runtime code, assertion, tolerance, or arbitrary sleep was changed.
+Before any edits/tests, follow the mandatory startup handshake in `AGENTS.md`: verify the exact target and reply to the user with one concise confirmation naming PR #102 and branch `codex/-ci-v2`.
 
-## Authoritative validation
-PR #100 Actions run `34775550869` / run #252 at head `d9b840232bee3dbbcd3bdd7b34359706247ce485` completed successfully for the classifier-selected scope:
-- `Classify CI scope` — green.
-- `Static integrity` — green.
-- `Focused browser regression` — green in Chromium and WebKit.
-- `Autonomous soak — Chromium long matrix` — green.
-- `Autonomous soak — WebKit representative matrix` — green, 2/2; this explicitly includes seed `30303` and it passed.
-- `Full Chromium + WebKit regression` — skipped by the risk classifier, not failed.
+## Current authoritative result
+GitHub Actions run #258 / `35623913602` for head `983ff69648a0961389dd5096151d3edf30924cac` completed with exactly one failed job:
 
-A prior child PR #101 was accidental. Its single fix commit is now contained directly in PR #100; #101 is closed and is not a separate work stream.
+`Full — WebKit — shard 1/3`
 
-## Planned next work package — CI v2
-A staged implementation plan is now stored in `CI_V2_PLAN.md`.
+All other full shards and all soak seed jobs passed.
 
-Its purpose is to make CI both faster and much easier to diagnose by:
-- preserving useful evidence on first browser failure;
-- producing structured failure context for long/stateful tests;
-- splitting soak by browser/seed;
-- splitting full regression by browser and conservative shards;
-- experimenting with extra Playwright workers only after independence is proven;
-- auditing the classifier so risk-based behavior and coverage are preserved;
-- measuring before/after wall-clock time without using a brittle numeric target as a fake success gate.
+The failed WebKit shard had 63 passed and 2 failed tests:
 
-`CI_V2_PLAN.md` contains phase-by-phase exit criteria plus an adaptive phase rule so Codex can execute the whole package autonomously without getting stuck on wording that stops matching repository reality.
+1. `tests/camera-2.spec.js:217`
+   `Camera 2.0 › show entire map centers map and center control targets selected unit or capital`
+   - assertion expected centering error < 0.01
+   - observed 6.5 px
+   - wait timed out after 2000 ms
+   - this resembles the historical 13 px WebKit viewport-late-resize signature, but that is only a hypothesis until proven from the current trace/state.
 
-## Current action
-Stop for review. Do not start CI v2 merely because the plan exists. Do not rerun CI blindly and do not merge.
+2. `tests/combat-world-stability.spec.js:134`
+   `Combat, AI and world stability › manual hill movement uses the routed terrain cost and waits for the second turn`
+   - timed out waiting to click `[data-context-action="move"]`
+   - the new diagnostics artifact exists and contains screenshot/video/trace/failure evidence
+   - observed evidence indicates the target tile was presented as an attack target and the UI offered attack rather than move; determine exactly why.
 
-When the user explicitly starts CI v2, read `CI_V2_PLAN.md`, `AGENT_TESTING_POLICY.md`, and `AUTONOMY_STATUS.md`, then follow the requested mode:
-- one named phase only;
-- continue from the first unfinished phase;
-- or full autonomous pass through all phases.
+Artifact from the failed job:
+`epohi-full-webkit-shard-1` (artifact ID `10651331454`).
 
-Before marking PR #100 Ready for review, make one explicit policy decision: whether the successful classifier-selected authoritative run is sufficient, or whether an explicit full Chromium + WebKit regression is still required despite the classifier skipping it. If a full run is required, trigger it deliberately according to `AGENT_TESTING_POLICY.md`; do not weaken tests or change scope merely to force green.
+## Task
+Use the new CI v2 diagnostics (failure.json, trace, screenshot, video, error context, logs) to establish the exact root cause of both failures before changing code.
+
+### Camera
+Do not assume the historical 13 px WebKit race is the cause merely because 6.5 px matches half of 13. Prove or disprove it from the current camera/viewport/layout timeline and state.
+
+### Combat movement
+Determine why tile (6,5) became an attack target instead of a move destination. Distinguish among:
+- deterministic test setup contamination/insufficient isolation;
+- an enemy/neutral unit or other world state occupying/affecting the tile;
+- selection/UI semantic mismatch;
+- an actual runtime/pathing/combat regression.
+
+Do not change gameplay just to make the test green.
+
+## Guardrails
+- No arbitrary sleep.
+- Do not weaken assertions, tolerances, or timeouts.
+- Do not hide a deterministic failure behind retries.
+- Do not broadly refactor unrelated code.
+- Do not rerun the whole matrix unchanged just to see whether red becomes green.
+- Preserve CI v2 diagnostics and parallelization unless evidence shows a defect in them.
+
+## Validation order
+1. Diagnose both failures from the existing authoritative artifact/log first.
+2. Make the minimum correct fix only after root cause is known.
+3. Run the two exact failing WebKit tests first.
+4. Run any directly affected neighboring tests required by the proven root cause.
+5. Only then publish the coherent fix to this same PR #102 branch and use authoritative GitHub Actions.
+6. Inspect any new red job before another edit/rerun.
+
+## Completion criteria
+- Both root causes are written down, not guessed.
+- The minimum fix is justified by those root causes.
+- Exact affected WebKit tests are green.
+- Required authoritative CI for the final SHA is green, or a genuine blocker is precisely documented.
+- Update `AUTONOMY_STATUS.md` with root cause, changes, tests, CI run/result, and exact next action.
+- Update `CI_V2_PLAN.md` Phase 7/current status if authoritative evidence changes its completion state.
+- Stop for user review. Do not merge.
