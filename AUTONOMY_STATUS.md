@@ -1,26 +1,64 @@
 # AUTONOMY STATUS — CURRENT
 
 Updated: 2026-09-21 UTC.
-State: PR_100_CI_V2_IMPLEMENTED_LOCALLY / AUTHORITATIVE_CI_PENDING / NO_MERGE.
+State: PR_102_CI_V2_AUTHORITATIVE_RUN_258_ONE_RED_SHARD / TWO_WEBKIT_FAILURES_UNDER_INVESTIGATION / NO_MERGE.
 
-## CI v2 phase checkpoint
-- Scope remains existing PR #100 / `codex/fix-github-actions-output-issue` (the local checkout is the allowed `work` alias). No branch or replacement PR was created and no merge was attempted.
-- Phase 0 baseline: the old workflow had one sequential full job (Chromium then WebKit), one five-seed serial Chromium soak job, and one two-seed serial WebKit soak job. `fullyParallel` was false, every command used one worker, and the full/soak job timeouts were 65/90/50 minutes. Run `34775550869` is the latest known representative green, but this snapshot has no authenticated GitHub API/remote, so exact historical job durations cannot be recovered. Safe targets were therefore established from the workflow's explicit sequential structure rather than invented timing data.
-- Phase 1: Playwright now uses `trace: retain-on-failure` with existing failure screenshots/videos, plus a shared reporter that writes structured `failure.json` records under `test-results/`. Workflow commands no longer override that reporter, and every relevant artifact upload already includes `test-results/` and `playwright-report/`. A deliberately introduced local contract-test mistake proved that the first failure produced both `failure.json` and `trace.zip`; the mistake was fixed and the probe artifacts are not committed.
-- Phase 2: soak runs as seven independent browser/seed jobs with `fail-fast: false`, exactly preserving Chromium seeds `10101/20202/30303/40404/50505` and WebKit seeds `10101/30303`. The spec rejects a matrix seed that does not belong to the selected long/short set.
-- Phase 3: full non-soak regression is a browser × 3-shard matrix with diagnostic names and `fail-fast: false`. Playwright `--list` evidence showed the unsharded Chromium set had 186 entries and the combined shards had 186 entries / 186 unique entries.
-- Phase 4 adaptive result: full shards remain at one worker. The planned two-worker experiment requires authoritative repeated CI evidence, unavailable before publication in this unauthenticated snapshot; choosing one worker preserves stability while job-level parallelism supplies the safe speedup. This is the closest evidence-based equivalent allowed by the phase's explicit “workers intentionally remain at 1” exit path.
-- Phase 5: soak records seed and last successful boundary (creation, standing orders, turn transition, save/reload, outcome) and attaches compact turn/processing/outcome/modal/selection state on failure. Existing semantic turn waits, assertions, tolerances, and timeouts are unchanged.
-- Phase 6: classifier semantics are unchanged. Tier 0 still stops after classification, Tier 2 remains focused, Tier 3/4 route to the new full/soak matrices, PR-range classification and feature-branch push de-duplication remain intact, and contract tests assert behavior rather than YAML layout alone.
-- Phase 7 local evidence is green: JS syntax, selector/diagnostics unit contracts, workflow YAML parsing, workflow Playwright contracts, diff integrity, and exact shard-union enumeration. The mandatory authoritative browser gate and before/after Actions timing remain pending because `gh` has no authentication and the local checkout has no remote; no result is being claimed as green without execution.
+## Current scope
+- Active work is existing PR #102 / branch `codex/-ci-v2`, stacked on PR #100.
+- PR #102 was created accidentally during CI v2 work. Do not create another PR/branch. Do not merge or close #102 during this investigation.
+- After CI v2 is proven green, transfer/cleanup back to PR #100 is a separate user-reviewed action.
+- `AGENTS.md` now requires a startup handshake: before work, verify and explicitly name the exact PR/branch; if verification fails, stop instead of creating a replacement.
 
-## Adaptive criteria decisions
-- Historical exact wall time was unavailable, so Phase 0 uses the closest provable baseline: known green run ID plus explicit sequential job topology and timeout ceilings. This preserves the bottleneck-identification intent without fabricating measurements.
-- Phase 4 keeps workers at one because a stable two-worker improvement cannot be demonstrated locally or through unauthenticated Actions. This takes the plan's stability-first exit path rather than guessing.
-- Phase 7 cannot be closed until PR #100's authoritative Actions run executes on the committed SHA. All safe local/static work is complete; per `AGENT_TESTING_POLICY.md`, the missing external CI capability is recorded rather than treated as a product failure or false green.
+## CI v2 architecture now under authoritative validation
+- Full non-soak regression runs browser × 3 shards, one worker each, `fail-fast: false`.
+- Chromium soak runs five independent seeds: 10101, 20202, 30303, 40404, 50505.
+- WebKit soak runs two independent seeds: 10101, 30303.
+- First browser failures retain trace/screenshot/video and structured diagnostics/artifacts.
+
+## Authoritative run #258
+Run ID: `35623913602`
+Head before checkpoint-doc commits: `983ff69648a0961389dd5096151d3edf30924cac`
+
+Green:
+- Classify CI scope
+- Static integrity
+- Full Chromium shards 1/3, 2/3, 3/3
+- Full WebKit shards 2/3, 3/3
+- all five Chromium soak seeds
+- both WebKit soak seeds
+
+Skipped:
+- Focused browser regression, by classifier
+
+Red:
+- `Full — WebKit — shard 1/3`
+- 63 passed, 2 failed
+
+### Failure A — Camera 2.0
+`tests/camera-2.spec.js:217`
+`show entire map centers map and center control targets selected unit or capital`
+
+Observed:
+- expected centering error < 0.01
+- received 6.5 px after 2000 ms
+- this resembles the historical late 13 px WebKit viewport-height change, but current root cause is not yet proven and must be established from the new artifact/trace/state.
+
+### Failure B — manual hill movement
+`tests/combat-world-stability.spec.js:134`
+`manual hill movement uses the routed terrain cost and waits for the second turn`
+
+Observed:
+- timed out waiting for `[data-context-action="move"]`
+- diagnostics indicate target tile (6,5) was presented as an attack target / attack action instead of move
+- exact cause is not yet established: test setup/world-state contamination, occupant/hostile state, selection semantics, or runtime bug remain to be distinguished from evidence.
+
+Failed-job artifact:
+- `epohi-full-webkit-shard-1`, artifact ID `10651331454`
 
 ## Exact next action
-- Publish the committed CI v2 change to the existing PR #100 branch and inspect its Tier 3 authoritative matrix. Root-cause any red job; if green, record run ID, total wall time, slowest job, and comparison with run `34775550869`, then stop for review. Do not merge.
+Follow `CODEX_NEXT_TASK.md`.
+Use the existing diagnostics first, establish both exact root causes, then make the minimum correct fix. Validate the two exact WebKit failures before widening. Do not rerun the full matrix blindly. Update this checkpoint after meaningful progress and stop on final authoritative evidence for review.
+
 
 ---
 
