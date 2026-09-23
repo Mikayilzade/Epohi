@@ -7,6 +7,15 @@ Do not stop useful development merely because the temporary local agent/containe
 
 A local infrastructure limitation is not automatically a game-code failure.
 
+## Active platform priority — PC first
+The primary development target is PC using desktop Chrome/Chromium. Day-to-day development
+and manual playtesting happen locally on the user's PC; GitHub remains for commits, PRs, CI,
+and project history. Mobile support is deferred and non-blocking for ordinary PC gameplay
+development. Preserve existing mobile code and tests. A mobile-specific failure does not
+block ordinary PC work unless evidence shows it also affects shared runtime behavior or the
+desktop Chromium target. Before a large graphics/assets rework, perform a separate
+performance audit and use its findings to guide the work.
+
 ## Core testing principle: test by risk, not by habit
 Do not run the entire browser suite after every change just because a commit exists. Choose the smallest test set that is strong enough for the actual blast radius, then widen only when the risk or gate requires it.
 
@@ -44,7 +53,10 @@ Examples: camera, map/layout, movement/pathfinding, turn flow, state/save-load, 
 ### Tier 4 — final integration / merge / release gate
 Before a user-approved merge into the final/integration target, release, or other explicit final gate:
 
-- Require the full cross-browser gate regardless of how small the last individual change was.
+- Require the full gate defined in `QUALITY_GATES.md` for that target. Ordinary PC feature
+  development uses desktop Chromium as its required browser; mobile/WebKit coverage is
+  deferred and is not an automatic blocker unless the change affects that platform or a
+  shared/runtime regression is demonstrated.
 - Include relevant soak/stability coverage required by `QUALITY_GATES.md`.
 - Reuse valid green evidence for the exact unchanged SHA; do not rerun identical expensive suites without a reason.
 - `workflow_dispatch` is the explicit manual route for a Tier 4 gate when a fresh final gate is needed.

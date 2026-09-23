@@ -16,6 +16,13 @@ Always inspect the latest head of `prototype/humans-v1` and PR #69 before starti
 
 ## 2. Product direction
 
+### Current development priority — PC first
+- Primary target: PC / desktop Chrome/Chromium; day-to-day development and manual playtesting happen locally on the user's PC.
+- Mobile support is deferred and non-blocking for ordinary PC gameplay development. Keep existing mobile code and tests.
+- Mobile-specific failures do not block ordinary PC work unless they expose a shared/runtime regression that affects the PC target.
+- Run a separate performance audit before any large graphics/assets rework.
+- GitHub remains for commits, PRs, CI, and project history; local work is the normal development and manual-testing workflow.
+
 The game is a compact but systemic civilization strategy inspired by Civilization, built around:
 
 - a world that keeps developing without the player;
@@ -23,7 +30,7 @@ The game is a compact but systemic civilization strategy inspired by Civilizatio
 - units that will eventually accept increasingly sophisticated conditional orders;
 - a readable but non-trivial economy, science and territorial system;
 - long-term progression from tribe to state and later eras;
-- a mobile-friendly browser build, especially for iPhone playtesting.
+- a browser build with desktop PC as the active target; mobile remains a deferred platform.
 
 The intended differentiator is not merely “small Civilization”. The long-term focus is **autonomous units and living states**: intelligence, discipline, intuition and initiative should eventually determine how complex an order a unit can understand and execute.
 

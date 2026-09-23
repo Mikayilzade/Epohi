@@ -2,6 +2,16 @@
 
 The user should not be asked to test a build until every automated gate below is satisfied or explicitly documented as technically impossible.
 
+## Active development target
+Ordinary development targets PC / desktop Chrome/Chromium, with local development and manual
+playtesting on the user's PC. Mobile support is deferred and non-blocking; preserve its code
+and tests. Mobile-specific failures are not ordinary PC development blockers unless evidence
+shows a shared/runtime regression or impact on desktop Chromium. GitHub remains for commits,
+PRs, CI, and history. Before a large graphics/assets rework, run a separate performance audit.
+
+The mobile/WebKit gates below retain coverage for a future mobile-focused release. They are
+not automatic blockers for ordinary PC gameplay development.
+
 ## Gate A — static integrity
 - `node --check` for all JavaScript in `src/`, `tests/`, service worker and Playwright config.
 - `git diff --check` for the implementation range.
@@ -18,11 +28,13 @@ Required scenarios include:
 - capture modal and post-capture state;
 - idle period with no runaway observer/DOM activity.
 
-## Gate C — focused mobile runtime, WebKit
-Run the same critical scenarios using Playwright WebKit with a 390×844 touch/mobile context. WebKit failure is a release blocker even if Chromium is green.
+## Gate C — focused mobile runtime, WebKit (deferred)
+Retain the same critical scenarios using Playwright WebKit with a 390×844 touch/mobile
+context. A failure blocks a mobile-focused release, not ordinary PC development.
 
 ## Gate D — complete regression suite
-Run the full Playwright suite on:
+For the active PC target, run the full Playwright suite on desktop Chromium. For a
+mobile-focused release, also run the suite on:
 1. `chromium-mobile`
 2. `webkit-mobile`
 
@@ -67,7 +79,8 @@ Continuously assert invariants such as:
 - no runaway DOM/observer activity after each turn settles.
 
 ## Gate H — automated UX / layout smoke
-At mobile viewport verify major sheets fit the viewport or scroll correctly:
+For the active PC target, verify major sheets at desktop viewport sizes. For a
+mobile-focused release, also verify mobile viewport fit/scroll behavior for:
 - city;
 - science;
 - diplomacy;
@@ -87,7 +100,9 @@ Before asking for a physical-device test:
 - service-worker cache/version deliberately refreshed if runtime assets changed;
 - immutable test URL prepared for the exact RC SHA.
 
-## Gate J — one physical iPhone test
-Only now ask Mikayil for a real playthrough. The purpose is tactile/device validation: heat, responsiveness, Safari-specific behavior, scrolling and interaction feel—not basic functional QA.
+## Gate J — one physical iPhone test (deferred)
+Only for a mobile-focused release, after applicable gates pass, ask Mikayil for a real
+playthrough. The purpose is tactile/device validation: heat, responsiveness, Safari-specific
+behavior, scrolling and interaction feel—not basic functional QA.
 
 If the device test finds a defect, add a regression, return to the relevant automated gate, and produce a new RC. Do not send a sequence of patch builds for manual micro-testing.
