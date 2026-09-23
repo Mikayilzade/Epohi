@@ -5,6 +5,7 @@ This is the only automatic repository entry point for ChatGPT/Codex agents. It o
 ## Minimum-context workflow
 
 1. Treat the user's latest request plus `CODEX_NEXT_TASK.md`, the current branch/PR, diff, and CI state as the source of truth.
+   For an explicitly assigned Orca worker worktree, also read `ORCA_HARNESS.md` before editing.
 2. For an autonomous “continue/go” task, read `CODEX_NEXT_TASK.md` and only the newest checkpoint at the top of `AUTONOMY_STATUS.md`; stop at the first `---` / historical marker.
 3. Do not preload repository history. Open other documents only when the task requires them:
    - `QUALITY_GATES.md` for a release/full gate;
@@ -21,9 +22,10 @@ Before doing any edit, test, commit, push, or publication work, confirm the exac
 
 1. Resolve the target PR and branch from the user's latest instruction and/or `CODEX_NEXT_TASK.md`.
 2. Verify that the target is consistent with the available repository/PR metadata or with the preloaded Codex task header + checkpoint. A local sandbox branch named `work` is allowed only as an alias for the verified remote target.
+   An explicitly assigned Orca worker branch is also valid when its integration PR/branch and base checkpoint are verified as described in `ORCA_HARNESS.md`.
 3. A new Codex chat/task does **not** imply a new branch or PR. Continue on the existing target when one is named.
 4. If the target is verified, the first user-facing response must be a single concise confirmation in the user's language, for example:
-   `Понял. Работаю только в PR #102 / ветке codex/-ci-v2, новую ветку/PR не создаю, merge не делаю. Приступаю.`
+   `Понял. Работаю только в PR #103 / ветке codex-qgq4u5, новую ветку и PR не создаю, merge не делаю. Приступаю.`
    Adapt the PR/branch and merge restriction to the actual task.
 5. Do not send that confirmation if the target cannot be verified or if repository state contradicts the task. Instead stop before edits and report the exact mismatch/blocker.
 6. Never silently choose a replacement branch/PR. Creating either requires an explicit instruction such as “create a new branch/PR”; general requests like “continue”, “fix”, “work on this”, “new chat”, or “do the task” are not permission.
@@ -39,7 +41,7 @@ Before doing any edit, test, commit, push, or publication work, confirm the exac
 
 ## Branch / PR safety
 
-1. Work only for the branch and PR named in `CODEX_NEXT_TASK.md` or in the user's latest instruction; a Codex-local `work` alias does not authorize a different remote target.
+1. Work only for the branch and PR named in `CODEX_NEXT_TASK.md` or in the user's latest instruction. An explicitly assigned Orca worker branch may be used for local work under `ORCA_HARNESS.md`; it does not replace the named integration branch/PR. A Codex-local `work` alias does not authorize a different remote target.
 2. Never create a new remote branch or PR as a workaround for a missing local branch, failed fetch/push, network error, lost workspace, or uncertainty.
 3. Create a branch or PR only when the user's latest instruction explicitly asks for it.
 4. Before commit/publication, inspect the complete intended diff and confirm it belongs only to the requested PR scope.
