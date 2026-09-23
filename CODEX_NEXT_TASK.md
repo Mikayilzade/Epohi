@@ -1,66 +1,41 @@
 # CODEX NEXT TASK
 
 ## Scope
-Work only on existing PR #102 / branch `codex/-ci-v2`.
+Work only on existing PR #103 / branch `codex-qgq4u5`.
 
-PR #102 is an accidental child PR created during CI v2 work. For this task, finish the CI v2 investigation/fix inside this existing PR only. Do not create another branch or PR. Do not merge. Do not close PR #102. Cleanup/transfer back to PR #100 will be handled separately after this work is proven green.
+Do not create another branch or PR. Do not merge. Do not close PR #103.
 
-Before any edits/tests, follow the mandatory startup handshake in `AGENTS.md`: verify the exact target and reply to the user with one concise confirmation naming PR #102 and branch `codex/-ci-v2`.
+Before edits, follow the mandatory startup handshake in `AGENTS.md` and confirm that the local checkout is this branch (or a verified local alias of it).
 
-## Current authoritative result
-GitHub Actions run #258 / `35623913602` for head `983ff69648a0961389dd5096151d3edf30924cac` completed with exactly one failed job:
+## Current project decision — PC-first development
+The user has explicitly changed the active platform priority:
 
-`Full — WebKit — shard 1/3`
-
-All other full shards and all soak seed jobs passed.
-
-The failed WebKit shard had 63 passed and 2 failed tests:
-
-1. `tests/camera-2.spec.js:217`
-   `Camera 2.0 › show entire map centers map and center control targets selected unit or capital`
-   - assertion expected centering error < 0.01
-   - observed 6.5 px
-   - wait timed out after 2000 ms
-   - this resembles the historical 13 px WebKit viewport-late-resize signature, but that is only a hypothesis until proven from the current trace/state.
-
-2. `tests/combat-world-stability.spec.js:134`
-   `Combat, AI and world stability › manual hill movement uses the routed terrain cost and waits for the second turn`
-   - timed out waiting to click `[data-context-action="move"]`
-   - the new diagnostics artifact exists and contains screenshot/video/trace/failure evidence
-   - observed evidence indicates the target tile was presented as an attack target and the UI offered attack rather than move; determine exactly why.
-
-Artifact from the failed job:
-`epohi-full-webkit-shard-1` (artifact ID `10651331454`).
+- Primary development target: PC / desktop Chrome/Chromium.
+- Main manual playtesting: local desktop build on the user's PC.
+- Mobile support is deferred and non-blocking for ordinary game development.
+- Existing mobile code and tests must not be deleted merely because mobile is deferred.
+- Mobile-specific failures must not block ordinary PC gameplay development unless they reveal a shared/runtime regression that also affects the PC target.
+- Before any large graphics/assets rewrite, perform a separate performance audit; do not assume that adding image assets alone will improve performance.
+- GitHub remains the source of history/PR/CI/backup, while day-to-day development and manual testing now happen locally.
 
 ## Task
-Publish and validate the minimum root-caused test stabilization already prepared in the current snapshot.
+Documentation/policy update only.
 
-### Camera root cause and fix
-The diagnostic timeline shows the final WebKit viewport height arriving 13 px after the fit sample. The old center is therefore 6.5 px from the final center. Wait for the existing stable-layout boundary before clicking Fit; do not change tolerance or timeout.
+Read the existing project/policy docs and record this PC-first / mobile-deferred decision in the smallest appropriate set of existing files. Prefer updating existing documents such as `AGENT_TESTING_POLICY.md`, `QUALITY_GATES.md`, `PROJECT_HANDOFF.md`, or another clearly appropriate existing policy/status document rather than creating a new file.
 
-### Combat movement root cause and fix
-Random world generation may place a camp on hard-coded tile `(6,5)`. Attack is the correct UI semantic for that hostile target, so this is insufficient fixture isolation rather than a runtime/pathing regression. Clear camp/barbarian state from the focused route target; do not change gameplay.
+Also update `AUTONOMY_STATUS.md` so future chats/agents see this decision immediately.
 
-## Guardrails
-- No arbitrary sleep.
-- Do not weaken assertions, tolerances, or timeouts.
-- Do not hide a deterministic failure behind retries.
-- Do not broadly refactor unrelated code.
-- Do not rerun the whole matrix unchanged just to see whether red becomes green.
-- Preserve CI v2 diagnostics and parallelization unless evidence shows a defect in them.
+Do not change gameplay/runtime code in this task.
+Do not delete mobile tests.
+Do not weaken existing assertions just to obtain green.
+Do not rerun heavy browser CI for a docs-only change unless the repository policy explicitly requires it.
 
-## Validation order
-1. Run static checks on the prepared diff.
-2. Run the two exact failing WebKit tests first through authoritative CI (local browser infrastructure is unavailable).
-3. Run any directly affected neighboring tests required by the proven root cause.
-4. Only then publish the coherent fix to this same PR #102 branch and use authoritative GitHub Actions.
-5. Inspect any new red job before another edit/rerun.
+## Context about PR #103
+PR #103 currently contains the previous WebKit-focused test fixes and its latest authoritative focused run #262 / `35634045850` is red in two `webkit-mobile` camera tests. Under the new PC-first decision, those mobile-specific failures are not automatically blockers for ordinary PC development. Do not continue fixing them in this docs-only task unless analysis proves they indicate a shared PC/runtime regression.
 
 ## Completion criteria
-- Both root causes are written down, not guessed.
-- The minimum fix is justified by those root causes.
-- Exact affected WebKit tests are green.
-- Required authoritative CI for the final SHA is green, or a genuine blocker is precisely documented.
-- Update `AUTONOMY_STATUS.md` with root cause, changes, tests, CI run/result, and exact next action.
-- Update `CI_V2_PLAN.md` Phase 7/current status if authoritative evidence changes its completion state.
-- Stop for user review. Do not merge.
+- PC-first / mobile-deferred policy is documented clearly.
+- Existing mobile code/tests remain intact.
+- `AUTONOMY_STATUS.md` reflects the new active priority.
+- Report exactly which docs changed and why.
+- Stop for user review. No merge.
