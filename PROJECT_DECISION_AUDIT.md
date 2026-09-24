@@ -26,6 +26,10 @@ they disagree; see the PR #101 discrepancy below.
 - **Unreviewed design inbox:** [DESIGN_INBOX_2026-09-23.md](DESIGN_INBOX_2026-09-23.md)
   records new ideas and questions. It is not canonical accepted design; an item
   becomes canonical only after a separate user decision.
+- **Current Git/PR map:** [GIT_STRUCTURE_CLEANUP_PLAN.md](GIT_STRUCTURE_CLEANUP_PLAN.md)
+  records the historical 2026-09-24 branch/PR/worktree inventory and proposed
+  cleanup conditions. Current status is in `CODEX_NEXT_TASK.md`; this snapshot
+  does not authorize closing or deleting anything.
 - **Historical context:** [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md), dated checklists,
   task briefs, and the archive below. Their old branch, PR, CI, and TODO language
   does not override the current sources above.
