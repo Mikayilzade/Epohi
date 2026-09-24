@@ -2,7 +2,16 @@
 
 This file is the durable handoff for continuing development in a new ChatGPT/Codex session. The repository and its latest Git history remain the source of truth if this document and code ever differ.
 
-## 1. Project identity
+> **Current-use note (2026-09-23):** This handoff contains a PR #69/#74-era
+> snapshot. For the current integration target and next action use
+> [CODEX_NEXT_TASK.md](CODEX_NEXT_TASK.md) and the top of
+> [AUTONOMY_STATUS.md](AUTONOMY_STATUS.md). For decision status and current code
+> evidence use [PROJECT_DECISION_AUDIT.md](PROJECT_DECISION_AUDIT.md). Sections
+> 1, 6–8 and 10–12 below preserve historical instructions; they are not an
+> authorization to switch branches, run a mobile release gate, or work on an
+> older PR. Sections 3–5 are orientation and must be checked against current code.
+
+## 1. Project identity — historical PR #69 snapshot
 
 - Working title: **Эпохи** (may be renamed later).
 - Repository: `Mikayilzade/Epohi`.
@@ -136,7 +145,7 @@ The application is a static browser game using globals rather than a bundler.
 
 Do not casually remove or rename these APIs; many browser tests use them.
 
-## 6. Development rules agreed with the user
+## 6. Development rules agreed with the user — historical PR #69 context
 
 - Never merge PR #69 or any prototype work into `main` without explicit approval.
 - Work on a feature/stabilization branch based on `prototype/humans-v1`, then merge only into the prototype branch after review.
@@ -150,14 +159,18 @@ Do not casually remove or rename these APIs; many browser tests use them.
 - Keep the game playable after each integrated milestone.
 - Prefer finite checklist-driven work over endless polishing.
 
-## 7. GitHub history relevant to the current milestone
+## 7. GitHub history — historical PR #69 milestone
 
 - PR #69: long-lived Draft integration PR, `prototype/humans-v1` → `main`.
 - PR #70: Living Civilizations implementation, merged into `prototype/humans-v1`.
 - PR #71: final Living Civilizations stabilization, merged into `prototype/humans-v1`.
 - `main` remains untouched by the human-prototype branch unless Mikayil explicitly approves the final merge.
 
-## 8. Testing expectations
+## 8. Testing expectations — historical full-gate policy
+
+The current risk-based and PC-first rules are in
+[AGENT_TESTING_POLICY.md](AGENT_TESTING_POLICY.md) and
+[QUALITY_GATES.md](QUALITY_GATES.md).
 
 Before calling a package complete:
 
@@ -171,9 +184,13 @@ Before calling a package complete:
 
 The user performs the final physical-device test and reports tactile issues, heating, scrolling and interaction confusion.
 
-## 9. Current known limitations
+## 9. Known limitations recorded in the earlier snapshot
 
-- Terrain currently has no true weighted movement cost: passable land costs one movement step. Hills/forest affect defense, not speed. A weighted pathfinding/movement-point redesign is a future isolated milestone.
+- **SUPERSEDED:** This snapshot said terrain had no weighted movement and that
+  passable land cost one step. Current `src/data.js:5-11` and
+  `src/humans-pathing-core.js:133-178` implement weighted terrain movement
+  (commit `e41c641`); see decision D06 in
+  [PROJECT_DECISION_AUDIT.md](PROJECT_DECISION_AUDIT.md).
 - The AI has growing cities and production but still lacks the depth of a full economic planner.
 - Diplomacy remains an early system; treaties, obligations, negotiations and trade route geography can grow further.
 - Treasury markets are an early gold-sink layer and need balance based on several full campaigns.
@@ -181,7 +198,7 @@ The user performs the final physical-device test and reports tactile issues, hea
 - The current human-era campaign is still much shorter and shallower than the intended full game.
 - Autonomy is not yet the central deep mechanic envisioned for the final project.
 
-## 10. Recommended next steps
+## 10. Recommended next steps — historical proposal
 
 After the player-feedback/treasury package is stable:
 
@@ -197,13 +214,13 @@ After the player-feedback/treasury package is stable:
 4. Expand living states with negotiations, requests, obligations and more meaningful alliance behavior.
 5. Only later deepen eras, victory paths, visuals, audio and public demo packaging.
 
-## 11. New-chat continuation prompt
+## 11. New-chat continuation prompt — historical, do not reuse
 
 Use this prompt in a new chat inside the «Эпохи» project:
 
 > Продолжаем разработку игры «Эпохи». Репозиторий: `Mikayilzade/Epohi`. Сначала прочитай `PROJECT_HANDOFF.md`, затем проверь текущий Draft PR #69 и последний head ветки `prototype/humans-v1`. Не трогай и не сливай `main` без моего прямого разрешения. Работай крупными законченными пакетами, не спамь GitHub Actions, сохраняй совместимость сохранений и подтверждай результат полным Playwright-прогоном.
 
-## 12. Trust rule
+## 12. Trust rule — historical PR #69 wording
 
 When chat memory, this document and repository code disagree, use this order:
 

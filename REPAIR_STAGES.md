@@ -1,5 +1,12 @@
 # Исправления после ручного теста
 
+> **Historical repair plan (2026-09-23 audit):** The TODO labels below describe
+> the original M01–M15 plan, not the current implementation state. Later code
+> and tests, including commit `9bee0a9`, cover several items. Use the per-item
+> evidence and remaining device questions in
+> [PROJECT_DECISION_AUDIT.md](PROJECT_DECISION_AUDIT.md). Preserve this plan as
+> the original acceptance criteria; do not rerun it wholesale as a fresh task.
+
 Область: существующий PR #90, current PR branch; PR #89 is the base.
 Основание: MANUAL_SMOKE_2026-09-08.md. Работа последовательная, один исполнитель Codex.
 ChatGPT готовит задания и независимо проверяет diff/доказательства; Mikayil делает один итоговый тест устройства.

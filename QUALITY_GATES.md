@@ -1,6 +1,8 @@
 # QUALITY GATES — Humans v1 Release Candidate
 
-The user should not be asked to test a build until every automated gate below is satisfied or explicitly documented as technically impossible.
+For a release candidate, ask the user to test a build only after the automated
+gates applicable to that target platform are satisfied or a specific exception
+is documented. Ordinary PC development follows `AGENT_TESTING_POLICY.md`.
 
 ## Active development target
 Ordinary development targets PC / desktop Chrome/Chromium, with local development and manual
@@ -11,6 +13,13 @@ PRs, CI, and history. Before a large graphics/assets rework, run a separate perf
 
 The mobile/WebKit gates below retain coverage for a future mobile-focused release. They are
 not automatic blockers for ordinary PC gameplay development.
+
+At the 2026-09-23 audit SHA (`2c6b2a1`), `playwright.config.js` defines only
+`chromium-mobile` and `webkit-mobile`, and the workflow invokes those projects.
+Desktop Chromium validation required for a PC release is therefore an open
+coverage gap. Do not count a mobile-emulated Chromium job or a docs-only CI
+scope-classifier success as proof that the desktop gate passed. See
+[PROJECT_DECISION_AUDIT.md](PROJECT_DECISION_AUDIT.md), D23–D24.
 
 ## Gate A — static integrity
 - `node --check` for all JavaScript in `src/`, `tests/`, service worker and Playwright config.
@@ -92,11 +101,13 @@ mobile-focused release, also verify mobile viewport fit/scroll behavior for:
 Generate/retain screenshots on failure for diagnosis. Do not make the user inspect routine screenshots.
 
 ## Gate I — Release Candidate cleanup
-Before asking for a physical-device test:
-- all gates above green;
+Before requesting release-candidate review or an applicable physical-device test:
+- all gates applicable to the target platform green, with deferred mobile gates
+  required again for a mobile-focused release;
 - temporary branch-only workflow removed or replaced by a durable appropriately scoped workflow;
 - temporary diagnostics removed;
-- PR #84 body and `AUTONOMY_STATUS.md` updated to the exact RC SHA and exact test counts;
+- the actual integration PR body and `AUTONOMY_STATUS.md` updated to the exact
+  RC SHA, executed jobs and exact test counts (a skipped job is not a pass);
 - service-worker cache/version deliberately refreshed if runtime assets changed;
 - immutable test URL prepared for the exact RC SHA.
 
