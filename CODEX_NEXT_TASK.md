@@ -1,50 +1,83 @@
 # CODEX NEXT TASK
 
-## Target and constraints
+## Current integration target
 
-Existing integration target: PR #103 / `codex-qgq4u5`.
+Use **only** PR #103 / branch `codex-qgq4u5`.
 
-Accepted autonomy and architecture decisions are now canonical in
-`ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md`. Read that file before the next
-architecture phase. `DESIGN_INBOX_2026-09-23.md` remains an inbox for unresolved
-product/gameplay ideas and does not override accepted decisions.
+- PR #103 is OPEN / Draft.
+- Base: `main`.
+- Head: `codex-qgq4u5`.
+- The older stacked PRs #69, #84, #85, #86, #89, #90, #91, #93, #99, #100 and #102 were reviewed and closed without merge on 2026-09-26.
+- Their remote branches have **not** been deleted.
+- Do not reopen or recreate the old PR stack unless a concrete missing commit is later proven necessary.
+- Do not create a replacement PR for ordinary continuation work.
+- Do not merge PR #103 without explicit user approval.
 
-Follow `AGENTS.md` and `ORCA_HARNESS.md`. PC/desktop Chromium remains the primary
-current target; preserve mobile code/tests. Do not merge PR #103 without explicit user
-approval.
+Accepted autonomy and architecture decisions are canonical in
+`ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md`.
 
-## Current next actions
+`DESIGN_INBOX_2026-09-23.md` remains an inbox for unresolved gameplay/product ideas and
+must not be treated as accepted implementation work.
 
-1. Finish review of the Git/PR/worktree cleanup audit. Do not delete/close ambiguous old
-   PRs or branches until their unique work and ancestry are resolved.
-2. Bring the accepted cleanup/workflow result into the current integration history.
-3. Then start the large autonomous Epohi architecture cleanup using
-   `ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md` as the working contract.
-4. The architecture Lead should:
-   - audit the real code and define Epohi-specific completion criteria;
-   - leave a short checkpoint with plan/risks;
-   - continue without waiting when no user decision is required;
-   - refactor by logical system boundaries, preserving gameplay behavior;
-   - choose test depth by risk;
-   - trace/measure important runtime paths including End Turn;
-   - update the living technical passport;
-   - remove obsolete duplicate implementations before declaring completion.
-5. Battle Simulator design remains separate and must not be implemented inside this
-   architecture task while its gameplay questions are unresolved.
+Follow `AGENTS.md` and `ORCA_HARNESS.md`.
 
-## Publication/autonomy
+## Why the old PRs were closed
 
-For the already-authorized current integration branch, Lead may create coherent commits
-and push them to PR #103 after its normal review/checks. Do not merge, force-push, close
-old PRs, delete important remote branches, or create replacement/new PRs except as allowed
-by the repository safety rules and explicit user authorization.
+Most old PR heads are direct ancestors of #103 and therefore their work is already contained
+in the current integration history.
 
-## Known open Git decision
+PR #85 and #86 had Git history that diverged from #103, so they were checked separately
+before closure:
 
-The previous audit found old open PRs including #69/#90/#102 and a stacked ancestry ending
-at #103. Their final disposition is not yet assumed. Resolve with Git/GitHub evidence
-before cleanup actions; do not infer that an old PR is disposable merely because a later
-PR exists.
+- #85's two unique commits only expanded a temporary cross-browser workflow for the old
+  stabilization child branches. That temporary workflow no longer exists on #103 and is
+  obsolete for the current one-PR workflow.
+- #86's unique branch contained old run-240/run-246 checkpoint documents plus source/test
+  repairs. The relevant runtime/test behavior is present or further evolved in #103
+  (foreign-unit context handling, outcome controls, stack-picker tests, visible city/science
+  flows, worker-time tests, etc.). The old status/task documents and temporary workflow
+  wiring are historical, not missing current work.
+
+Closing those PRs did not delete their branches or commits.
+
+## Next large task
+
+Start the autonomous Epohi architecture cleanup using
+`ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md` as the working contract.
+
+Lead should:
+
+1. Audit the real current code and define Epohi-specific completion criteria.
+2. Leave a short checkpoint describing the plan, major risks and expected module boundaries.
+3. Continue automatically unless a meaningful gameplay/design decision, dangerous Git action
+   or real blocker requires the user.
+4. Refactor by logical responsibilities rather than arbitrary file-size targets.
+5. Keep gameplay logic separate from UI/presentation and balance/config separate from
+   algorithms.
+6. Preserve intended gameplay behavior while allowing internal rewrites and obvious
+   technical fixes.
+7. Choose test depth by risk.
+8. Trace and measure important runtime paths, especially End Turn, before/after relevant
+   changes.
+9. Maintain the living technical architecture passport.
+10. Remove obsolete duplicate implementations before declaring the cleanup complete.
+
+PC/desktop Chromium remains the primary current target. Preserve mobile code/tests.
+
+Battle Simulator design remains separate and must not be implemented inside the Epohi
+architecture cleanup while its gameplay questions remain unresolved.
+
+## Publication rules
+
+For the already-authorized current integration branch, Lead may make coherent commits and
+push them to PR #103 after normal review/checks.
+
+Do not:
+- merge #103 without explicit user approval;
+- force-push;
+- delete important remote branches;
+- create replacement PRs;
+- reopen the old PR stack without evidence that current #103 is missing required work.
 
 Stop only for a real blocker, a meaningful gameplay/design choice, a dangerous Git action,
 or completion of the assigned goal.
