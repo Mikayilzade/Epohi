@@ -1400,9 +1400,10 @@
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
         if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
-        if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
-        if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
         if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
+        if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
+        if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
+        if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
         selected = null;
         let message = "Города получили: 🍞" + income.food + " · 🔨" + income.production + " · 🪙" + income.gold + " · 🔬" + income.science;
         if (rivalActions) message = "Соперники действуют: " + rivalActions + ". " + message;
@@ -1421,6 +1422,7 @@
         phaseBanner.classList.add("is-hidden");
         render();
         if (state.turn !== turnAtStart && window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
+        if (state.turn !== turnAtStart && window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.refreshUi();
       }
       autoSave(true).catch(function () {
         setSaveStatus("Ошибка автосохранения");

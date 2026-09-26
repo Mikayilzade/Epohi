@@ -401,23 +401,16 @@
     if (!event.target.closest || !event.target.closest("#endTurnBtn")) return;
     const gs = ensureState(state());
     if (gs) captureRivalSnapshot(gs);
-    window.setTimeout(function () {
-      const next = ensureState(state());
-      if (next) repairWorkerAutonomy(next);
-    }, 0);
   }
 
-  function onTurnChange() {
-    const gs = ensureState(state());
+  function processTurn(gs) {
+    gs = ensureState(gs);
     if (!gs) return;
     processAiExperience(gs);
     repairAiCityCaptures(gs);
     syncForeignBuildingKnowledge(gs);
     invalidateImpossibleTrades(gs);
-    window.setTimeout(function () {
-      repairWorkerAutonomy(gs);
-      schedule();
-    }, 0);
+    repairWorkerAutonomy(gs);
   }
 
   function handleClick(event) {
@@ -485,8 +478,6 @@
     wrapLivingTurn();
     window.addEventListener("click", onEndTurnCapture, true);
     document.addEventListener("click", handleClick);
-    const turn = document.getElementById("turnValue");
-    if (turn) new MutationObserver(onTurnChange).observe(turn, {childList:true,characterData:true,subtree:true});
     // Coherence proposals have their own priority observer in EventOverlayPolicy. The
     // finalizer does not decorate proposal content, so observing proposal class changes
     // here duplicated semantic ownership and could keep observer delivery active at idle.
@@ -510,6 +501,8 @@
     patchUrgentDecision: patchUrgentDecision,
     patchCaptureCapacity: patchCaptureCapacity,
     repairAiCityCaptures: repairAiCityCaptures,
+    processTurn: processTurn,
+    refreshUi: schedule,
     suppressOverlappingToasts: suppressOverlappingToasts
   };
 

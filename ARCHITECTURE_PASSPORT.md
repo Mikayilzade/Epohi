@@ -208,3 +208,15 @@ listeners, so the completion criteria above remain open.
   autosave slot 1. Local desktop Chrome: 16/17 related checks passed on the
   first run; the new test initially read the prior turn's autosave, then passed
   after waiting for slot 1 to reach turn 2. No game-code failure was found.
+
+### Stage 10: explicit coherence finalization phase
+
+- `EpohiCoherenceFinalize.processTurn(state)` now resolves AI city-capture
+  repair, experience, foreign building knowledge, invalid trade proposals and
+  worker autonomy before autosave. The `turnValue` observer and deferred
+  worker-autonomy repair were removed. Presentation refresh is requested after
+  the core render.
+- Local desktop Chrome: coherence/capture, save and turn tests 22/22.
+- The living-world `processTurn` wrapper and general UI decorator still call
+  some of these idempotent repairs. They must be replaced with direct action
+  hooks or consolidated at the turn boundary to remove repeated log scans.
