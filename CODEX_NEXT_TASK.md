@@ -2,47 +2,49 @@
 
 ## Target and constraints
 
-Existing integration target: PR #103 / `codex-qgq4u5`. The assigned Orca Lead
-worktree `orca/epohi-lead` was clean and verified at `2c6b2a1`, matching the PR
-head at the start of the 2026-09-23 audit. The docs audit and design inbox are
-recorded locally for review. Before later edits, inspect their history and
-re-verify the branch, base and PR head under `AGENTS.md` / `ORCA_HARNESS.md`.
+Existing integration target: PR #103 / `codex-qgq4u5`.
 
-Do not create a replacement branch or PR, push, merge or close PR #103 without
-new explicit authorization. Preserve existing mobile code/tests. PC/desktop
-Chromium is the active development target; mobile remains deferred for ordinary
-PC work unless a failure has shared or desktop impact. Audit performance before
-a large graphics/assets rewrite.
+Accepted autonomy and architecture decisions are now canonical in
+`ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md`. Read that file before the next
+architecture phase. `DESIGN_INBOX_2026-09-23.md` remains an inbox for unresolved
+product/gameplay ideas and does not override accepted decisions.
 
-## Current next action
+Follow `AGENTS.md` and `ORCA_HARNESS.md`. PC/desktop Chromium remains the primary
+current target; preserve mobile code/tests. Do not merge PR #103 without explicit user
+approval.
 
-1. Review and preserve `DESIGN_INBOX_2026-09-23.md` as an unreviewed inbox, not
-   canonical accepted design.
-2. Resolve Git/PR/worktree cleanup choices before changing that structure.
-3. Do a short Git-for-beginners orientation.
-4. Begin Battle Simulator design discussion. No implementation while substantive
-   design questions remain.
+## Current next actions
 
-The completed repository audit remains in `PROJECT_DECISION_AUDIT.md` and the
-top of `AUTONOMY_STATUS.md`. The inbox preserves a separate user-note order
-that puts Git orientation before cleanup; confirm the order when planning it.
+1. Finish review of the Git/PR/worktree cleanup audit. Do not delete/close ambiguous old
+   PRs or branches until their unique work and ancestry are resolved.
+2. Bring the accepted cleanup/workflow result into the current integration history.
+3. Then start the large autonomous Epohi architecture cleanup using
+   `ARCHITECTURE_AUTONOMY_DECISIONS_2026-09-26.md` as the working contract.
+4. The architecture Lead should:
+   - audit the real code and define Epohi-specific completion criteria;
+   - leave a short checkpoint with plan/risks;
+   - continue without waiting when no user decision is required;
+   - refactor by logical system boundaries, preserving gameplay behavior;
+   - choose test depth by risk;
+   - trace/measure important runtime paths including End Turn;
+   - update the living technical passport;
+   - remove obsolete duplicate implementations before declaring completion.
+5. Battle Simulator design remains separate and must not be implemented inside this
+   architecture task while its gameplay questions are unresolved.
 
-The user has since supplied a historical ChatGPT-side summary. The audit marks
-it as CHAT EVIDENCE, separate from repo/GitHub evidence; it also records a
-CHAT↔GITHUB discrepancy over PR #101's disposition. Commit `a29d33e`
-preserves the exact M01–M15 chat-derived mapping. No historical
-`CHAT_EVIDENCE_NEEDED` items remain from this audit; open questions now require
-a new user decision on PR #69/#90/#102, manual/device evidence after `9bee0a9`,
-or further GitHub investigation of #101. No old chat transcripts were accessed
-and no game code changed. Do not treat historical TODO files or inbox ideas as
-newly assigned implementation work.
+## Publication/autonomy
 
-## CI evidence at audit start
+For the already-authorized current integration branch, Lead may create coherent commits
+and push them to PR #103 after its normal review/checks. Do not merge, force-push, close
+old PRs, delete important remote branches, or create replacement/new PRs except as allowed
+by the repository safety rules and explicit user authorization.
 
-At head `2c6b2a1`, GitHub run `35863161549` passed the docs-only scope
-classifier; browser jobs were skipped. Run `35634045850` remains the latest
-focused browser run and failed two WebKit-mobile camera tests. Neither run
-establishes desktop Chromium coverage. Do not rerun heavy browser CI for this
-docs-only review unless the testing policy requires it.
+## Known open Git decision
 
-Stop for user review. No push, merge or PR creation without new authorization.
+The previous audit found old open PRs including #69/#90/#102 and a stacked ancestry ending
+at #103. Their final disposition is not yet assumed. Resolve with Git/GitHub evidence
+before cleanup actions; do not infer that an old PR is disposable merely because a later
+PR exists.
+
+Stop only for a real blocker, a meaningful gameplay/design choice, a dangerous Git action,
+or completion of the assigned goal.
