@@ -105,6 +105,29 @@ test.describe('Combat, AI and world stability', () => {
     expect(resolved).toEqual({production:18,status:'resolved'});
   });
 
+  test('expired urgent decision is recorded before turn autosave', async ({ page }) => {
+    await ready(page, 0, 'small');
+    await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      gs.urgentDecisions.push({ id:'expires-this-turn', title:'Проверка срока',
+        cityId:gs.cities[0].id, status:'pending', createdTurn:gs.turn,
+        expiresTurn:gs.turn, options:[] });
+    });
+    page.on('dialog', dialog => dialog.accept());
+    await page.evaluate(() => document.getElementById('endTurnBtn').click());
+    await expect(page.locator('#turnValue')).toHaveText('2');
+    await expect.poll(() => page.evaluate(async () => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
+      const gs = latest && latest.gameState;
+      return gs && {
+        status: gs.urgentDecisions.find(item => item.id === 'expires-this-turn').status,
+        event: gs.eventLog.some(item => item.eventType === 'urgent-decision-expired')
+      };
+    })).toEqual({ status:'expired', event:true });
+  });
+
   test('enemy selected from the map exposes and resolves a visible unit attack', async ({ page }) => {
     await ready(page, 1);
     const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return{enemyId:enemy.id,attackerId:attacker.id};});

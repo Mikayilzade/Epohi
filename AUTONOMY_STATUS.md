@@ -1,18 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_6_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_7_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 5 is published at `f16e4f8`. Stage 6 is locally validated
+- **STATUS:** Stage 6 is published at `f92b911`. Stage 7 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Worker projects now advance in an explicit pre-save turn phase;
-  removed their turn-label observer and second full render.
-- **EVIDENCE:** Local Chrome 20/21 desktop checks; one existing mobile-only
-  layout assertion failed at desktop width, then worker/save test passed at
-  mobile width. Desktop runtime cadence and save snapshot checks 4/4.
-- **NEXT:** Review/publish Stage 6; move remaining gameplay turn observers
-  into explicit phases before autosave and keep reducing duplicate renders.
+- **DONE:** Urgent decisions now expire before autosave in the End Turn
+  pipeline; removed their turn-label observer and second full core render.
+- **EVIDENCE:** Local desktop Chrome combat/world/save 18/18, targeted rerun
+  1/1. Small-map no-rival End Turn samples 620/313/225 ms versus initial
+  751/535/437 ms, too few samples for a speed claim. Stage 5 CI failed only
+  the pre-existing WebKit mobile camera viewport test; Stage 6 CI pending.
+- **NEXT:** Review/publish Stage 7; move pathing and remaining gameplay turn
+  observers before autosave, then consolidate presentation invalidation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

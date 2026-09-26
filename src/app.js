@@ -1363,6 +1363,7 @@
   function endTurn() {
     if (state.victory || state.defeat) { openVictory(); return; }
     if (turnProcessing) return;
+    const turnAtStart = state.turn;
     turnProcessing = true;
     endTurnBtn.disabled = true;
     phaseBanner.classList.remove("is-hidden");
@@ -1399,6 +1400,7 @@
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
         if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
+        if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
         selected = null;
         let message = "Города получили: 🍞" + income.food + " · 🔨" + income.production + " · 🪙" + income.gold + " · 🔬" + income.science;
         if (rivalActions) message = "Соперники действуют: " + rivalActions + ". " + message;
@@ -1416,6 +1418,7 @@
         endTurnBtn.disabled = false;
         phaseBanner.classList.add("is-hidden");
         render();
+        if (state.turn !== turnAtStart && window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
       }
       autoSave(true).catch(function () {
         setSaveStatus("Ошибка автосохранения");

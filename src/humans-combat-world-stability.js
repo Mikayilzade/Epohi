@@ -144,7 +144,6 @@
       if (treasuryAction) render(); else window.setTimeout(render, 0);
     });
     const end = document.getElementById("endTurnBtn"); if (end) end.addEventListener("click", function (event) { const gs=state(), pending=gs && (gs.urgentDecisions || []).some(function (item) { return item.status === "pending" && item.expiresTurn === gs.turn; }); if (pending && !window.confirm("Есть нерешённое срочное событие. Завершить ход без награды?")) { event.preventDefault(); event.stopImmediatePropagation(); } }, true);
-    const turn = document.getElementById("turnValue"); if (turn) new MutationObserver(function () { const gs=state(); if (gs) { expireUrgentDecisions(gs); render(); } }).observe(turn, { childList:true, subtree:true });
     if(window.EpohiHumansJourney&&!window.EpohiHumansJourney.stabilityWrapped){
       const journey=window.EpohiHumansJourney, originalSync=journey.sync, originalResolve=journey.resolveEvent;
       journey.stabilityWrapped=true;

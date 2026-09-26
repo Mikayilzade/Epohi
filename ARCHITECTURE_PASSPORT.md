@@ -168,3 +168,19 @@ listeners, so the completion criteria above remain open.
   cadence and save snapshot tests passed 4/4. No test or CSS was weakened.
 - Other turn-label observers still mutate game state after autosave; their
   phases must move before the snapshot before this boundary is complete.
+
+### Stage 7: urgent decision deadline phase
+
+- `app.js` expires urgent decisions in the turn calculation before saving the
+  new turn, then asks the stability view to update after the core render.
+  `humans-combat-world-stability.js` no longer observes `turnValue` to mutate
+  decisions or trigger a second full core render. The confirmation guard for
+  unresolved decisions remains on the End Turn button.
+- A focused integration test checks both `status: expired` and the expiration
+  event inside the new autosave. Local desktop Chrome: combat/world plus save
+  checks 18/18. Three End Turn click samples on a small no-rival map were
+  620/313/225 ms versus original 751/535/437 ms; the short samples are noisy
+  and include browser scheduling, so no speedup is claimed from them alone.
+- CI at Stage 5 (`36264466699`) failed only the existing WebKit mobile camera
+  viewport-fit assertion, also seen at Stage 2; 64 other tests in that shard
+  passed. Stage 6 CI was still in progress when this checkpoint was written.
