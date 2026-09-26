@@ -58,6 +58,23 @@
   function getCampaignSaves(campaignId, storageAvailable) { return storageAvailable && campaignId ? dbTx(SAVE_STORE, "readonly", function(store){ return requestAll(store.index("campaignId").getAll(campaignId)); }).then(function(list){ return list.sort(function(a,b){ return String(b.updatedAt).localeCompare(String(a.updatedAt)); }); }) : Promise.resolve([]); }
   function getSaveRecord(id, storageAvailable) { return storageAvailable && id ? dbTx(SAVE_STORE, "readonly", function(store){ return requestPromise(store.get(id)); }) : Promise.resolve(null); }
   function putSaveRecord(record) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.put(record); }).then(function(){ return record; }); }
+  function putRotatingAutosave(record, rotate) {
+    return dbTx(SAVE_STORE, "readwrite", function (store) {
+      const request = store.index("campaignId").getAll(record.campaignId);
+      request.onsuccess = function () {
+        const saves = request.result || [];
+        const slot = function (number) { return record.campaignId + "-autosave-" + number; };
+        const first = saves.find(function (save) { return save.saveId === slot(1); });
+        const second = saves.find(function (save) { return save.saveId === slot(2); });
+        const sameTurn = saves.some(function (save) { return save.type === "autosave" && save.turn === record.turn; });
+        if (rotate && !sameTurn && first) {
+          if (second) store.put(Object.assign({}, second, { id:slot(3), saveId:slot(3), name:"autosave-3" }));
+          store.put(Object.assign({}, first, { id:slot(2), saveId:slot(2), name:"autosave-2" }));
+        }
+        store.put(record);
+      };
+    }).then(function () { return record; });
+  }
   function deleteSaveRecord(id) { return dbTx(SAVE_STORE, "readwrite", function(store){ store.delete(id); }); }
 
   window.EpohiStorage = {
@@ -74,6 +91,7 @@
     getCampaignSaves,
     getSaveRecord,
     putSaveRecord,
+    putRotatingAutosave,
     deleteSaveRecord
   };
 })();

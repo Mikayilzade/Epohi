@@ -102,6 +102,20 @@ listeners, so the completion criteria above remain open.
   tests 2/2; save/startup/turn suite 10/10. Three-click End Turn sample after
   extraction: 549/296/318 ms, snapshots 47,963-48,051 bytes. The baseline
   method and noise caveat above still apply.
-- Remaining save debt: rotation performs several IndexedDB transactions and
-  should become one atomic transaction before calling the save path complete.
-  State migration still lives in `app.js`; move it to a versioned state module.
+- CI run `36261809991` at `5d96cc4`: Chromium, soak, static and other WebKit
+  jobs passed; WebKit mobile shard 1 failed one camera viewport-fit assertion
+  (`tests/camera-2.spec.js:195`, 6.5 px versus <0.01 px). No camera code was
+  changed in Stage 2, and desktop impact is not shown. This mobile failure is
+  tracked under the PC-first testing policy, not marked green.
+- State migration still lives in `app.js`; move it to a versioned state module.
+
+### Stage 3: atomic autosave rotation
+
+- `storage.js` now rotates autosave slot records and writes the new snapshot in
+  one IndexedDB readwrite transaction. A transaction abort cannot leave only
+  part of a slot shift committed. `save-service.js` asks for rotation but no
+  longer copies/deletes the slots itself.
+- Local desktop Chrome: save/turn focused tests 6/6. The three consecutive
+  autosave slots still contain turns 5, 4 and 3 after four End Turns. Three-click
+  End Turn sample: 603/322/346 ms, snapshots 48,037-48,125 bytes, within the
+  short-run baseline range. CI for this stage is checked after publication.

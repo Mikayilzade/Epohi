@@ -493,10 +493,9 @@
     onCampaignCreated: function (id) { activeCampaignId = id; safeSet(ACTIVE_CAMPAIGN_KEY, id); },
     onActiveSave: function (id, turn) { activeSaveId = id; loadedSaveId = id; loadedSaveTurn = turn; safeSet(ACTIVE_SAVE_KEY, id); },
     getCampaign: getCampaign,
-    getCampaignSaves: getCampaignSaves,
     putCampaign: putCampaign,
     putSaveRecord: putSaveRecord,
-    deleteSaveRecord: deleteSaveRecord,
+    putRotatingAutosave: window.EpohiStorage.putRotatingAutosave,
     campaignFromState: campaignFromState,
     validateSaveState: validateSaveState,
     cloneState: cloneState,
@@ -520,7 +519,7 @@
 
   function createCampaignForNewGame(newState, name) {
     const c = campaignFromState(newState, name);
-    newState.partyName = c.name; activeCampaignId = c.campaignId; activeSaveId = null; loadedSaveId = null; loadedSaveTurn = null; saveService.resetRotation();
+    newState.partyName = c.name; activeCampaignId = c.campaignId; activeSaveId = null; loadedSaveId = null; loadedSaveTurn = null;
     safeSet(ACTIVE_CAMPAIGN_KEY, activeCampaignId); safeSet(ACTIVE_SAVE_KEY, "");
     return putCampaign(c).then(function(){ return c; });
   }
