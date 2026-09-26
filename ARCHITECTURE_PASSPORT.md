@@ -135,4 +135,20 @@ listeners, so the completion criteria above remain open.
   save, prototype and barbarian cases plus schema 1/1. End Turn samples after
   this stage: 1100/411/557 ms and 696/532/269 ms. The second run overlaps
   the prior range; these short samples show scheduling noise and do not prove
-  a sustained regression or gain. CI is checked after publication.
+  a sustained regression or gain. CI run `36263454395` passed all jobs.
+
+### Stage 5: remove history-driven event rollback
+
+- The core turn used to grant a legacy random resource event; a later
+  `humans-worker-learning.js` observer parsed newly added Russian history text
+  and reversed that grant. This made the history log an input to gameplay and
+  let a visual observer mutate resources after the autosave request.
+- Removed the grant and its rollback together. The observed default outcome is
+  unchanged: those legacy resource events were cancelled every normal turn.
+  This also removes an unnecessary random draw and post-turn history scan.
+- `tests/turn-unlock.spec.js` covers turn 5 with deterministic random input and
+  an existing history line: the next turn must not manufacture another legacy
+  resource event. Local desktop Chrome: turn/save focused checks 7/7 after
+  changing the test's click to bypass an unrelated open decision modal.
+- Remaining history and event-log readers, including worker-learning production
+  experience, still need structured inputs rather than text parsing.

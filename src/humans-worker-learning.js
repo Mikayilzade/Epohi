@@ -12,7 +12,6 @@
 
   let originalDebugFactory = null;
   let lastTurn = null;
-  let beforeTurn = null;
   let queued = false;
 
   function debug() {
@@ -431,35 +430,6 @@
     if (p) p.textContent = "Вся карта уже разведана. Дополнительные карты больше ничего не откроют.";
   }
 
-  function captureBeforeTurn(event) {
-    if (!event.target.closest || !event.target.closest("#endTurnBtn")) return;
-    const gs = ensureState(state());
-    if (!gs) return;
-    beforeTurn = { turn:Number(gs.turn)||1, history:(gs.history||[]).slice(0,8) };
-  }
-
-  function reverseLegacyRandomEvent(gs) {
-    if (!beforeTurn) return;
-    const newest = (gs.history || []).slice(0,12).filter(function (line) { return beforeTurn.history.indexOf(line) < 0; });
-    const rules = [
-      {match:"Богатый урожай принёс +7",key:"food",amount:7},
-      {match:"Умелые мастера дали +6",key:"production",amount:6},
-      {match:"Караван торговцев оставил +8",key:"gold",amount:8},
-      {match:"Мудрец поделился знаниями: +6",key:"science",amount:6},
-      {match:"Засуха уничтожила 5",key:"food",amount:-5}
-    ];
-    let changed = false;
-    rules.forEach(function (rule) {
-      if (!newest.some(function (line) { return String(line).indexOf(rule.match) >= 0; })) return;
-      if (gs.resources && Number.isFinite(gs.resources[rule.key])) gs.resources[rule.key] = Math.max(0, Number(gs.resources[rule.key]) - rule.amount);
-      changed = true;
-    });
-    if (changed) {
-      gs.history = (gs.history || []).filter(function (line) { return !rules.some(function (rule) { return String(line).indexOf(rule.match) >= 0; }); });
-    }
-    beforeTurn = null;
-  }
-
   function suppressIncomeToast() {
     const node = document.getElementById("toast");
     if (!node || node.dataset.incomeToastGuard === "1") return;
@@ -503,7 +473,6 @@
     const turn=Number(gs.turn)||1;
     if(lastTurn===turn)return;
     lastTurn=turn;
-    reverseLegacyRandomEvent(gs);
     processExperienceEvents(gs);
     processWorkerProjects(gs);
     const value=debug(); if(value&&typeof value.render==="function")value.render();
@@ -526,7 +495,7 @@
 
   function install(){
     installStyles(); patchDebug(); suppressIncomeToast(); ensureState(state());
-    window.addEventListener("click",captureBeforeTurn,true); window.addEventListener("click",handleClick,true);
+    window.addEventListener("click",handleClick,true);
     document.addEventListener("epohi:own-unit-context-ready", function () {
       const gs = ensureState(state());
       if (gs) patchWorkerUi(gs);

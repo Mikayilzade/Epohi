@@ -1306,22 +1306,6 @@
     return targets[0];
   }
 
-  function randomEvent() {
-    if (state.turn < 5 || state.turn % 5 !== 0 || Math.random() > .62) return null;
-    const events = [
-      { key: "food", amount: 7, text: "Богатый урожай принёс +7 🍞" },
-      { key: "production", amount: 6, text: "Умелые мастера дали +6 🔨 в запас" },
-      { key: "gold", amount: 8, text: "Караван торговцев оставил +8 🪙" },
-      { key: "science", amount: 6, text: "Мудрец поделился знаниями: +6 🔬" },
-      { key: "food", amount: -5, text: "Засуха уничтожила 5 🍞" }
-    ];
-    const event = randomChoice(events);
-    state.resources[event.key] = Math.max(0, state.resources[event.key] + event.amount);
-    state.history.unshift("Ход " + state.turn + ": " + event.text.replace(/[🍞🔨🪙🔬]/g, "").trim() + ".");
-    return event.text;
-  }
-
-
 
   function logEvent(targetState, eventType, text, coords, options) {
     const gs = targetState || state; if (!gs) return;
@@ -1400,7 +1384,6 @@
         completedProject = processProduction();
         const grew = false;
         const completedTech = finishResearch();
-        const eventText = randomEvent();
         state.turn += 1;
         if (window.EpohiLivingCivilizations) {
           window.EpohiLivingCivilizations.processTurn(state, {
@@ -1421,7 +1404,6 @@
         if (grew) message = "Население выросло до " + state.city.population + "! " + message;
         if (completedTech) message = completedTech.icon + " Изучено: " + completedTech.name + ". " + message;
         if (completedProject) message = completedProject.text + " " + message;
-        if (eventText) message = eventText + ". " + message;
         if (barbarianText) message += barbarianText;
         showToast(message, 3600);
         if (completedProject && completedProject.victory) openVictory();

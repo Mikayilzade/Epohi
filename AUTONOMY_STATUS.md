@@ -1,18 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_4_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_5_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 3 is published at `cc7d8ab` with all CI jobs green.
-  Stage 4 is locally validated on Lead; PR #103 remains the only target.
+- **STATUS:** Stage 4 is published at `889beb1` with all CI jobs green.
+  Stage 5 is locally validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Moved legacy/current state normalization into `state-schema.js`;
-  added a canonical state version and a legacy migration test.
-- **EVIDENCE:** Local desktop Chrome save/prototype/barbarian 15/15 plus schema
-  1/1. End Turn samples 1100/411/557 and 696/532/269 ms; no consistent trend.
-  Worker inventory found many turn-label observers and overlapping UI triggers.
-- **NEXT:** Review/publish Stage 4; consolidate End Turn UI triggers using
-  the inventory while preserving semantic per-turn hooks.
+- **DONE:** Removed a legacy random event and its history-text rollback; the
+  cancelled event no longer passes through game state and a DOM observer.
+- **EVIDENCE:** CI `36263454395` at Stage 4 passed all jobs. Local desktop
+  Chrome save/turn checks 7/7, including deterministic turn 5 regression.
+- **NEXT:** Review/publish Stage 5; move gameplay turn observers into explicit
+  pre-save phases and reduce duplicate full renders.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
