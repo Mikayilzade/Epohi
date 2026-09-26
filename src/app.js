@@ -8,6 +8,9 @@
   if (!window.EpohiData) {
     throw new Error("EpohiData must be loaded before app.js");
   }
+  if (!window.EpohiStateSchema) {
+    throw new Error("EpohiStateSchema must be loaded before app.js");
+  }
 
   if (!window.EpohiUtils) {
     throw new Error("EpohiUtils must be loaded before app.js");
@@ -42,6 +45,7 @@
     MAP_SIZES,
     GAME_VERSION,
     SAVE_SCHEMA_VERSION,
+    STATE_VERSION,
     SAVE_KEY,
     TUTORIAL_KEY,
     UPDATE_KEY,
@@ -403,7 +407,7 @@
     rivalCount = Math.min(size <= 20 ? 1 : 2, Math.max(0, Number(rivalCount == null ? 1 : rivalCount)));
     const cx = Math.floor(size / 2), cy = Math.floor(size / 2);
     const newState = {
-      version: 5, mapSize: size, turn: 1, map: generateMap(size), barbarianActivity: barbarianActivity || "normal",
+      version: STATE_VERSION, mapSize: size, turn: 1, map: generateMap(size), barbarianActivity: barbarianActivity || "normal",
       city: { id:"player-cap", x: cx, y: cy, name: "Ардена", population: 1, food: 6, production: 14, buildings: [], queue: null, damage: 0, hp: 180, maxHp: 180, capital: true },
       units: [],
       barbarians: [], nextUnitId: 1, nextBarbarianId: 1, settlements: [], artifacts: [], permanentBonuses: {},
@@ -415,42 +419,15 @@
     return newState;
   }
 
-  function validState(candidate) {
-    return candidate && Array.isArray(candidate.map) && candidate.map.length >= 8 && candidate.city && candidate.resources && Array.isArray(candidate.researched);
-  }
-
   function migrateState(candidate) {
-    if (!validState(candidate)) return null;
-    candidate.mapSize = candidate.mapSize || candidate.map.length; if (!candidate.barbarianActivity) candidate.barbarianActivity = "normal";
-    candidate.map.forEach(function (row) { row.forEach(function (tile) { if (tile.pillaged === undefined) tile.pillaged = false; if (tile.poi === undefined) tile.poi = null; if (tile.camp === undefined) tile.camp = null; }); });
-    if (!Array.isArray(candidate.units)) {
-      const oldScout = candidate.scout || { x: candidate.city.x, y: candidate.city.y - 1, moved: false };
-      candidate.units = [makePlayerUnit("scout", "u1", oldScout.x, oldScout.y, { moves: oldScout.moved ? 0 : 2, acted: false })];
-    }
-    candidate.units.forEach(function (unit, index) {
-      if (!unit.id) unit.id = "u" + (index + 1); if (!UNIT_DEFS[unit.type]) unit.type = "scout";
-      const def = UNIT_DEFS[unit.type]; if (typeof unit.moves !== "number") unit.moves = def.maxMoves; if (typeof unit.acted !== "boolean") unit.acted = false;
-      if (typeof unit.maxHp !== "number") unit.maxHp = def.maxHealth || 60; if (typeof unit.hp !== "number") unit.hp = unit.maxHp; ensureUnitName(unit);
+    return window.EpohiStateSchema.migrate(candidate, {
+      makePlayerUnit: makePlayerUnit,
+      ensureUnitName: ensureUnitName,
+      migrateBarbarianDirector: migrateBarbarianDirector144,
+      migrateCivilizations: function (gameState) {
+        if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(gameState);
+      }
     });
-    if (!Array.isArray(candidate.barbarians)) candidate.barbarians = [];
-    if (!candidate.nextBarbarianId) candidate.nextBarbarianId = 1;
-    if (!Array.isArray(candidate.artifacts)) candidate.artifacts = [];
-    if (!candidate.permanentBonuses) candidate.permanentBonuses = {};
-    if (!Array.isArray(candidate.settlements)) candidate.settlements = [];
-    if (!candidate.city.id) candidate.city.id = "player-cap"; if (!candidate.city.buildings) candidate.city.buildings = []; if (candidate.city.damage === undefined) candidate.city.damage = 0; if (typeof candidate.city.maxHp !== "number") candidate.city.maxHp = 180; if (typeof candidate.city.hp !== "number") candidate.city.hp = Math.max(40, candidate.city.maxHp - candidate.city.damage * 12);
-    if (candidate.city.queue === undefined) candidate.city.queue = null; if (!Array.isArray(candidate.cities)) candidate.cities = [candidate.city];
-    const legacyFood = candidate.resources && typeof candidate.resources.food === "number" ? candidate.resources.food : 0;
-    const legacyProduction = candidate.resources && typeof candidate.resources.production === "number" ? candidate.resources.production : 0;
-    candidate.cities.forEach(function(c,i){ if(!c.id)c.id=i?"player-city"+i:"player-cap"; if(!c.buildings)c.buildings=[]; if(c.queue===undefined)c.queue=null; if(typeof c.food!=="number")c.food=0; if(typeof c.production!=="number")c.production=0; if(typeof c.maxHp!=="number")c.maxHp=c.capital?180:150; if(typeof c.hp!=="number")c.hp=c.maxHp; if(!c.name)c.name=i?"Новый город":"Ардена"; });
-    candidate.city = candidate.cities[0]; candidate.city.capital = true;
-    if (!candidate.localResourceMigration142Done) { candidate.city.food += legacyFood; candidate.city.production += legacyProduction; candidate.localResourceMigration142Done = true; }
-    candidate.resources.food = 0; candidate.resources.production = 0;
-    if (!candidate.nextUnitId) candidate.nextUnitId = candidate.units.reduce(function (max, unit) { return Math.max(max, Number(String(unit.id).replace(/\D/g, "")) || 0); }, 0) + 1;
-    if (!Number.isFinite(candidate.cityCapacity)) candidate.cityCapacity = Math.max(4, (candidate.cities || []).length); if (!Number.isFinite(candidate.cityCapacityPurchases)) candidate.cityCapacityPurchases = 0;
-    if (!Array.isArray(candidate.history)) candidate.history = []; if (!Array.isArray(candidate.eventLog)) candidate.eventLog = []; if (!Array.isArray(candidate.rivals)) candidate.rivals = []; if (!candidate.nextRivalUnitId) candidate.nextRivalUnitId = 1; if (typeof candidate.defeat !== "boolean") candidate.defeat = false; if (typeof candidate.victory !== "boolean") candidate.victory = false;
-    migrateBarbarianDirector144(candidate); candidate.version = 5; delete candidate.scout;
-    if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(candidate);
-    return candidate;
   }
 
   function validateSaveState(candidate) {

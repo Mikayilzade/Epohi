@@ -36,10 +36,10 @@ Architecture cleanup is complete when:
 
 | System | Inputs and outputs | Current home | Intended dependency |
 | --- | --- | --- | --- |
-| Game state and migration | snapshot -> valid current state | `app.js`, `save-utils.js` | data definitions only |
+| Game state and migration | snapshot -> valid current state | `state-schema.js`, `save-utils.js`; domain adapters in `app.js` | data definitions and domain migrations |
 | Turn simulation | state + rules + random source -> result | `app.js`, `humans-*` | state, data, domain rules |
 | World, AI, combat, economy | state slice -> state change/result | `app.js`, some `humans-*` | data and shared pure helpers |
-| Save repository | snapshot + slot intent -> records | `storage.js`, `save-utils.js`, `app.js` | state migration, browser storage |
+| Save repository | snapshot + slot intent -> records | `storage.js`, `save-utils.js`, `save-service.js` | state migration, browser storage |
 | Presentation | state/result -> DOM, animation | `app.js`, `humans-*` | read-only gameplay API |
 
 ## Initial risk and sequence checkpoint
@@ -118,4 +118,21 @@ listeners, so the completion criteria above remain open.
 - Local desktop Chrome: save/turn focused tests 6/6. The three consecutive
   autosave slots still contain turns 5, 4 and 3 after four End Turns. Three-click
   End Turn sample: 603/322/346 ms, snapshots 48,037-48,125 bytes, within the
-  short-run baseline range. CI for this stage is checked after publication.
+  short-run baseline range. CI run `36262784864` passed all jobs.
+
+### Stage 4: versioned state schema
+
+- `state-schema.js` owns current state validation and normalization of legacy
+  city, unit, resource and history fields. `STATE_VERSION` is declared in
+  `config.js` and used for new games and migrated snapshots. `app.js` supplies
+  the existing barbarian and civilization domain migrations through explicit
+  callbacks, retaining their behavior without giving the schema DOM access.
+- `city` remains an alias of `cities[0]` after creation/migration; serialization
+  duplicates it, so migration reestablishes the alias on load. This is a
+  documented transitional shape, not a second independently edited city.
+- `tests/state-schema.spec.js` checks a legacy scout/resource snapshot,
+  versioning and repeat-migration idempotence. Local desktop Chrome: 15/15
+  save, prototype and barbarian cases plus schema 1/1. End Turn samples after
+  this stage: 1100/411/557 ms and 696/532/269 ms. The second run overlaps
+  the prior range; these short samples show scheduling noise and do not prove
+  a sustained regression or gain. CI is checked after publication.

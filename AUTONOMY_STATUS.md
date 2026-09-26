@@ -1,19 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_3_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_4_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 1 CI passed at `1fb9d10`; Stage 2 is published as
-  `5d96cc4` in PR #103. Stage 3 is locally validated.
+- **STATUS:** Stage 3 is published at `cc7d8ab` with all CI jobs green.
+  Stage 4 is locally validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Made autosave rotation one IndexedDB transaction, removing the
-  multi-transaction copy/delete sequence from `save-service.js`.
-- **EVIDENCE:** Local desktop Chrome save/turn 6/6; autosave slots hold turns
-  5/4/3. End Turn sample 603/322/346 ms (baseline 751/535/437 ms). Stage 2 CI
-  run `36261809991` passed Chromium, soak and static; one WebKit mobile camera
-  viewport-fit test failed (6.5 px versus <0.01 px), without desktop evidence.
-- **NEXT:** Review/commit/publish Stage 3; extract state
-  migration and use End Turn inventory to consolidate triggers.
+- **DONE:** Moved legacy/current state normalization into `state-schema.js`;
+  added a canonical state version and a legacy migration test.
+- **EVIDENCE:** Local desktop Chrome save/prototype/barbarian 15/15 plus schema
+  1/1. End Turn samples 1100/411/557 and 696/532/269 ms; no consistent trend.
+  Worker inventory found many turn-label observers and overlapping UI triggers.
+- **NEXT:** Review/publish Stage 4; consolidate End Turn UI triggers using
+  the inventory while preserving semantic per-turn hooks.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
