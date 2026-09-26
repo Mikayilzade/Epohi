@@ -59,3 +59,23 @@ test.describe('v1.4.5.1 turn unlock hotfix', () => {
     await expect(page.locator('#endTurnBtn')).toBeEnabled();
   });
 });
+
+test('turn history cannot trigger a legacy resource event', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  await page.evaluate(() => {
+    const debug = window.__epohiDebug();
+    debug.state.turn = 5;
+    debug.state.history.unshift('Ход 5: Богатый урожай принёс +7.');
+    debug.render();
+    Math.random = () => 0;
+  });
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.evaluate(() => document.getElementById('endTurnBtn').click());
+  await expect(page.locator('#turnValue')).toHaveText('6');
+  const result = await page.evaluate(() => {
+    const history = window.__epohiDebug().state.history;
+    return history.filter((line) => line.includes('Богатый урожай принёс +7')).length;
+  });
+  expect(result).toBe(1);
+});

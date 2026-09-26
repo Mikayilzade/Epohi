@@ -54,7 +54,40 @@ test.describe('v1.4.4 living barbarian camps', () => {
 
   test('legacy migration handles saves with and without camps without duplicates', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
-    const r = await page.evaluate(() => { const d=window.__epohiDebug(), base=JSON.parse(JSON.stringify(d.state)); delete base.barbarianDirector; base.map.forEach(row=>row.forEach(t=>{ if(t.camp) delete t.camp.campId; })); const withCamp=d.migrateState(JSON.parse(JSON.stringify(base))); const noCampRaw=JSON.parse(JSON.stringify(base)); noCampRaw.map.forEach(row=>row.forEach(t=>t.camp=null)); delete noCampRaw.barbarianDirector; const noCamp=d.migrateState(noCampRaw); const again=d.migrateState(JSON.parse(JSON.stringify(noCamp))); return { withCount:d.activeCampEntries(withCamp).length, withIds:d.activeCampEntries(withCamp).every(e=>!!e.camp.campId), noCount:d.activeCampEntries(noCamp).length, same:noCamp.barbarianDirector.nextCampSpawnTurn===again.barbarianDirector.nextCampSpawnTurn }; });
-    expect(r).toEqual({ withCount:1, withIds:true, noCount:0, same:true });
+    const r = await page.evaluate(() => {
+      const d = window.__epohiDebug();
+      const live = d.activeCampEntries(d.state);
+      const keep = live[0];
+      const base = JSON.parse(JSON.stringify(d.state));
+
+      // Migration semantics must not depend on an asynchronously maintained live map
+      // having one or several camps by the time this legacy fixture is captured.
+      // Build the legacy "with camp" save with exactly one retained camp and no campId.
+      base.map.forEach((row, y) => row.forEach((tile, x) => {
+        if (!tile.camp) return;
+        if (!keep || x !== keep.x || y !== keep.y) {
+          tile.camp = null;
+          return;
+        }
+        delete tile.camp.campId;
+      }));
+      delete base.barbarianDirector;
+
+      const withCamp = d.migrateState(JSON.parse(JSON.stringify(base)));
+      const noCampRaw = JSON.parse(JSON.stringify(base));
+      noCampRaw.map.forEach(row => row.forEach(tile => { tile.camp = null; }));
+      delete noCampRaw.barbarianDirector;
+      const noCamp = d.migrateState(noCampRaw);
+      const again = d.migrateState(JSON.parse(JSON.stringify(noCamp)));
+      return {
+        sourceCount: live.length,
+        withCount: d.activeCampEntries(withCamp).length,
+        withIds: d.activeCampEntries(withCamp).every(entry => !!entry.camp.campId),
+        noCount: d.activeCampEntries(noCamp).length,
+        same: noCamp.barbarianDirector.nextCampSpawnTurn === again.barbarianDirector.nextCampSpawnTurn
+      };
+    });
+    expect(r.sourceCount).toBeGreaterThan(0);
+    expect(r).toMatchObject({ withCount:1, withIds:true, noCount:0, same:true });
   });
 });
