@@ -220,3 +220,17 @@ listeners, so the completion criteria above remain open.
 - The living-world `processTurn` wrapper and general UI decorator still call
   some of these idempotent repairs. They must be replaced with direct action
   hooks or consolidated at the turn boundary to remove repeated log scans.
+
+### Stage 11: immutable AI production cost calculation
+
+- Removed the wrapper that temporarily overwrote shared
+  `UNIT_DEFS[type].cost.production` and restored it in a microtask. The AI
+  production queue now asks `EpohiCoherenceFinalize.unitProductionCost(civ,type)`
+  for its cost. This keeps balance definitions stable while preserving the
+  same 10% discount step.
+- Also removed the living-turn wrapper's duplicate coherence pass. The
+  explicit finalization phase is the turn owner; the general UI decorator
+  still performs some compatibility repairs outside End Turn.
+- Local desktop Chrome: coherence, combat/world and save checks 33/33, plus
+  an AI queue check 1/1 confirming a cost of 31 while the shared warrior cost
+  remains 34.

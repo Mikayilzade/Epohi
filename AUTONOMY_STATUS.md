@@ -1,17 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_10_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_11_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 9 is published at `f6f70a1`. Stage 10 is locally validated
+- **STATUS:** Stage 10 is published at `ed24bb7`. Stage 11 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Coherence finalization now runs before autosave; removed its
-  turn-label observer and deferred worker-autonomy repair.
-- **EVIDENCE:** Local desktop Chrome coherence/capture, save and turn 22/22.
-  Stage 9 CI pending.
-- **NEXT:** Review/publish Stage 10; remove duplicate coherence scans and
-  remaining outcomes/gameplay UI observers before final verification.
+- **DONE:** AI queue discounts now use an explicit cost calculation; shared
+  balance data is not temporarily mutated. Removed duplicate living-turn
+  coherence wrapping.
+- **EVIDENCE:** Local desktop Chrome coherence/combat/save 33/33, plus AI
+  queue cost 1/1. Stage 10 CI in progress.
+- **NEXT:** Review/publish Stage 11; separate outcome-state calculation from
+  presentation and remove remaining gameplay mutation from turn observers.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

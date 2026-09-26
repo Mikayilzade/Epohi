@@ -2103,7 +2103,7 @@
           canSettle:civ.cities.length<AI_LIMITS.maxCities
         };
         let type=window.EpohiLivingCivilizations?window.EpohiLivingCivilizations.chooseProduction(civ,context):(context.threat||context.warriors<2?'warrior':(context.workers<1?'worker':(context.canSettle?'settler':'scout')));
-        const def=UNIT_DEFS[type]; city.queue={type:'unit',id:type,progress:0,cost:def.cost.production||0,upfront:{gold:def.cost.gold||0}};
+        const def=UNIT_DEFS[type]; const productionCost=window.EpohiCoherenceFinalize?window.EpohiCoherenceFinalize.unitProductionCost(civ,type):(def.cost.production||0); city.queue={type:'unit',id:type,progress:0,cost:productionCost,upfront:{gold:def.cost.gold||0}};
         if(def.cost.gold)civ.resources.gold=Math.max(0,civ.resources.gold-def.cost.gold);
       }
       const inc=cityIncome(city); city.food=(city.food||0)+inc.food; civ.resources.gold+=inc.gold; civ.resources.science+=inc.science; city.queue.progress+=inc.production;

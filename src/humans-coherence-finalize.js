@@ -10,8 +10,6 @@
     BASE_UNIT_COST[id] = Number(UNIT_DEFS[id] && UNIT_DEFS[id].cost && UNIT_DEFS[id].cost.production) || 0;
   });
 
-  let wrappedLiving = false;
-  let wrappedProductionChoice = false;
   let beforeAiTurn = null;
   let queued = false;
 
@@ -142,25 +140,11 @@
     });
   }
 
-  function wrapChooseProduction() {
-    const living = window.EpohiLivingCivilizations;
-    if (!living || wrappedProductionChoice || typeof living.chooseProduction !== "function") return;
-    wrappedProductionChoice = true;
-    const original = living.chooseProduction;
-    living.chooseProduction = function (civ) {
-      const type = original.apply(this, arguments);
-      const def = UNIT_DEFS[type];
-      if (!civ || !def || !def.cost) return type;
-      ensureExperience(civ);
-      const base = BASE_UNIT_COST[type];
-      if (!base) return type;
-      const adjusted = Math.max(1, Math.ceil(base * (1 - unitDiscount(civ, type))));
-      def.cost.production = adjusted;
-      Promise.resolve().then(function () {
-        if (Number(def.cost.production) === adjusted) def.cost.production = base;
-      });
-      return type;
-    };
+  function unitProductionCost(civ, type) {
+    const base = BASE_UNIT_COST[type];
+    if (!base || !civ) return base || 0;
+    ensureExperience(civ);
+    return Math.max(1, Math.ceil(base * (1 - unitDiscount(civ, type))));
   }
 
   function knownTech(holder, id) {
@@ -195,21 +179,6 @@
       changed = true;
     });
     return changed;
-  }
-
-  function wrapLivingTurn() {
-    const living = window.EpohiLivingCivilizations;
-    if (!living || wrappedLiving || typeof living.processTurn !== "function") return;
-    wrappedLiving = true;
-    const original = living.processTurn;
-    living.processTurn = function (gs) {
-      const result = original.apply(this, arguments);
-      ensureState(gs);
-      processAiExperience(gs);
-      syncForeignBuildingKnowledge(gs);
-      invalidateImpossibleTrades(gs);
-      return result;
-    };
   }
 
   function repairWorkerAutonomy(gs) {
@@ -474,8 +443,6 @@
   function install() {
     installStyles();
     ensureState(state());
-    wrapChooseProduction();
-    wrapLivingTurn();
     window.addEventListener("click", onEndTurnCapture, true);
     document.addEventListener("click", handleClick);
     // Coherence proposals have their own priority observer in EventOverlayPolicy. The
@@ -494,6 +461,7 @@
     version: 3,
     ensureState: ensureState,
     processAiExperience: processAiExperience,
+    unitProductionCost: unitProductionCost,
     syncForeignBuildingKnowledge: syncForeignBuildingKnowledge,
     invalidateImpossibleTrades: invalidateImpossibleTrades,
     repairWorkerAutonomy: repairWorkerAutonomy,

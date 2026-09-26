@@ -152,21 +152,41 @@ test.describe('Рабочие, опыт производства, диплома
 
   test('ИИ получает ту же скидку на тип войск после каждых десяти произведённых', async ({ page }) => {
     const problems = await openGame(page, 1);
-    const result = await page.evaluate(async () => {
+    const result = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       const civ = state.rivals[0];
       window.EpohiCoherenceFinalize.ensureState(state);
       civ.experience.units.warrior = 10;
       const type = window.EpohiLivingCivilizations.chooseProduction(civ, { threat:true, warriors:0, workers:1, scouts:1, canSettle:false });
-      const during = window.EpohiData.UNIT_DEFS.warrior.cost.production;
-      await Promise.resolve();
-      const restored = window.EpohiData.UNIT_DEFS.warrior.cost.production;
-      return { type, during, restored };
+      const cost = window.EpohiCoherenceFinalize.unitProductionCost(civ, type);
+      const base = window.EpohiData.UNIT_DEFS.warrior.cost.production;
+      return { type, cost, base };
     });
     expect(result.type).toBe('warrior');
-    expect(result.during).toBe(31);
-    expect(result.restored).toBe(34);
+    expect(result.cost).toBe(31);
+    expect(result.base).toBe(34);
     await expectNoConsoleProblems(problems);
+  });
+
+  test('AI queue uses its discounted price without changing shared unit balance', async ({ page }) => {
+    await openGame(page, 1);
+    await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const civ = gs.rivals[0];
+      window.EpohiCoherenceFinalize.ensureState(gs);
+      civ.experience.units.warrior = 10;
+      civ.cities[0].queue = null;
+      window.EpohiLivingCivilizations.chooseProduction = () => 'warrior';
+    });
+    await page.locator('#endTurnBtn').click();
+    await expect(page.locator('#turnValue')).toHaveText('2');
+    const values = await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      return { queue:gs.rivals[0].cities[0].queue,
+        base:window.EpohiData.UNIT_DEFS.warrior.cost.production };
+    });
+    expect(values.queue).toEqual(expect.objectContaining({ id:'warrior', cost:31 }));
+    expect(values.base).toBe(34);
   });
 
   test('падение столицы не уничтожает государство, пока остаётся другой город', async ({ page }) => {
