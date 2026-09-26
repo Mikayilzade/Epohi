@@ -1,17 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_1_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_2_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Architecture Stage 1 validated locally on Lead. PR #103 remains
-  the sole integration target; publication pending complete stage diff review.
+- **STATUS:** Stage 1 is published at `1fb9d10` on PR #103 with all CI jobs
+  green. Stage 2 is locally validated on Lead and awaits diff review/publication.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Wrote the architecture passport; fixed save request snapshots and
-  record game-version metadata; removed 14 shadowed old rule declarations.
-- **EVIDENCE:** Desktop Chrome focused tests 28/28. Three-click End Turn sample
-  before 751/535/437 ms, after 663/351/319 ms; no short-run regression.
-- **NEXT:** Review and commit Stage 1; isolate save orchestration, then turn
-  simulation and presentation, with risk-based checks at each boundary.
+- **DONE:** Moved save orchestration to `src/save-service.js` with explicit
+  state/identity/status boundaries; added three-slot autosave regression test.
+- **EVIDENCE:** Local desktop Chrome save/startup/turn 10/10, save slots 2/2.
+  End Turn sample after Stage 2: 549/296/318 ms (baseline 751/535/437 ms).
+- **NEXT:** Review/publish Stage 2; make slot rotation atomic, extract state
+  migration, then consolidate End Turn rules and presentation triggers.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

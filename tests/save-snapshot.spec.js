@@ -30,3 +30,33 @@ test('queued autosave keeps the state from its request time', async ({ page }) =
   expect(saved.record.schemaVersion).toBe(saved.schemaVersion);
   expect(saved.record.gameVersion).toBe(saved.gameVersion);
 });
+
+test('three autosave slots keep consecutive completed turns', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+
+  for (let turn = 2; turn <= 5; turn += 1) {
+    await page.locator('#endTurnBtn').click();
+    await expect(page.locator('#turnValue')).toHaveText(String(turn));
+    await expect.poll(async () => page.evaluate(async () => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find((save) => save.saveId.endsWith('-autosave-1'));
+      return latest && latest.turn;
+    })).toBe(turn);
+  }
+
+  const slots = await page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    return [1, 2, 3].map((slot) => {
+      const save = saves.find((item) => item.saveId.endsWith('-autosave-' + slot));
+      return save && { turn: save.turn, stateTurn: save.gameState.turn };
+    });
+  });
+  expect(slots).toEqual([
+    { turn: 5, stateTurn: 5 },
+    { turn: 4, stateTurn: 4 },
+    { turn: 3, stateTurn: 3 }
+  ]);
+});

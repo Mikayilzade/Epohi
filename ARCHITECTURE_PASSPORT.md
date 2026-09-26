@@ -82,6 +82,26 @@ and performance tests live in `tests/runtime-invalidation*.spec.js` and
   including browser scheduling/render; treat differences as noise until sampled
   repeatedly. No regression was observed in this short check.
 
-Next owner: extract save orchestration from `app.js`, then separate turn rules
-from presentation. The current UI still owns many gameplay mutations and
-multiple post-turn listeners, so the completion criteria above remain open.
+The current UI still owns many gameplay mutations and multiple post-turn
+listeners, so the completion criteria above remain open.
+
+### Stage 2: save orchestration boundary
+
+- `src/save-service.js` now owns snapshot capture, queued writes, campaign
+  association and three-slot autosave rotation. It receives state and identity
+  through explicit functions and emits status codes to the UI; it never reads
+  the DOM. `app.js` retains player-facing save controls and maps status codes to
+  messages. `storage.js` remains the IndexedDB adapter and `save-utils.js`
+  remains the record/validation helper.
+- The service is loaded after `save-utils.js` and before `app.js` in
+  `index.html`. Save change points: record fields in `save-utils.js`, write and
+  rotation policy in `save-service.js`, IndexedDB schema in `storage.js`, and
+  UI controls in `app.js`.
+- `tests/save-snapshot.spec.js` also checks autosave slots 1/2/3 hold
+  consecutive completed turns. Local desktop Chrome: save snapshot and slot
+  tests 2/2; save/startup/turn suite 10/10. Three-click End Turn sample after
+  extraction: 549/296/318 ms, snapshots 47,963-48,051 bytes. The baseline
+  method and noise caveat above still apply.
+- Remaining save debt: rotation performs several IndexedDB transactions and
+  should become one atomic transaction before calling the save path complete.
+  State migration still lives in `app.js`; move it to a versioned state module.

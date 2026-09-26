@@ -20,6 +20,9 @@
   if (!window.EpohiSaveUtils) {
     throw new Error("EpohiSaveUtils must be loaded before app.js");
   }
+  if (!window.EpohiSaveService) {
+    throw new Error("EpohiSaveService must be loaded before app.js");
+  }
 
   if (!window.EpohiCameraStorage) {
     throw new Error("EpohiCameraStorage must be loaded before app.js");
@@ -213,12 +216,9 @@
   let activeSaveId = safeGet(ACTIVE_SAVE_KEY) || null;
   let loadedSaveId = activeSaveId;
   let loadedSaveTurn = null;
-  let lastAutosaveMeta = null;
-  let autosaveWriteLock = Promise.resolve();
   let storageAvailable = true;
   let storageWarning = "";
   let saveStatus = "Сохранено";
-  let saveQueue = Promise.resolve();
   let selected = null;
   let inspectedTile = null;
   let ownUnitInspection = null;
@@ -485,14 +485,30 @@
   function setSaveStatus(text) { saveStatus = text; renderTop(); }
   function savingBlockedMessage() { return "Завершите текущее действие перед сохранением"; }
   let turnProcessing = false;
-  let autoSaveImpl = null;
   function canSaveNow() { return !!state && !turnProcessing && !document.querySelector("#victoryModal.show"); }
 
-  function ensureCampaign(gameState, campaignId) {
-    if (!gameState) return Promise.reject(new Error("Нет текущей партии"));
-    if (campaignId) return getCampaign(campaignId).then(function(c){ return c || putCampaign(campaignFromState(gameState, gameState.partyName, campaignId)); });
-    const c = campaignFromState(gameState, gameState.partyName); activeCampaignId = c.campaignId; safeSet(ACTIVE_CAMPAIGN_KEY, activeCampaignId); return putCampaign(c);
-  }
+  const saveService = window.EpohiSaveService.create({
+    getState: function () { return state; },
+    getIdentity: function () { return { activeCampaignId: activeCampaignId, loadedSaveId: loadedSaveId, loadedSaveTurn: loadedSaveTurn }; },
+    onCampaignCreated: function (id) { activeCampaignId = id; safeSet(ACTIVE_CAMPAIGN_KEY, id); },
+    onActiveSave: function (id, turn) { activeSaveId = id; loadedSaveId = id; loadedSaveTurn = turn; safeSet(ACTIVE_SAVE_KEY, id); },
+    getCampaign: getCampaign,
+    getCampaignSaves: getCampaignSaves,
+    putCampaign: putCampaign,
+    putSaveRecord: putSaveRecord,
+    deleteSaveRecord: deleteSaveRecord,
+    campaignFromState: campaignFromState,
+    validateSaveState: validateSaveState,
+    cloneState: cloneState,
+    buildSaveRecord: buildSaveRecord,
+    mapSizeCells: mapSizeCells,
+    schemaVersion: SAVE_SCHEMA_VERSION,
+    canSaveNow: canSaveNow,
+    saveLegacySnapshot: function (snapshot) { safeSet(SAVE_KEY, JSON.stringify(snapshot)); },
+    onStatus: function (status) { setSaveStatus({ saving: "Сохранение…", saved: "Сохранено", error: "Ошибка сохранения" }[status]); },
+    onError: function (error) { showToast("Не удалось сохранить: " + error.message, 3200); },
+    onBlocked: function () { showToast(savingBlockedMessage(), 2600); }
+  });
 
   function nextDefaultCampaignName() {
     return getCampaigns().then(function(campaigns){
@@ -504,69 +520,17 @@
 
   function createCampaignForNewGame(newState, name) {
     const c = campaignFromState(newState, name);
-    newState.partyName = c.name; activeCampaignId = c.campaignId; activeSaveId = null; loadedSaveId = null; loadedSaveTurn = null; lastAutosaveMeta = null;
+    newState.partyName = c.name; activeCampaignId = c.campaignId; activeSaveId = null; loadedSaveId = null; loadedSaveTurn = null; saveService.resetRotation();
     safeSet(ACTIVE_CAMPAIGN_KEY, activeCampaignId); safeSet(ACTIVE_SAVE_KEY, "");
     return putCampaign(c).then(function(){ return c; });
   }
 
-  function writeSnapshot(type, name, fixedSaveId, parentSaveId, prepared) {
-    if (!state && !prepared) return Promise.resolve(null);
-    if (!canSaveNow() && type !== "autosave") { showToast(savingBlockedMessage(), 2600); return Promise.resolve(null); }
-    // Capture at request time: the queued IndexedDB write must never serialize a
-    // later turn or another campaign under this request's slot and metadata.
-    const snapshot = prepared ? prepared.snapshot : cloneState(state);
-    const campaignId = prepared ? prepared.campaignId : activeCampaignId;
-    const parentTurn = prepared ? prepared.parentTurn : loadedSaveTurn;
-    if (!prepared) safeSet(SAVE_KEY, JSON.stringify(snapshot));
-    setSaveStatus("Сохранение…");
-    saveQueue = saveQueue.catch(function(){}).then(function(){ return ensureCampaign(snapshot, campaignId).then(function(campaign){
-      const now = new Date().toISOString(); const valid = validateSaveState(snapshot); if (!valid) throw new Error("Состояние повреждено и не сохранено");
-      valid.partyName = campaign.name;
-      const record = buildSaveRecord({
-        type: type,
-        name: name,
-        fixedSaveId: fixedSaveId,
-        parentSaveId: parentSaveId,
-        campaign: campaign,
-        gameState: valid,
-        now: now,
-        schemaVersion: SAVE_SCHEMA_VERSION,
-        loadedSaveTurn: parentTurn
-      });
-      const saveId = record.saveId;
-      return putSaveRecord(record).then(function(){ campaign.lastPlayedAt = now; campaign.status = valid.victory ? "victory" : "active"; campaign.lastLoadedSaveId = saveId; campaign.mapSize = mapSizeCells(valid); if (activeCampaignId === campaign.campaignId) { activeSaveId = saveId; loadedSaveId = saveId; loadedSaveTurn = valid.turn; safeSet(ACTIVE_SAVE_KEY, saveId); } return putCampaign(campaign).then(function(){ setSaveStatus("Сохранено"); return record; }); });
-    }); }).catch(function(error){ setSaveStatus("Ошибка сохранения"); showToast("Не удалось сохранить: " + error.message, 3200); throw error; });
-    return saveQueue;
-  }
+  function quickSave() { return saveService.writeSnapshot("quicksave", "Быстрое сохранение", activeCampaignId + "-quicksave", loadedSaveId).then(function(r){ if(r) showToast("Игра сохранена"); }); }
+  function manualSave(slotIndex, name, overwriteId) { const parent = loadedSaveId && loadedSaveId !== overwriteId ? loadedSaveId : null; return saveService.writeSnapshot("manual", name, overwriteId || (activeCampaignId + "-manual-" + slotIndex), parent); }
 
-  function quickSave() { return writeSnapshot("quicksave", "Быстрое сохранение", activeCampaignId + "-quicksave", loadedSaveId).then(function(r){ if(r) showToast("Игра сохранена"); }); }
-  function manualSave(slotIndex, name, overwriteId) { const parent = loadedSaveId && loadedSaveId !== overwriteId ? loadedSaveId : null; return writeSnapshot("manual", name, overwriteId || (activeCampaignId + "-manual-" + slotIndex), parent); }
-  function saveAutosaveSlot(campaign, slotName, parentSaveId, prepared) {
-    return writeSnapshot("autosave", slotName, campaign.campaignId + "-" + slotName, parentSaveId, prepared);
-  }
-
-  function autoSave(rotate) {
-    if (autoSaveImpl) return autoSaveImpl(rotate);
-    if (!state) return Promise.resolve(null);
-    const snapshot = cloneState(state);
-    const prepared = { snapshot: snapshot, campaignId: activeCampaignId, parentTurn: loadedSaveTurn };
-    const parentSaveId = loadedSaveId;
-    safeSet(SAVE_KEY, JSON.stringify(snapshot));
-    autosaveWriteLock = autosaveWriteLock.catch(function(){}).then(function(){ return ensureCampaign(snapshot, prepared.campaignId).then(function(c){ return getCampaignSaves(c.campaignId).then(function(saves){
-      const currentTurn = snapshot.turn;
-      const autos = saves.filter(function(s){ return s.type === "autosave"; });
-      const sameTurn = autos.find(function(s){ return s.campaignId === c.campaignId && s.turn === currentTurn; });
-      const shouldRotate = !!rotate && !sameTurn && !(lastAutosaveMeta && lastAutosaveMeta.campaignId === c.campaignId && lastAutosaveMeta.turn === currentTurn);
-      if (!shouldRotate) return saveAutosaveSlot(c, "autosave-1", parentSaveId, prepared);
-      const bySlot = {}; autos.forEach(function(s){ if (s.saveId === c.campaignId + "-autosave-1") bySlot[1] = s; if (s.saveId === c.campaignId + "-autosave-2") bySlot[2] = s; });
-      const ops = [deleteSaveRecord(c.campaignId + "-autosave-3")];
-      if (bySlot[2] && bySlot[2].turn !== currentTurn) { const moved2 = Object.assign({}, bySlot[2], { id:c.campaignId+"-autosave-3", saveId:c.campaignId+"-autosave-3", name:"autosave-3" }); ops.push(deleteSaveRecord(bySlot[2].saveId).then(function(){ return putSaveRecord(moved2); })); }
-      if (bySlot[1] && bySlot[1].turn !== currentTurn) { const moved1 = Object.assign({}, bySlot[1], { id:c.campaignId+"-autosave-2", saveId:c.campaignId+"-autosave-2", name:"autosave-2" }); ops.push(deleteSaveRecord(bySlot[1].saveId).then(function(){ return putSaveRecord(moved1); })); }
-      return Promise.all(ops).then(function(){ lastAutosaveMeta = { campaignId: c.campaignId, turn: currentTurn }; return saveAutosaveSlot(c, "autosave-1", parentSaveId, prepared); });
-    }); }); });
-    return autosaveWriteLock;
-  }
+  function autoSave(rotate) { return saveService.autoSave(rotate); }
   function saveGame() { return autoSave(false); }
+
   function loadCamera() {
     return loadCameraFromStorage();
   }
@@ -2309,7 +2273,7 @@
     saveCamera();
   });
 
-  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, saveGame: saveGame, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ autoSaveImpl = fn; }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, inspectOwnUnitAt: inspectOwnUnitAt, isRepeatedOwnUnitInspection: isRepeatedOwnUnitInspection, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
+  window.__epohiDebug = function(){ return { state: state, endTurn: endTurn, canSaveNow: canSaveNow, saveGame: saveGame, isTurnProcessing: function(){ return turnProcessing; }, setAutoSaveForTests: function(fn){ saveService.setAutoSaveForTests(fn); }, foundCity: foundCity, canFoundCity: canFoundCity, foundCityBlockReason: foundCityBlockReason, renderContext: renderContext, processBarbarians: processBarbarians, processRivals: processRivals, stepToward: stepToward, targetActiveCampCount: targetActiveCampCount, isValidCampSpawnTile: isValidCampSpawnTile, findCampSpawnCandidates: findCampSpawnCandidates, spawnReplacementCamp: spawnReplacementCamp, maintainBarbarianCamps: maintainBarbarianCamps, scheduleNextCampSpawn: scheduleNextCampSpawn, activeCampEntries: activeCampEntries, countBarbariansForCamp: countBarbariansForCamp, migrateState: migrateState, createNewGame: createNewGame, campReward: campReward, playerKnowsCamp: playerKnowsCamp, civKnowsCamp: civKnowsCamp, updateCampDiscovery: updateCampDiscovery, chooseAiGoal: chooseAiGoal, currentRivalSeesTile: currentRivalSeesTile, buildImprovementWithWorker: buildImprovementWithWorker, repairImprovement: repairImprovement, render: render, camera: camera, getCamera: function(){ return camera; }, applyCamera: applyCamera, setCameraScale: setCameraScale, showEntireMap: showEntireMap, centerCameraOnFocus: centerCameraOnFocus, centerCameraOnTile: centerCameraOnTile, getCameraScaleBounds: function(){ return getCameraScaleBounds(mapViewport, mapEl, mapSizeCells); }, setResourceViewCity: setResourceViewCity, setResourceViewEmpire: setResourceViewEmpire, cycleResourceView: cycleResourceView, queueProject: queueProject, cityIncome: cityIncome, inspectLayersAt: inspectLayersAt, validStartUnitSpot: validStartUnitSpot, findStartUnitSpot: findStartUnitSpot, placeStartingUnits: placeStartingUnits, getSelectedUnitId: function(){ return selectedUnitId; }, getSelectedCityId: function(){ return selectedCityId; }, getInspectLayer: function(){ return inspectLayer; }, inspectOwnUnitAt: inspectOwnUnitAt, isRepeatedOwnUnitInspection: isRepeatedOwnUnitInspection, setActiveCity: function(id){ selectedCityId = id; setResourceViewCity(id); } }; };
   openDb().then(function(db){ db.close(); storageAvailable = true; return migrateOldSaveIfNeeded(); }).catch(function(error){ storageAvailable = false; storageWarning = "IndexedDB недоступна: " + error.message + ". Пять слотов отключены, старое localStorage-сохранение не изменяется."; }).finally(function(){
     openMainMenu();
     if (!safeGet(UPDATE_KEY)) { safeSet(UPDATE_KEY, "1"); setTimeout(function(){ showToast("v1.4.5.1-hotfix: мобильная карточка осмотра прокручивается, а летопись больше не спамит движениями ИИ", 3600); }, 350); }
