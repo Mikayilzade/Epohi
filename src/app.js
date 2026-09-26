@@ -1400,6 +1400,7 @@
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
         if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
+        if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
         if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
         if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
         selected = null;

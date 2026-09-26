@@ -40,6 +40,28 @@ async function ensureWorker(page) {
   });
 }
 
+test('captured research insight is applied before the new turn is saved', async ({ page }) => {
+  await openGame(page, 0);
+  await page.evaluate(() => {
+    const gs = window.__epohiDebug().state;
+    window.EpohiCaptureState.ensureState(gs);
+    gs.currentResearch = 'writing';
+    gs.resources.science = 0;
+    gs.techInsights.writing = 7;
+  });
+  await page.locator('#endTurnBtn').click();
+  await expect(page.locator('#turnValue')).toHaveText('2');
+  await expect.poll(() => page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
+    if (!latest || latest.turn !== 2) return null;
+    const gs = latest && latest.gameState;
+    return gs && { insight:gs.techInsights.writing,
+      event:gs.eventLog.some(item => item.eventType === 'technology-insight-applied') };
+  })).toEqual({ insight:0, event:true });
+});
+
 test.describe('Рабочие, опыт производства, дипломатия и захват городов', () => {
   test('рабочий строит улучшение рабочим временем без городского производства', async ({ page }) => {
     const problems = await openGame(page, 0);

@@ -197,3 +197,14 @@ listeners, so the completion criteria above remain open.
 - Stage 6 CI (`36264955266`) failed one Chromium mobile camera resize/pinch
   test; its other 64 tests in that shard passed. No camera code changed in that
   stage. The mobile camera instability remains tracked separately.
+
+### Stage 9: explicit capture/research turn phase
+
+- `EpohiCaptureState.processTurn(state)` applies captured technology insight
+  and detects fallen cities after route orders, before worker projects and the
+  autosave. The capture module no longer observes `turnValue` for gameplay.
+  Its existing immediate research-click and capture hooks remain.
+- A focused test checks that consumed insight and its event are present in
+  autosave slot 1. Local desktop Chrome: 16/17 related checks passed on the
+  first run; the new test initially read the prior turn's autosave, then passed
+  after waiting for slot 1 to reach turn 2. No game-code failure was found.

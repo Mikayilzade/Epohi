@@ -1,18 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_8_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_9_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 7 is published at `56dbc75`. Stage 8 is locally validated
+- **STATUS:** Stage 8 is published at `ce523e0`. Stage 9 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** New-turn route orders now advance before autosave; pathing's turn
-  observer is presentation-only and no longer causes a second core render.
-- **EVIDENCE:** Local desktop Chrome pathing 8/8 and save/runtime cadence 4/4.
-  Stage 6 CI failed one mobile camera resize test; all 64 other tests in that
-  shard passed. Stage 7 CI pending.
-- **NEXT:** Review/publish Stage 8; move remaining gameplay turn observers
-  before autosave, then consolidate presentation invalidation.
+- **DONE:** Captured research insight and fallen-city detection now run before
+  autosave through an explicit capture-state turn phase, without a turn-label
+  gameplay observer.
+- **EVIDENCE:** Local desktop Chrome 16/17 on the first pass; the new autosave
+  test read turn 1 too early and passed on rerun after waiting for turn 2.
+  Stage 7 CI pending.
+- **NEXT:** Review/publish Stage 9; move coherence and outcomes gameplay
+  mutations before save, then consolidate presentation invalidation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
