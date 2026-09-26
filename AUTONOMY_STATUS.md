@@ -1,19 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_AUDIT_AND_BASELINE.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_1_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Lead rebased local docs audit onto verified PR #103 head `bf8cba5`;
-  historical plan preserved in local commit `defc69c`. Two zero-byte untracked
-  files were preserved in stash `pre-architecture-lead-untracked-2026-09-26`.
+- **STATUS:** Architecture Stage 1 validated locally on Lead. PR #103 remains
+  the sole integration target; publication pending complete stage diff review.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Audited script order, monolith, save pipeline and End Turn entry.
-  Wrote Epohi-specific criteria, boundaries, sequence and risk checkpoint.
-- **EVIDENCE:** `app.js` combines state, rules, save, AI, rendering and input;
-  later scripts attach more turn listeners and DOM observers. PR #103 remains
-  OPEN/Draft into `main` at `bf8cba5` at sync time.
-- **NEXT:** Establish End Turn/save baseline; isolate save snapshots from the
-  asynchronous queue; extract turn phases in behavior-preserving stages.
+- **DONE:** Wrote the architecture passport; fixed save request snapshots and
+  record game-version metadata; removed 14 shadowed old rule declarations.
+- **EVIDENCE:** Desktop Chrome focused tests 28/28. Three-click End Turn sample
+  before 751/535/437 ms, after 663/351/319 ms; no short-run regression.
+- **NEXT:** Review and commit Stage 1; isolate save orchestration, then turn
+  simulation and presentation, with risk-based checks at each boundary.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

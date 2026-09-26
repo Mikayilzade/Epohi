@@ -62,3 +62,26 @@ This section is updated after each architectural stage. Current save tests live
 in `tests/prototype-baseline.spec.js` and `tests/turn-unlock.spec.js`; observer
 and performance tests live in `tests/runtime-invalidation*.spec.js` and
 `tests/humans-pathing-performance.spec.js`. `AGENT_TESTING_POLICY.md` sets scope.
+
+### Stage 1: save request identity and shadowed rules
+
+- `app.js` captures game state, campaign identity and parent-turn metadata when
+  a save is requested. The asynchronous IndexedDB queue writes that snapshot,
+  even if another turn starts before the write. `save-utils.js` now puts
+  `gameVersion` beside `schemaVersion` on new records. Existing records retain
+  their prior shape and remain loadable.
+- Fourteen earlier top-level functions in `app.js` were shadowed by later
+  declarations in the same strict IIFE. The earlier bodies were removed. The
+  active later implementations remain, including AI, barbarians and production.
+- `tests/save-snapshot.spec.js` checks that a delayed save retains the request
+  turn, resources, schema and rules version. Desktop Chrome focused checks:
+  28/28 across save snapshot, turn unlock, barbarian camps, and combat/world.
+- Baseline desktop Chrome, small map, no rivals, three actual End Turn clicks:
+  751/535/437 ms, snapshots 48,040-48,128 bytes. After Stage 1:
+  663/351/319 ms, snapshots 48,004-48,092 bytes. These are single-run timings
+  including browser scheduling/render; treat differences as noise until sampled
+  repeatedly. No regression was observed in this short check.
+
+Next owner: extract save orchestration from `app.js`, then separate turn rules
+from presentation. The current UI still owns many gameplay mutations and
+multiple post-turn listeners, so the completion criteria above remain open.

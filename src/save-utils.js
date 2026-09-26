@@ -76,6 +76,7 @@
       createdAt: options.now,
       updatedAt: options.now,
       schemaVersion: options.schemaVersion,
+      gameVersion: GAME_VERSION,
       parentSaveId: options.parentSaveId || null,
       parentTurn: options.parentSaveId ? options.loadedSaveTurn : null
     };
