@@ -250,3 +250,17 @@ listeners, so the completion criteria above remain open.
 - Other action-specific outcome checks still use the compatibility `evaluate`
   path; a later pass should have their command handlers call state evaluation
   directly and leave presentation callbacks read-only.
+
+### Stage 13: preserve successor capital on load
+
+- `state-schema.js` no longer unconditionally makes `cities[0]` the capital.
+  It selects the living city already marked capital, then the saved active
+  city's id, then legacy fallbacks. The selected `city` reference aliases the
+  matching object in `cities`, and other capital flags are cleared.
+- This fixes a save/load defect after the outcome system transfers the capital
+  to another city. Local desktop Chrome: schema, outcomes and saves 13/13,
+  including a JSON snapshot round trip with a dead first city and a living
+  second capital.
+- The legacy `city` field still duplicates a city in serialized snapshots;
+  a later schema update should make the active-capital id explicit and keep
+  one serialized city collection.

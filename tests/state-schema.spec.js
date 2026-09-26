@@ -45,3 +45,28 @@ test('legacy state migration is versioned and idempotent', async ({ page }) => {
   expect(result.eventLog).toEqual([]);
   expect(result.oldScoutRemoved).toBe(true);
 });
+
+test('saved successor capital remains the active city after migration', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const result = await page.evaluate(() => {
+    const debug = window.__epohiDebug();
+    const state = debug.state;
+    const first = state.cities[0];
+    const successor = { ...first, id:'successor-capital', name:'Новая столица',
+      x:first.x + 2, y:first.y, hp:150, maxHp:150, capital:true,
+      buildings:[], queue:null };
+    first.hp = 0;
+    first.capital = false;
+    state.cities.push(successor);
+    state.city = successor;
+    const saved = JSON.parse(JSON.stringify(state));
+    const restored = debug.migrateState(saved);
+    return { capitalId:restored.city.id,
+      alias:restored.city === restored.cities[1],
+      flags:restored.cities.map(city => city.capital),
+      firstHp:restored.cities[0].hp };
+  });
+  expect(result).toEqual({ capitalId:'successor-capital', alias:true,
+    flags:[false,true], firstHp:0 });
+});

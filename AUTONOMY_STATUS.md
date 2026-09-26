@@ -1,18 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_12_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_13_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 11 is published at `098ee1e`. Stage 12 is locally validated
+- **STATUS:** Stage 12 is published at `485882d`. Stage 13 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Outcome state is calculated before autosave and displayed after
-  render; removed outcome's turn-label observer and duplicate End Turn click
-  refresh.
-- **EVIDENCE:** Local desktop Chrome outcome/save/turn 15/15, plus outcome
-  autosave check 1/1. Stage 11 CI pending.
-- **NEXT:** Review/publish Stage 12; remove remaining action-triggered
-  gameplay scans from presentation decorators and continue subsystem splits.
+- **DONE:** Save migration preserves the living successor capital rather than
+  resetting the first city as capital.
+- **EVIDENCE:** Local desktop Chrome state schema, outcomes and saves 13/13.
+  Stage 12 CI pending.
+- **NEXT:** Review/publish Stage 13; remove duplicate serialized `city` data,
+  then continue separating world/AI rules from presentation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

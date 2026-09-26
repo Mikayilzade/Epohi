@@ -64,8 +64,15 @@
       if (typeof city.hp !== "number") city.hp = city.maxHp;
       if (!city.name) city.name = index ? "Новый город" : "Ардена";
     });
-    candidate.city = candidate.cities[0];
-    candidate.city.capital = true;
+    const selectedCapital = candidate.cities.find(function (city) { return city.capital && city.hp > 0; }) ||
+      candidate.cities.find(function (city) { return city.id === candidate.city.id && city.hp > 0; }) ||
+      candidate.cities.find(function (city) { return city.capital; }) ||
+      candidate.cities.find(function (city) { return city.id === candidate.city.id; }) ||
+      candidate.cities[0];
+    if (selectedCapital) {
+      candidate.cities.forEach(function (city) { city.capital = city === selectedCapital; });
+      candidate.city = selectedCapital;
+    }
     if (!candidate.localResourceMigration142Done) {
       candidate.city.food += legacyFood;
       candidate.city.production += legacyProduction;
