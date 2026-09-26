@@ -467,16 +467,14 @@
     window.setTimeout(schedule,0);
   }
 
-  function onTurnChange() {
-    const gs=ensureState(state());
-    if(!gs)return;
+  function processTurn(gs) {
+    gs=ensureState(gs);
+    if(!gs)return false;
     const turn=Number(gs.turn)||1;
-    if(lastTurn===turn)return;
+    if(lastTurn===turn)return false;
     lastTurn=turn;
     processExperienceEvents(gs);
-    processWorkerProjects(gs);
-    const value=debug(); if(value&&typeof value.render==="function")value.render();
-    schedule();
+    return processWorkerProjects(gs);
   }
 
   function decorate() {
@@ -500,14 +498,13 @@
       const gs = ensureState(state());
       if (gs) patchWorkerUi(gs);
     });
-    const turn=document.getElementById("turnValue"); if(turn)new MutationObserver(onTurnChange).observe(turn,{childList:true,characterData:true,subtree:true});
     ["cityModal","feedbackTreasuryModal","contextPanel"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});});
     lastTurn=Number(state()&&state().turn)||null; schedule();
   }
 
   window.EpohiWorkerLearning={
     version:1,ensureState:ensureState,buildingDiscount:buildingDiscount,unitDiscount:unitDiscount,effectiveProductionCost:effectiveProductionCost,
-    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents,patchWorkerUi:patchWorkerUi
+    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents,processTurn:processTurn,patchWorkerUi:patchWorkerUi
   };
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true}); else install();

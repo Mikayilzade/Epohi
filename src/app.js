@@ -1398,6 +1398,7 @@
         state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
+        if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
         selected = null;
         let message = "Города получили: 🍞" + income.food + " · 🔨" + income.production + " · 🪙" + income.gold + " · 🔬" + income.science;
         if (rivalActions) message = "Соперники действуют: " + rivalActions + ". " + message;

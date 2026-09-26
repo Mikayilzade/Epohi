@@ -1,17 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_5_LOCAL_VALIDATED.
+Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_6_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 4 is published at `889beb1` with all CI jobs green.
-  Stage 5 is locally validated on Lead; PR #103 remains the only target.
+- **STATUS:** Stage 5 is published at `f16e4f8`. Stage 6 is locally validated
+  on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Removed a legacy random event and its history-text rollback; the
-  cancelled event no longer passes through game state and a DOM observer.
-- **EVIDENCE:** CI `36263454395` at Stage 4 passed all jobs. Local desktop
-  Chrome save/turn checks 7/7, including deterministic turn 5 regression.
-- **NEXT:** Review/publish Stage 5; move gameplay turn observers into explicit
-  pre-save phases and reduce duplicate full renders.
+- **DONE:** Worker projects now advance in an explicit pre-save turn phase;
+  removed their turn-label observer and second full render.
+- **EVIDENCE:** Local Chrome 20/21 desktop checks; one existing mobile-only
+  layout assertion failed at desktop width, then worker/save test passed at
+  mobile width. Desktop runtime cadence and save snapshot checks 4/4.
+- **NEXT:** Review/publish Stage 6; move remaining gameplay turn observers
+  into explicit phases before autosave and keep reducing duplicate renders.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

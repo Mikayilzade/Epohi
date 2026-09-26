@@ -75,6 +75,15 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       const worker = state.units.find(unit => unit.id === id);
       return { improvement: state.map[worker.y][worker.x].improvement, project: worker.workerProject };
     }, result.workerId)).toEqual({ improvement: 'lumber', project: null });
+    await expect.poll(() => page.evaluate(async id => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
+      if (!latest) return null;
+      const state = latest.gameState;
+      const worker = state.units.find(unit => unit.id === id);
+      return worker && { improvement: state.map[worker.y][worker.x].improvement, project: worker.workerProject };
+    }, result.workerId)).toEqual({ improvement: 'lumber', project: null });
     expect(problems).toEqual([]);
   });
 

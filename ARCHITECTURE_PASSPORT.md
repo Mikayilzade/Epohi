@@ -152,3 +152,19 @@ listeners, so the completion criteria above remain open.
   changing the test's click to bypass an unrelated open decision modal.
 - Remaining history and event-log readers, including worker-learning production
   experience, still need structured inputs rather than text parsing.
+
+### Stage 6: explicit worker turn phase
+
+- `app.js` calls `EpohiWorkerLearning.processTurn(state)` after resetting unit
+  actions and before the single core render and autosave. The worker module
+  advances projects and accounts for experience once per turn through this
+  entry point. Its `turnValue` MutationObserver and second full core render
+  were removed.
+- The existing worker test now checks that a completed improvement and cleared
+  project are present in autosave slot 1, rather than only in live state.
+- Local Chrome: 20/21 desktop checks passed; the one desktop failure was an
+  existing mobile-only `flex-wrap: nowrap` assertion exercised at 1280 px.
+  The same worker/save test passed at a 390 px viewport. Desktop runtime
+  cadence and save snapshot tests passed 4/4. No test or CSS was weakened.
+- Other turn-label observers still mutate game state after autosave; their
+  phases must move before the snapshot before this boundary is complete.
