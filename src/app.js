@@ -1370,6 +1370,7 @@
     showToast("Ход соперников", 900);
     setTimeout(function(){
       let completedProject = null;
+      let outcomeResult = null;
       try {
         const aiBudget = { remaining:AI_LIMITS.maxActionsPerTurn, used:0 };
         state.lastAiUnitActions={};
@@ -1404,6 +1405,7 @@
         if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
         if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
         if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
+        if (window.EpohiHumansOutcomes) outcomeResult = window.EpohiHumansOutcomes.evaluateState(state);
         selected = null;
         let message = "Города получили: 🍞" + income.food + " · 🔨" + income.production + " · 🪙" + income.gold + " · 🔬" + income.science;
         if (rivalActions) message = "Соперники действуют: " + rivalActions + ". " + message;
@@ -1423,6 +1425,7 @@
         render();
         if (state.turn !== turnAtStart && window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
         if (state.turn !== turnAtStart && window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.refreshUi();
+        if (outcomeResult && window.EpohiHumansOutcomes) window.EpohiHumansOutcomes.presentOutcome(state, outcomeResult, { announce:true, showGoalsOnBlockedVictory:true });
       }
       autoSave(true).catch(function () {
         setSaveStatus("Ошибка автосохранения");

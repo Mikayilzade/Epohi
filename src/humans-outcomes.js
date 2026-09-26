@@ -318,7 +318,7 @@
     };
   }
 
-  function evaluate(state, options) {
+  function evaluateState(state, options) {
     options = options || {};
     state = state || getState();
     if (!state) return null;
@@ -328,14 +328,12 @@
       state.victory = false;
       state.defeat = false;
       existing.status = "active";
-      hideLegacyOutcomeModal();
-      return existing;
+      return { outcome: existing, continuing: true };
     }
     if (!options.recalculate && (existing.status === "victory" || existing.status === "defeat")) {
       state.victory = existing.status === "victory";
       state.defeat = existing.status === "defeat";
-      if (options.announce) showOutcomeModal(state, existing);
-      return existing;
+      return { outcome: existing, retained: true };
     }
 
     promoteSuccessorCapital(state);
@@ -394,19 +392,31 @@
         "Дворец построен, но государство ещё неустойчиво. Выполните остальные цели государственной победы.",
         "statehood-incomplete"
       );
+    }
+    return { outcome: next, prematurePalace: prematurePalace && next.status !== "victory" };
+  }
+
+  function presentOutcome(state, result, options) {
+    if (!result) return null;
+    options = options || {};
+    const outcome = result.outcome;
+    if (result.continuing) hideLegacyOutcomeModal();
+    if (result.prematurePalace) {
       hideLegacyOutcomeModal();
       if (options.showGoalsOnBlockedVictory !== false) openGoals();
     }
-
-    if (next.status === "victory" || next.status === "defeat") {
-      const key = outcomeKey(next);
-      if (options.announce || !announcedThisSession.has(key)) {
+    if (outcome.status === "victory" || outcome.status === "defeat") {
+      const key = outcomeKey(outcome);
+      if (result.retained ? options.announce : (options.announce || !announcedThisSession.has(key))) {
         announcedThisSession.add(key);
-        showOutcomeModal(state, next);
+        showOutcomeModal(state, outcome);
       }
     }
+    return outcome;
+  }
 
-    return next;
+  function evaluate(state, options) {
+    return presentOutcome(state, evaluateState(state, options), options);
   }
 
   function progressCard(title, progress, available) {
@@ -589,18 +599,11 @@
       new MutationObserver(ensureMenuButton).observe(menuContent, { childList: true });
     }
 
-    const turnValue = document.getElementById("turnValue");
-    if (turnValue) {
-      new MutationObserver(function () {
-        scheduleSync({ announce: true, showGoalsOnBlockedVictory: true });
-      }).observe(turnValue, { childList: true, characterData: true, subtree: true });
-    }
-
     document.addEventListener("click", function (event) {
       const outcomeAction = event.target.closest && event.target.closest(
         "#outcomeGoalsBtn, #outcomeMapBtn, [data-outcome-goals-action], [data-outcome-map-action]"
       );
-      if (outcomeAction) return;
+      if (outcomeAction || (event.target.closest && event.target.closest("#endTurnBtn"))) return;
       scheduleSync({ announce: false, showGoalsOnBlockedVictory: true });
       window.setTimeout(function () {
         scheduleSync({ announce: true, showGoalsOnBlockedVictory: true });
@@ -620,6 +623,8 @@
     statehoodProgress: statehoodProgress,
     militaryProgress: militaryProgress,
     promoteSuccessorCapital: promoteSuccessorCapital,
+    evaluateState: evaluateState,
+    presentOutcome: presentOutcome,
     evaluate: evaluate,
     openGoals: openGoals,
     sync: sync

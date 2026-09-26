@@ -234,3 +234,19 @@ listeners, so the completion criteria above remain open.
 - Local desktop Chrome: coherence, combat/world and save checks 33/33, plus
   an AI queue check 1/1 confirming a cost of 31 while the shared warrior cost
   remains 34.
+
+### Stage 12: outcome state before presentation
+
+- `humans-outcomes.js` now exposes `evaluateState(state)` for game-state
+  changes and `presentOutcome(state,result)` for modals and goals. Its public
+  `evaluate` remains as a compatibility call for non-turn actions and tests.
+- End Turn evaluates the outcome before autosave and presents it after the core
+  render. The `turnValue` observer and generic click refresh for the End Turn
+  button were removed. A new test reads a military victory from autosave slot
+  1 after a completed turn.
+- Local desktop Chrome: existing outcome/save/turn checks 15/15; new autosave
+  check 1/1 after keeping fixture setup and End Turn click in the same browser
+  task so an unrelated deferred outcome refresh cannot preempt the turn.
+- Other action-specific outcome checks still use the compatibility `evaluate`
+  path; a later pass should have their command handlers call state evaluation
+  directly and leave presentation callbacks read-only.

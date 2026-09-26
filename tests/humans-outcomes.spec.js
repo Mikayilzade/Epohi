@@ -253,6 +253,26 @@ test.describe('Победа, поражение и восстановление 
     await expect(page.locator('#victoryModalTitle')).toHaveText('Соперники подчинены!');
   });
 
+  test('military outcome is present in the completed turn autosave', async ({ page }) => {
+    await openFreshGame(page, { rivals: 1 });
+    await page.evaluate(() => {
+      const rival = window.__epohiDebug().state.rivals[0];
+      rival.defeated = true;
+      rival.cities = [];
+      rival.units = [];
+      document.getElementById('endTurnBtn').click();
+    });
+    await expect(page.locator('#turnValue')).toHaveText('2');
+    await expect.poll(() => page.evaluate(async () => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
+      if (!latest || latest.turn !== 2) return null;
+      return { status:latest.gameState.outcome.status,
+        type:latest.gameState.outcome.type, victory:latest.gameState.victory };
+    })).toEqual({ status:'victory', type:'military', victory:true });
+  });
+
   test('transient outcome actions preserve goals and enable post-victory free play', async ({ page }) => {
     await openFreshGame(page, { name: 'Свободная игра' });
 
