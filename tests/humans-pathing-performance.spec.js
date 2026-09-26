@@ -198,6 +198,15 @@ test.describe('Маршруты, desktop-карта и производител�
     expect(afterTurn.turn).toBeGreaterThanOrEqual(2);
     expect(afterTurn.hasOrder).toBe(true);
     expect(afterTurn.distance).toBeGreaterThan(0);
+    await expect.poll(() => page.evaluate(async id => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
+      const savedUnit = latest && latest.gameState.units.find(item => item.id === id);
+      return savedUnit && { turn:latest.turn, x:savedUnit.x, y:savedUnit.y };
+    }, unit.id)).toEqual({ turn:afterTurn.turn,
+      x:await page.evaluate(id => window.__epohiDebug().state.units.find(item => item.id === id).x, unit.id),
+      y:await page.evaluate(id => window.__epohiDebug().state.units.find(item => item.id === id).y, unit.id) });
     await expectNoConsoleProblems(problems);
   });
 

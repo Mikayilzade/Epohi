@@ -1399,6 +1399,7 @@
         state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
         maintainBarbarianCamps(state, Math.random);
         state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
+        if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
         if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
         if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
         selected = null;

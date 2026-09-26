@@ -368,9 +368,7 @@
     endTurn.addEventListener("click", function () {
       const gs = CORE.ensureState(state());
       if (!gs || endTurn.disabled) return;
-      const beforeTurn = gs.turn || 1;
       CORE.processOrders(gs, { render: false });
-      endTurn.dataset.pathingTurn = String(beforeTurn);
     }, true);
   }
 
@@ -384,15 +382,7 @@
 
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (map) new MutationObserver(scheduleUi).observe(map, { childList: true });
-    if (turn) new MutationObserver(function () {
-      const gs = CORE.ensureState(state());
-      const endTurn = document.getElementById("endTurnBtn");
-      if (gs && endTurn && Number(endTurn.dataset.pathingTurn || 0) < (gs.turn || 1)) {
-        endTurn.dataset.pathingTurn = String(gs.turn || 1);
-        CORE.processOrders(gs);
-      }
-      scheduleUi();
-    }).observe(turn, { childList: true, characterData: true, subtree: true });
+    if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, characterData: true, subtree: true });
 
     document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);

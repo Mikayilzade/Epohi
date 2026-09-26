@@ -184,3 +184,16 @@ listeners, so the completion criteria above remain open.
 - CI at Stage 5 (`36264466699`) failed only the existing WebKit mobile camera
   viewport-fit assertion, also seen at Stage 2; 64 other tests in that shard
   passed. Stage 6 CI was still in progress when this checkpoint was written.
+
+### Stage 8: explicit route-order turn phase
+
+- `app.js` now advances route orders after new-turn movement reset and before
+  worker projects, presentation and autosave. The capture-phase click hook
+  still spends remaining movement before turn calculation. The pathing view's
+  turn-label observer now schedules UI only; it no longer advances orders or
+  requests another full core render.
+- The route test compares saved coordinates and turn with the live unit after
+  End Turn. Local desktop Chrome: pathing 8/8, save and runtime cadence 4/4.
+- Stage 6 CI (`36264955266`) failed one Chromium mobile camera resize/pinch
+  test; its other 64 tests in that shard passed. No camera code changed in that
+  stage. The mobile camera instability remains tracked separately.
