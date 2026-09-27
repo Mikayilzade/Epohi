@@ -485,3 +485,17 @@ listeners, so the completion criteria above remain open.
   intermittent new-game setup failures where `#partySize` was absent after
   the screen transition, plus a camera failure. Cause is under investigation;
   these failures are recorded separately from the workforce change.
+
+### Stage 27: new-game screen independent of name storage latency
+
+- `openNewGameScreen()` now renders its form immediately. The asynchronous
+  IndexedDB query only updates the suggested campaign name when the same
+  form is still open. If storage stalls, map size and the Create action remain
+  available. A fallback name keeps the existing optional-name flow usable.
+- This addresses the observed WebKit CI setup failure where `#partySize` was
+  absent after opening the new-game screen; the previous code did not render
+  that element until the campaign-name query resolved. Final WebKit evidence
+  remains pending CI.
+- Tier 3 local desktop Chrome menu/game creation/journey checks 15/15,
+  including a regression that checks form presence before the name promise
+  can settle. Syntax and diff checks pass.

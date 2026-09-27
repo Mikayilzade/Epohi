@@ -1,19 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_26_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_27_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 25 is published at `08d8d91`. Stage 26 is locally
+- **STATUS:** Stage 26 is published at `61d2501`. Stage 27 is locally
   validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Workforce reconciliation moved from UI redraw into game entry,
-  turn growth and refugee decision commands. Notifications are presentation.
-- **EVIDENCE:** Tier 3 local desktop Chrome workforce 5/5 plus journey/combat/
-  save 25/25; static checks pass. End Turn sample 388/421/192 ms (no speed
-  claim). Stage 25 CI desktop Chromium/soak green; WebKit mobile setup and
-  camera failures need investigation.
-- **NEXT:** Publish Stage 26; investigate WebKit form transition if repeated,
-  then continue removing UI observer state repair and extracting rival rules.
+- **DONE:** New-game form renders before asynchronous suggested-name lookup;
+  delayed storage can no longer leave the new-game screen without controls.
+- **EVIDENCE:** Tier 3 local desktop Chrome menu/create/journey 15/15;
+  immediate-form regression and syntax/diff checks pass. Stage 26 CI pending.
+- **NEXT:** Publish Stage 27; inspect WebKit CI evidence, then continue
+  extracting rival/combat rules and eliminating duplicate UI refreshes.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

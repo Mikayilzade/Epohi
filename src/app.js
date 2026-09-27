@@ -1638,12 +1638,17 @@
 
   function openNewGameScreen() {
     setScreen("new-game");
-    nextDefaultCampaignName().then(function(defName){
+    let defName = "Новый мир 1";
       renderScreen('<div class="screen-head"><h2>Новая игра</h2><button id="backMain" class="menu-primary ghost">Назад</button></div><div class="screen-form"><label class="field-label">Название партии<input id="partyName" placeholder="'+defName+'"><small id="nameWarn" class="wiki-mini"></small></label><label class="field-label">Размер карты<select id="partySize"><option value="small">маленькая — 20×20</option><option value="normal" selected>обычная — 28×28</option><option value="large">большая — 36×36</option></select></label><label class="field-label">Активность варваров<select id="barbarianActivity"><option value="low">низкая</option><option value="normal" selected>обычная</option><option value="high">высокая</option><option value="off">отключены</option></select></label><label class="field-label">Цивилизации-соперники<select id="rivalCount"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select><small class="wiki-mini">На 20×20 максимум один соперник; старые сохранения не получают ИИ задним числом.</small></label><button id="createParty" class="menu-primary">Создать мир</button></div>');
       document.getElementById("backMain").onclick = openMainMenu;
-      document.getElementById("partyName").oninput = function(){ const value=this.value.trim(); getCampaigns().then(function(cs){ document.getElementById('nameWarn').textContent = value && cs.some(function(c){ return c.name === value; }) ? 'Название уже используется; партия всё равно будет отдельной.' : ''; }); };
+      document.getElementById("partyName").oninput = function(){ const input=this, value=input.value.trim(); getCampaigns().then(function(cs){ const warn=document.getElementById('nameWarn'); if(!warn || document.getElementById('partyName')!==input)return; warn.textContent = value && cs.some(function(c){ return c.name === value; }) ? 'Название уже используется; партия всё равно будет отдельной.' : ''; }).catch(function(){}); };
       document.getElementById("createParty").onclick = function(){ const size=MAP_SIZES[document.getElementById('partySize').value]||DEFAULT_MAP_SIZE; const rivals=Math.min(size<=20?1:2, Number(document.getElementById('rivalCount').value)); const ns=createNewGame(size, rivals, document.getElementById('barbarianActivity').value); state=ns; const name=document.getElementById('partyName').value.trim()||defName; createCampaignForNewGame(ns, name).then(function(c){ return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){ startPlaying(ns, c.campaignId, activeSaveId); }); }); };
-    });
+    const nameInput = document.getElementById("partyName");
+    nextDefaultCampaignName().then(function (name) {
+      if (document.getElementById("partyName") !== nameInput) return;
+      defName = name;
+      nameInput.placeholder = name;
+    }).catch(function () {});
   }
 
   function saveCardHtml(s) {

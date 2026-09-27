@@ -7,6 +7,18 @@ const {
 } = require("./helpers");
 
 test.describe('Epohi browser smoke', () => {
+  test('new-game form appears before the default name query resolves', async ({ page }) => {
+    await clearStorage(page);
+    await page.goto('/');
+    await expect(page.getByRole('button', { name: 'Новая игра' })).toBeVisible();
+    const immediate = await page.evaluate(() => {
+      document.getElementById('newGameScreenBtn').click();
+      return !!document.getElementById('partySize');
+    });
+    expect(immediate).toBe(true);
+    await expect(page.locator('#partySize')).toBeVisible();
+  });
+
   test('main menu loads without unhandled console errors', async ({ page }) => {
     const problems = watchConsole(page);
     await clearStorage(page);
