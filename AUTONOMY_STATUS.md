@@ -1,17 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_20_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_21_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 19 is published at `f030578`. Stage 20 is locally validated
-  on Lead; PR #103 remains the only target.
+- **STATUS:** Stage 20 is published at `c2b2ade`; its full CI is green. Stage 21
+  is locally validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Capture choices explicitly queue the next fallen city. Removed
-  the animation-frame gameplay callback from capture-state.
-- **EVIDENCE:** Tier 3 local desktop Chrome capture/combat/diplomacy 42/42;
-  new two-city chain and static checks pass. Stage 19 CI pending.
-- **NEXT:** Publish Stage 20; centralize state normalization and continue
-  extracting combat/AI rules from `app.js`.
+- **DONE:** New games and migrated saves normalize production experience and
+  rival research at state entry. Worker/diplomacy UI refreshes and discount
+  reads no longer create or repair gameplay data.
+- **EVIDENCE:** Tier 3 local desktop Chrome state/learning/save 25/25; syntax
+  and diff checks pass. Stage 20 full Chromium/WebKit/soak CI green.
+- **NEXT:** Publish Stage 21; extract combat and rival AI rules from `app.js`,
+  then audit End Turn observers/rendering and performance.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

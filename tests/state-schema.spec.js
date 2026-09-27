@@ -74,3 +74,49 @@ test('saved successor capital remains the active city after migration', async ({
     serializedCityAbsent:true, alias:true,
     flags:[false,true], firstHp:0 });
 });
+
+test('game creation and load normalize domain state before presentation', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 1, 'small');
+  const result = await page.evaluate(async () => {
+    const debug = window.__epohiDebug();
+    const created = debug.createNewGame(20, 1, 'normal');
+    const initialized = {
+      experience: !!(created.experience && created.experience.units && created.experience.buildings),
+      migrated: created.workerLearningMigrated === true,
+      rivalResearch: created.rivals.every(civ => civ.science && Array.isArray(civ.technologies))
+    };
+    const old = JSON.parse(JSON.stringify(created));
+    old.cities[0].buildings.push('granary');
+    delete old.experience;
+    delete old.workerLearningMigrated;
+    old.rivals.forEach(civ => { delete civ.science; delete civ.technologies; });
+    const loaded = debug.migrateState(old);
+    const normalized = {
+      buildingCount: loaded.experience.buildings.granary,
+      migrated: loaded.workerLearningMigrated === true,
+      rivalResearch: loaded.rivals.every(civ => civ.science && Array.isArray(civ.technologies))
+    };
+
+    const live = debug.state;
+    live.workerLearningMigrated = false;
+    live.city.buildings.push('granary');
+    live.experience.buildings = {};
+    const rival = live.rivals[0];
+    rival.science.currentResearch = 'invalid-test-tech';
+    rival.science.progress = 7;
+    document.getElementById('cityModal').classList.add('show');
+    document.getElementById('turnValue').textContent = String(live.turn);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const presentationOnly = {
+      migrated: live.workerLearningMigrated,
+      buildingCount: live.experience.buildings.granary || 0,
+      research: rival.science.currentResearch,
+      progress: rival.science.progress
+    };
+    return { initialized, normalized, presentationOnly };
+  });
+  expect(result.initialized).toEqual({ experience:true, migrated:true, rivalResearch:true });
+  expect(result.normalized).toEqual({ buildingCount:1, migrated:true, rivalResearch:true });
+  expect(result.presentationOnly).toEqual({ migrated:false, buildingCount:0, research:'invalid-test-tech', progress:7 });
+});

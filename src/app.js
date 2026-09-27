@@ -418,11 +418,18 @@
     newState.cities = [newState.city]; placeStartingUnits(newState, newState.city, newState.units);
     newState.barbarianDirector = { nextCampSpawnTurn: null, lastCampDestroyedTurn: null, nextCampId: 1, lastMaintenanceTurn: null, lastDestroyedCamp: null }; revealAround(newState, newState.city.x, newState.city.y, 2); newState.units.forEach(function(u){ revealAround(newState, u.x, u.y, u.type === "scout" ? 1 : 0); }); initializeRivals(newState, rivalCount); placeCamps(newState, Math.random); assignMissingCampIds(newState);
     logEvent(newState, "civilization-founded", "Основана Ардена.", { x: cx, y: cy }, { actorType: "player", actorId: "player" });
-    return newState;
+    return initializeGameSystems(newState);
+  }
+
+  function initializeGameSystems(gameState) {
+    if (!gameState) return null;
+    if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
+    if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);
+    return gameState;
   }
 
   function migrateState(candidate) {
-    return window.EpohiStateSchema.migrate(candidate, {
+    const migrated = window.EpohiStateSchema.migrate(candidate, {
       makePlayerUnit: makePlayerUnit,
       ensureUnitName: ensureUnitName,
       migrateBarbarianDirector: migrateBarbarianDirector144,
@@ -430,6 +437,7 @@
         if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(gameState);
       }
     });
+    return initializeGameSystems(migrated);
   }
 
   function validateSaveState(candidate) {

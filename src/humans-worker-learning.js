@@ -60,12 +60,8 @@
     toast.timer = window.setTimeout(function () { node.classList.remove("show"); }, duration || 2200);
   }
 
-  function ensureExperience(holder) {
-    if (!holder.experience) holder.experience = {};
-    if (!holder.experience.buildings) holder.experience.buildings = {};
-    if (!holder.experience.foreignBuildings) holder.experience.foreignBuildings = {};
-    if (!holder.experience.units) holder.experience.units = {};
-    return holder.experience;
+  function readExperience(holder) {
+    return holder && holder.experience || {};
   }
 
   function ensureState(gs) {
@@ -75,13 +71,13 @@
   }
 
   function ownBuildingDiscount(holder, id) {
-    const exp = ensureExperience(holder);
-    return Math.min(OWN_BUILDING_MAX, Math.max(0, Number(exp.buildings[id]) || 0) * OWN_BUILDING_STEP);
+    const exp = readExperience(holder);
+    return Math.min(OWN_BUILDING_MAX, Math.max(0, Number(exp.buildings && exp.buildings[id]) || 0) * OWN_BUILDING_STEP);
   }
 
   function foreignBuildingDiscount(holder, id) {
-    const exp = ensureExperience(holder);
-    const sources = Array.isArray(exp.foreignBuildings[id]) ? exp.foreignBuildings[id] : [];
+    const exp = readExperience(holder);
+    const sources = Array.isArray(exp.foreignBuildings && exp.foreignBuildings[id]) ? exp.foreignBuildings[id] : [];
     return sources.length * FOREIGN_BUILDING_STEP;
   }
 
@@ -90,7 +86,8 @@
   }
 
   function unitDiscount(holder, id) {
-    const produced = Math.max(0, Number(ensureExperience(holder).units[id]) || 0);
+    const exp = readExperience(holder);
+    const produced = Math.max(0, Number(exp.units && exp.units[id]) || 0);
     return Math.min(UNIT_MAX, Math.floor(produced / 10) * UNIT_STEP);
   }
 
@@ -438,7 +435,7 @@
   }
 
   function decorate() {
-    const gs=ensureState(state()); if(!gs)return;
+    const gs=state(); if(!gs)return;
     patchCityUi(gs); patchWorkerUi(gs); patchMapPurchase(gs);
   }
 
@@ -452,10 +449,10 @@
   }
 
   function install(){
-    installStyles(); patchDebug(); suppressIncomeToast(); ensureState(state());
+    installStyles(); patchDebug(); suppressIncomeToast();
     window.addEventListener("click",handleClick,true);
     document.addEventListener("epohi:own-unit-context-ready", function () {
-      const gs = ensureState(state());
+      const gs = state();
       if (gs) patchWorkerUi(gs);
     });
     ["cityModal","feedbackTreasuryModal","contextPanel"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{childList:true,subtree:true,attributes:true,attributeFilter:["class"]});});

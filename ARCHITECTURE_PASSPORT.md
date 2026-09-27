@@ -382,6 +382,23 @@ listeners, so the completion criteria above remain open.
   `checkFallen` directly at their command boundaries.
 - Tier 3 local desktop Chrome capture/combat/diplomacy checks 42/42, including
   a new two-city capture chain that verifies the second decision is pending
-  after resolving the first. Syntax and diff checks passed. CI pending push.
+  after resolving the first. Syntax and diff checks passed. CI run
+  `36308402593` passed all Chromium and WebKit full shards, both soak matrices,
+  and static integrity.
 - Further work: move state normalization out of UI decorators and remove
   domain rules still embedded in `app.js`, especially combat and rival AI.
+
+### Stage 21: normalize domains at game-state entry
+
+- New games and migrated saves initialize player production experience and
+  rival research before gameplay or presentation. The worker and diplomacy UI
+  decorators now read state without invoking those migrations. Production
+  discount reads also leave missing experience records untouched.
+- This keeps the existing idempotent legacy-building migration and research
+  repair, but runs them at state entry and at explicit gameplay commands/turns
+  rather than during animation-frame UI refreshes.
+- Tier 3 local desktop Chrome state, capture/learning and save checks 25/25;
+  syntax and diff checks pass. CI pending publication.
+- Remaining: move combat, rival AI and turn rules out of `app.js`; remove
+  remaining gameplay wrappers and observer-driven presentation duplication;
+  complete a stable End Turn performance comparison and final system map.

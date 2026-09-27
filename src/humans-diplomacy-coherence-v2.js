@@ -335,7 +335,7 @@
   }
 
   function decorate() {
-    const gs=ensureRivalResearch(state()); if(!gs)return;
+    const gs=state(); if(!gs)return;
     hideUrgentIndicator(); patchDiplomacy(gs); renderProposal(gs);
   }
 
@@ -366,7 +366,7 @@
   }
 
   function install(){
-    installStyles(); ensureProposalModal(); ensureRivalResearch(state()); strengthenStackSelection(); wrapLivingResearch(); wrapHooks();
+    installStyles(); ensureProposalModal(); strengthenStackSelection(); wrapLivingResearch(); wrapHooks();
     window.addEventListener("click",interceptEnemyTap,true);
     document.addEventListener("click",function(event){if(event.target.closest&&event.target.closest("[data-dip-action],[data-proposal],[data-research],#endTurnBtn"))window.setTimeout(schedule,0);});
     const turn=document.getElementById("turnValue"); if(turn)new MutationObserver(schedule).observe(turn,{childList:true,characterData:true,subtree:true});
