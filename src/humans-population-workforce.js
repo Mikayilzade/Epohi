@@ -156,12 +156,14 @@
     if (firstMigration && !Number.isFinite(gs.populationWorkforcePreparedTurn)) {
       gs.populationWorkforcePreparedTurn = (gs.turn || 1) - 1;
     }
-    if (changed.length && options.toast !== false) {
-      const item = changed[0];
-      const type = TYPES[item.focus];
-      toast("👥 " + item.city.name + ": +" + item.count + " " + type.label + " за ход.");
-    }
     return { migrated: firstMigration, changed: changed };
+  }
+
+  function presentChanges(changed) {
+    if (!changed || !changed.length) return;
+    const item = changed[0];
+    const type = TYPES[item.focus];
+    toast("👥 " + item.city.name + ": +" + item.count + " " + type.label + " за ход.");
   }
 
   function specializationYield(city) {
@@ -174,7 +176,6 @@
 
   function adjustedIncome(gs, city) {
     const value = debug();
-    ensureCity(city);
     let base = { food: 0, production: 0, gold: 0, science: 0 };
     if (value && typeof value.cityIncome === "function") {
       const calculated = value.cityIncome(city) || base;
@@ -210,7 +211,7 @@
 
   function prepareTurn(gs) {
     if (!gs) return false;
-    reconcileState(gs, { announce: false, toast: false });
+    reconcileState(gs, { announce: false });
     const turn = safeInt(gs.turn) || 1;
     if (gs.populationWorkforcePreparedTurn === turn) return false;
     allCityEntries(gs).forEach(applyCityWorkforce);
@@ -245,7 +246,6 @@
     const content = document.getElementById("cityContent");
     const city = activePlayerCity(gs);
     if (!content || !city || !content.children.length) return;
-    ensureCity(city);
 
     let panel = content.querySelector("[data-population-workforce-panel]");
     if (!panel) {
@@ -352,7 +352,6 @@
     try {
       const gs = currentState();
       if (!gs) return;
-      reconcileState(gs, { announce: true, toast: true });
       renderCityPanel(gs);
       renderTopIncome(gs);
       patchWiki();
@@ -443,6 +442,7 @@
     types: TYPES,
     ensureCity: ensureCity,
     reconcileState: reconcileState,
+    presentChanges: presentChanges,
     adjustedIncome: adjustedIncome,
     prepareTurn: prepareTurn,
     workforceTotal: workforceTotal

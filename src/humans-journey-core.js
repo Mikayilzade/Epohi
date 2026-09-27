@@ -316,6 +316,10 @@
     const choice = event && event.choices.find(function (item) { return item.id === choiceId; });
     if (!event || !choice || !journey.queuedEvents.includes(eventId) || !canAfford(gs, choice)) return false;
     applyChoice(gs, event, choice);
+    if (event.id === "refugees" && choice.id === "welcome" && window.EpohiPopulationWorkforce) {
+      const workforceResult = window.EpohiPopulationWorkforce.reconcileState(gs);
+      window.EpohiPopulationWorkforce.presentChanges(workforceResult.changed);
+    }
     journey.queuedEvents = journey.queuedEvents.filter(function (id) { return id !== eventId; });
     journey.resolvedEvents.push(eventId);
     log(gs, "story-decision-resolved", event.title + ": " + choice.label + ".");

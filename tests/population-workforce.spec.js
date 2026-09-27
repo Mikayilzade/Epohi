@@ -28,6 +28,39 @@ async function openCapital(page) {
 }
 
 test.describe('Население и рабочая сила', () => {
+  test('UI refresh does not assign workers without a state command', async ({ page }) => {
+    await openFreshGame(page);
+    const result = await page.evaluate(async () => {
+      const gs = window.__epohiDebug().state;
+      const city = gs.cities[0];
+      city.population = 2;
+      window.__epohiDebug().render();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const afterRender = { known:city.workforceKnownPopulation,
+        assigned:window.EpohiPopulationWorkforce.workforceTotal(city.workforce) };
+      window.EpohiPopulationWorkforce.reconcileState(gs);
+      return { afterRender, afterCommand:{ known:city.workforceKnownPopulation,
+        assigned:window.EpohiPopulationWorkforce.workforceTotal(city.workforce) } };
+    });
+    expect(result.afterRender).toEqual({ known:1, assigned:0 });
+    expect(result.afterCommand).toEqual({ known:2, assigned:1 });
+  });
+
+  test('accepting refugees assigns the new community at the decision command', async ({ page }) => {
+    await openFreshGame(page);
+    const result = await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      gs.city.food = 10;
+      gs.humanJourney.queuedEvents.push('refugees');
+      const accepted = window.EpohiHumansJourney.resolveEvent('refugees', 'welcome');
+      return { accepted, population:gs.city.population,
+        known:gs.city.workforceKnownPopulation,
+        assigned:window.EpohiPopulationWorkforce.workforceTotal(gs.city.workforce),
+        event:gs.eventLog.some(item => item.eventType === 'population-workforce-assigned') };
+    });
+    expect(result).toEqual({ accepted:true, population:2, known:2, assigned:1, event:true });
+  });
+
   test('каждая община после первой получает занятие и видна в городе', async ({ page }) => {
     const consoleProblems = await openFreshGame(page);
 
@@ -74,6 +107,7 @@ test.describe('Население и рабочая сила', () => {
     await page.evaluate(() => {
       const debug = window.__epohiDebug();
       debug.state.cities[0].population = 3;
+      window.EpohiPopulationWorkforce.reconcileState(debug.state);
       debug.render();
     });
     await page.waitForFunction(() => {

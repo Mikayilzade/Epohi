@@ -425,6 +425,7 @@
     if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
     if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);
     if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.ensureState(gameState);
+    if (window.EpohiPopulationWorkforce) window.EpohiPopulationWorkforce.reconcileState(gameState, { announce:false });
     return gameState;
   }
 
@@ -1408,10 +1409,11 @@
     if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
+    const workforceChanges = window.EpohiPopulationWorkforce ? window.EpohiPopulationWorkforce.reconcileState(state).changed : [];
     if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.syncChronicle(state);
     const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
     return { income:income, completedProject:completedProject, completedTech:completedTech,
-      rivalActions:rivalActions, barbarianText:barbarianText, outcomeResult:outcomeResult };
+      rivalActions:rivalActions, barbarianText:barbarianText, workforceChanges:workforceChanges, outcomeResult:outcomeResult };
   }
 
   function endTurn() {
@@ -1442,6 +1444,7 @@
         endTurnBtn.disabled = false;
         phaseBanner.classList.add("is-hidden");
         render();
+        if (result && result.workforceChanges && window.EpohiPopulationWorkforce) window.EpohiPopulationWorkforce.presentChanges(result.workforceChanges);
         if (state.turn !== turnAtStart && window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
         if (state.turn !== turnAtStart && window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.refreshUi();
         if (result && result.outcomeResult && window.EpohiHumansOutcomes) window.EpohiHumansOutcomes.presentOutcome(state, result.outcomeResult, { announce:true, showGoalsOnBlockedVictory:true });

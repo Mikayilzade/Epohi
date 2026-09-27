@@ -467,3 +467,21 @@ listeners, so the completion criteria above remain open.
   pass. CI pending publication.
 - Remaining: eliminate remaining command/observer state repair, split rival
   action/combat application from `app.js`, and consolidate UI invalidation.
+
+### Stage 26: workforce changes at gameplay boundaries
+
+- Population/workforce reconciliation now runs when a game is created or
+  loaded, after growth in the turn simulation, and immediately after accepting
+  refugees. The workforce UI observer and income labels only read state.
+  Removed `ensureCity()` mutation from city-panel and displayed-income paths.
+- Assignment events remain structured state changes. The notification is a
+  separate presentation call after turn render or the refugee decision.
+- Tier 3 local desktop Chrome workforce 5/5 and neighboring journey/combat/
+  save 25/25, plus syntax/diff checks pass. Small no-rival End Turn sample is
+  388/421/192 ms and 47,689 serialized bytes versus Stage 24's
+  423/296/167 ms and 47,657 bytes. Both are noisy single runs; no speedup or
+  regression is claimed. CI pending publication.
+- Stage 25 CI desktop Chromium and soak passed. WebKit mobile shards had
+  intermittent new-game setup failures where `#partySize` was absent after
+  the screen transition, plus a camera failure. Cause is under investigation;
+  these failures are recorded separately from the workforce change.

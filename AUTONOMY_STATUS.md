@@ -1,18 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_25_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_26_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 24 is published at `b66304f`. Stage 25 is locally
+- **STATUS:** Stage 25 is published at `08d8d91`. Stage 26 is locally
   validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Diplomatic UI refresh no longer rebuilds event-log history.
-  Chronicle sync runs explicitly at the turn boundary before autosave and at
-  event/open commands; state entry initializes diplomacy flow fields.
-- **EVIDENCE:** Tier 3 local desktop Chrome diplomacy/chronicle/save 18/18;
-  syntax/diff checks pass. Stage 24 CI pending.
-- **NEXT:** Publish Stage 25; audit remaining UI state repair/observer fan-out
-  and continue extracting rival/combat application from `app.js`.
+- **DONE:** Workforce reconciliation moved from UI redraw into game entry,
+  turn growth and refugee decision commands. Notifications are presentation.
+- **EVIDENCE:** Tier 3 local desktop Chrome workforce 5/5 plus journey/combat/
+  save 25/25; static checks pass. End Turn sample 388/421/192 ms (no speed
+  claim). Stage 25 CI desktop Chromium/soak green; WebKit mobile setup and
+  camera failures need investigation.
+- **NEXT:** Publish Stage 26; investigate WebKit form transition if repeated,
+  then continue removing UI observer state repair and extracting rival rules.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
