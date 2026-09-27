@@ -124,6 +124,14 @@
   const AI_COLORS = ["#d75a5a", "#6f8fe8", "#d99a35", "#ba65d9"];
   const AI_LIMITS = { maxCities: 3, maxScouts: 2, maxWorkers: 3, maxUnits: 10, maxActionsPerTurn: 18, minWarTurn: 20, logLimit: 180 };
   const AI_WEIGHTS = { defenseThreat: 90, exploreUnknown: 42, improveNeed: 36, settleRoom: 48, campExpedition: 38, prepareWar: 30, attackAdvantage: 58 };
+  const COMBAT_BALANCE = {
+    minimumDamage: 4,
+    direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
+    guard: { defenseWeight: 0.35, varianceBase: 0.9, varianceRange: 0.2 },
+    route: { defenseWeight: 0.32, varianceBase: 1, varianceRange: 0 },
+    settlementDefense: 5,
+    improvementDefense: 2
+  };
 
   const TECHS = {
     agriculture: {
@@ -168,6 +176,7 @@
     AI_COLORS,
     AI_LIMITS,
     AI_WEIGHTS,
+    COMBAT_BALANCE,
     TECHS
   };
 })();

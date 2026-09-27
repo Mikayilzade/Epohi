@@ -294,16 +294,11 @@
   }
 
   function defenseBonus(state, x, y, baseDefense) {
-    const tile = state.map[y][x];
-    const rule=window.EpohiData.TERRAIN[tile.terrain]||{};
-    let bonus = (Number(baseDefense)||0)*(Number(rule.defenseModifier)||0)/100;
-    if (tile.improvement && !tile.pillaged) bonus += 2;
-    if (ownCityAt(state, x, y)) bonus += 5;
-    return bonus;
+    return window.EpohiCombatRules.terrainBonus(state.map[y][x], baseDefense, !!ownCityAt(state, x, y));
   }
 
   function damageAmount(base, defense) {
-    return Math.max(4, Math.round((base - defense * 0.35) * (0.9 + Math.random() * 0.2)));
+    return window.EpohiCombatRules.damage("guard", base, defense, Math.random());
   }
 
   function removeDeadTarget(state, hostile) {

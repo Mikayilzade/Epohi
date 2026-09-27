@@ -338,12 +338,12 @@
 
   function terrainAdjustedDefense(gs, unit, x, y, fallback) {
     const base=unit?defenseValue(unit):fallback;
-    const tile=gs.map[y]&&gs.map[y][x], rule=tile&&TERRAIN[tile.terrain];
-    return base*(1+(Number(rule&&rule.defenseModifier)||0)/100);
+    const tile=gs.map[y]&&gs.map[y][x];
+    return window.EpohiCombatRules.terrainAdjustedDefense(tile, base);
   }
 
   function damage(attack, defense) {
-    return Math.max(4, Math.round(attack - defense * 0.32));
+    return window.EpohiCombatRules.damage("route", attack, defense);
   }
 
   function killOwnUnit(gs, unit) {

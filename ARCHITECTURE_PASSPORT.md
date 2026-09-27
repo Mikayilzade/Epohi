@@ -402,3 +402,18 @@ listeners, so the completion criteria above remain open.
 - Remaining: move combat, rival AI and turn rules out of `app.js`; remove
   remaining gameplay wrappers and observer-driven presentation duplication;
   complete a stable End Turn performance comparison and final system map.
+
+### Stage 22: one combat calculation module
+
+- `src/combat-rules.js` now owns damage and terrain-defense calculations.
+  `src/data.js` names the existing direct, guard-order, and route profiles;
+  the three profiles retain their distinct accepted variance and defense
+  values. The old formula bodies are gone from `app.js`, autonomy, and pathing.
+- Combat stays a state/data calculation. Callers still own target choice,
+  casualty effects, event records and presentation; no combat mechanics or
+  random-draw order changed.
+- Tier 3 local desktop Chrome combat, stability, autonomy and pathing 23/23,
+  including deterministic profile/terrain values; syntax and diff checks pass.
+  CI pending publication.
+- Remaining: extract combat application and rival AI from `app.js`, resolve
+  presentation coupling in pathing, and remove redundant End Turn refreshes.

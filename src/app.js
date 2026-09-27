@@ -664,9 +664,9 @@
 
   function barbarianAt(x, y) { return (state.barbarians || []).find(function (b) { return b.x === x && b.y === y && b.hp > 0; }) || null; }
   function campAt(x, y) { const tile = state.map[y] && state.map[y][x]; return tile && tile.camp && tile.camp.hp > 0 ? tile.camp : null; }
-  function defenseBonus(x, y, baseDefense) { const tile = state.map[y][x], rule=TERRAIN[tile.terrain]||{}; let bonus = (Number(baseDefense)||0)*(Number(rule.defenseModifier)||0)/100; if (settlementAt(x,y)) bonus += 5; if (tile.improvement && !tile.pillaged) bonus += 2; return bonus; }
+  function defenseBonus(x, y, baseDefense) { return window.EpohiCombatRules.terrainBonus(state.map[y][x], baseDefense, !!settlementAt(x,y)); }
   function canAttack(unit, x, y) { const ru = rivalUnitAt(x,y), rc = rivalCityAt(x,y); const hostileRival = (ru && ru.civ.relation === "war") || (rc && rc.civ.relation === "war"); return unit && unit.moves > 0 && (UNIT_DEFS[unit.type].attack || 0) > 0 && isAdjacent(unit.x, unit.y, x, y) && (barbarianAt(x,y) || campAt(x,y) || hostileRival); }
-  function damageAmount(base, defense) { return Math.max(4, Math.round((base - defense * .35) * (.85 + Math.random() * .3))); }
+  function damageAmount(base, defense) { return window.EpohiCombatRules.damage("direct", base, defense, Math.random()); }
   function killUnit(unit) { state.units = state.units.filter(function (u) { return u.id !== unit.id; }); if (selectedUnitId === unit.id) selectedUnitId = state.units.length ? state.units[0].id : null; }
   function maybeAddArtifact(reason) { if (Math.random() > .18 && reason !== "poi") return false; const bonus = randomChoice(ARTIFACT_BONUSES); const art = { name: "Артефакт " + (state.artifacts.length + 1), bonus: bonus.id, text: bonus.name }; state.artifacts.push(art); state.permanentBonuses[bonus.id] = (state.permanentBonuses[bonus.id] || 0) + 1; state.history.unshift("Ход " + state.turn + ": найден артефакт — " + bonus.name + "."); return true; }
   function attackEnemy(unitId, x, y) {
