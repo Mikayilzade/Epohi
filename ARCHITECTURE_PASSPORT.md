@@ -594,3 +594,25 @@ listeners, so the completion criteria above remain open.
 - Stage 31 CI is fully green across static, Chromium, WebKit and soak jobs.
 - Remaining: unify event writers under one owned chronicle boundary, remove
   other presentation observers, and separate world/turn execution further.
+
+### Stage 33: barbarian target selection and repeated map scans
+
+- `src/barbarian-targeting.js` owns visible target collection and priority.
+  It builds the candidate list once per barbarian action; the prior
+  `nearestBarbarianTarget()` rebuilt it for adjacency and again for each
+  priority kind, repeatedly walking the whole map. Sight, home sight,
+  priority and wander choices are in `BARBARIAN_TARGET_RULES`.
+- The target order, stable distance ties and two random draws for wandering
+  are preserved. The old target selection functions left `app.js`; only a
+  state/random adapter remains. Tier 3 local desktop Chrome target/camp/
+  combat/world tests 32/32 and syntax/diff checks pass.
+- A seeded three-turn, one-rival comparison with eight injected barbarians
+  against `5a46dd2` gave identical barbarian positions, event types and
+  serialized state sizes on repeat: 51,971 / 53,456 / 55,225 bytes. End Turn
+  timings were 804/220/206 ms before and 251/299/205 ms after; no speed
+  claim follows from these short, warm-up-sensitive samples.
+- Stage 32 CI passed static and all desktop Chromium shards. WebKit mobile
+  `camera-2.spec.js` large-map viewport failed again; soak was skipped by
+  the CI gate after that failure. Stage 31 remains the latest full green CI.
+- Remaining: barbarian action application, broader turn/world separation,
+  UI invalidation and final architecture gate.

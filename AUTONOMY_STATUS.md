@@ -1,19 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_32_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_33_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 31 published at `672bd2a`. Stage 32 locally validated
+- **STATUS:** Stage 32 published at `5a46dd2`. Stage 33 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** End Turn no longer scans event history each turn. Living-world
-  and diplomacy-flow events write history when created; duplicate scans from
-  capture/coherence event writers were removed.
-- **EVIDENCE:** Tier 3 local desktop Chrome diplomacy/capture/AI 39/39.
-  Three-turn cumulative full-scan calls fell from 2/4/5 to 1/1/1; no speed
-  claim from noisy browser timings. Stage 31 CI is fully green.
-- **NEXT:** Publish Stage 32; consolidate event ownership and remaining UI
-  observers, then complete world/turn separation and final gate.
+- **DONE:** Barbarian target selection is a separate rule and scans the map
+  once per action, preserving target priority and random consumption.
+- **EVIDENCE:** Tier 3 local desktop Chrome 32/32; seeded eight-barbarian
+  three-turn state and event results match the previous app. Timings are
+  noisy with no speed claim. Stage 32 CI desktop 3/3, WebKit mobile camera
+  failed; Stage 31 remains the latest full green CI.
+- **NEXT:** Publish Stage 33; separate barbarian action application and
+  continue UI/turn consolidation before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

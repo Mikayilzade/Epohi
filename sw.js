@@ -14,6 +14,7 @@ const APP_FILES = [
   "./src/combat-rules.js",
   "./src/ai-strategy.js",
   "./src/ai-actions.js",
+  "./src/barbarian-targeting.js",
   "./src/state-schema.js",
   "./src/humans-content.js",
   "./src/utils.js",
