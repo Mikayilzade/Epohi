@@ -682,3 +682,21 @@ listeners, so the completion criteria above remain open.
   open under the PC-first policy, and no full-green result is claimed.
 - Remaining: consolidate other presentation observers, split further turn
   rules from the coordinator, and complete the final gate.
+
+### Stage 37: diplomatic validity leaves the stability renderer
+
+- `src/stability-rules.js` owns the existing proposal-validity algorithm and
+  cancellation pass. Game initialization/migration reconciles loaded
+  proposals; the End Turn pipeline reconciles after diplomacy; declaring war
+  reconciles immediately. `EpohiCombatWorldStability.render()` no longer
+  cancels proposals while building its panel. Its public `proposalValid`
+  name delegates to the sole rule implementation for compatibility.
+- Tier 3 local desktop Chrome diplomacy, capture, stability and coherence
+  checks passed 46/46. A new regression verifies that rendering an invalid
+  pending joint-war proposal does not change state and the next turn cancels
+  it before autosave. Static syntax/diff checks pass. This moves the existing
+  rule to state transitions without changing proposal-validity criteria.
+- Stage 36 CI passed static and all soak jobs; Chromium and WebKit mobile
+  camera shards failed separate fit/centering assertions.
+- Remaining: other state writes in presentation (`migrate`, modal receipt
+  markers), event ownership and broad observer consolidation, then final gate.

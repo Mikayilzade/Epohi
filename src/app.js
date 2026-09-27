@@ -422,6 +422,7 @@
 
   function initializeGameSystems(gameState) {
     if (!gameState) return null;
+    window.EpohiStabilityRules.cancelInvalidProposals(gameState);
     if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
     if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);
     if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.ensureState(gameState);
@@ -1441,6 +1442,7 @@
     if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
+    window.EpohiStabilityRules.cancelInvalidProposals(state);
     const workforceChanges = window.EpohiPopulationWorkforce ? window.EpohiPopulationWorkforce.reconcileState(state).changed : [];
     const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
     return { income:income, completedProject:completedProject, completedTech:completedTech,
@@ -1780,7 +1782,7 @@
     }).join("") : '<div class="inline-note">Соперники пока не обнаружены.</div>';
     menuContent.innerHTML = '<div class="section-title">Цивилизации</div><div class="built-list">'+list+'</div><div class="menu-actions" style="margin-top:12px"><button id="backMenu" class="wide-btn">Назад</button></div>';
     document.getElementById('backMenu').onclick=openMenu;
-    menuContent.querySelectorAll('[data-war]').forEach(function(b){ b.onclick=function(){ const civ=state.rivals.find(function(c){return c.civilizationId===b.dataset.war;}); if(civ && confirm('Это объявит войну. Продолжить?')){ civ.relation='war'; civ.warStartTurn=state.turn; logEvent(state,'war-declared','Ардена объявила войну: '+civ.name+'.',null,{actorType:'player',actorId:'player'}); showToast('Война с '+civ.name); openCivilizationsPanel(); render(); } }; });
+    menuContent.querySelectorAll('[data-war]').forEach(function(b){ b.onclick=function(){ const civ=state.rivals.find(function(c){return c.civilizationId===b.dataset.war;}); if(civ && confirm('Это объявит войну. Продолжить?')){ civ.relation='war'; civ.warStartTurn=state.turn; window.EpohiStabilityRules.cancelInvalidProposals(state); logEvent(state,'war-declared','Ардена объявила войну: '+civ.name+'.',null,{actorType:'player',actorId:'player'}); showToast('Война с '+civ.name); openCivilizationsPanel(); render(); } }; });
     menuContent.querySelectorAll('[data-peace]').forEach(function(b){ b.onclick=function(){ const civ=state.rivals.find(function(c){return c.civilizationId===b.dataset.peace;}); if(civ && (!civ.warStartTurn || state.turn-civ.warStartTurn>=10)){ civ.relation='neutral'; logEvent(state,'peace-made','Заключён мир: '+civ.name+'.',null,{actorType:'player',actorId:'player'}); showToast('Мир заключён'); openCivilizationsPanel(); } else showToast('Мир возможен после 10 ходов войны.'); }; });
     if (focusId) setTimeout(function(){ const el=document.getElementById('civ-'+focusId); if(el) el.scrollIntoView({block:'center'}); }, 0);
   }

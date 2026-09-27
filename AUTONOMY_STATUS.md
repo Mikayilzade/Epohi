@@ -1,20 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_36_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_37_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 35 published at `25eecf3`. Stage 36 locally validated
+- **STATUS:** Stage 36 published at `38ec6bd`. Stage 37 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Map presentation indexes actors once per render; attack-target
-  checks skip distant tiles before searching actors.
-- **EVIDENCE:** Tier 3 local desktop Chrome 32/32; seeded two-rival map HTML
-  matches Stage 35 after two End Turns. Large-map render samples changed from
-  8/6/6/6/5 to 7/5/5/4/4 ms, too short for a gain claim. Stage 35 CI static
-  and soak passed; mobile camera/pathing shards failed. Desktop pathing passed
-  locally. Stage 31 remains latest full green CI.
-- **NEXT:** Publish Stage 36; continue turn-rule extraction and presentation
-  consolidation, then complete the final gate.
+- **DONE:** Proposal validity and cancellation are state rules, applied on
+  load, at End Turn and on war declaration, rather than during UI render.
+- **EVIDENCE:** Tier 3 local desktop Chrome 46/46, including render purity
+  and next-turn cancellation. Stage 36 CI static and soak passed; Chromium
+  and WebKit mobile camera assertions failed. Stage 31 is latest full green.
+- **NEXT:** Publish Stage 37; continue removing state mutation from UI and
+  consolidating event ownership before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

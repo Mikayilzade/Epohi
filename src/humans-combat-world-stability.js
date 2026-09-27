@@ -98,15 +98,6 @@
     addEvent(gs, "treasury-purchase", "Административная ёмкость расширена до " + gs.cityCapacity + " за " + cost + " золота."); render(); return true;
   }
 
-  function proposalValid(gs, proposal) {
-    const proposer = (gs.rivals || []).find(function (civ) { return civ.civilizationId === proposal.civId; });
-    const target = (gs.rivals || []).find(function (civ) { return civ.civilizationId === proposal.targetId; });
-    if (!proposer || proposer.defeated || (target && target.defeated)) return false;
-    if (proposal.type !== "jointWar") return true;
-    if (!target || proposer.diplomacy && proposer.diplomacy[target.civilizationId] === "war" || target.relation === "war") return false;
-    return !(gs.diplomaticProposals || []).some(function (other) { return other !== proposal && other.type === "jointWar" && other.status === "pending" && other.civId === proposal.civId && other.targetId === proposal.targetId; });
-  }
-
   function ensureUi() {
     if (!document.getElementById("stabilityMajorModal")) document.body.insertAdjacentHTML("beforeend", '<div id="stabilityMajorModal" class="modal" role="dialog" aria-modal="true"><section class="sheet"><header class="sheet-head"><h2 id="stabilityMajorTitle">Событие мира</h2><button class="close-btn" data-stability-close="major" aria-label="Закрыть">×</button></header><div id="stabilityMajorContent" class="sheet-scroll"></div></section></div><button id="urgentDecisionIndicator" class="wide-btn stability-decision-indicator" type="button">⚠ Требуется решение</button><div id="stabilityDecisionModal" class="modal" role="dialog" aria-modal="true"><section class="sheet"><header class="sheet-head"><h2>Требуется решение</h2><button class="close-btn" data-stability-close="decision" aria-label="Закрыть">×</button></header><div id="stabilityDecisionContent" class="sheet-scroll"></div></section></div>');
   }
@@ -126,7 +117,6 @@
     if (treasury) { let card=treasury.querySelector("[data-administration-card]"); if(!card){treasury.insertAdjacentHTML("beforeend",'<article class="game-card" data-administration-card></article>');card=treasury.querySelector("[data-administration-card]");} card.innerHTML='<div><h3>🏛️ Расширить администрацию</h3><p>Города: '+(gs.cities||[]).length+'/'+gs.cityCapacity+'. Повышает ёмкость на один.</p></div><button class="card-button" data-expand-administration '+((gs.resources.gold||0)<administrationCost(gs)?'disabled':'')+'>'+administrationCost(gs)+' 🪙</button>'; }
     const menuContent = document.getElementById("menuContent");
     if (menuContent && !menuContent.querySelector("[data-world-events-open]")) menuContent.insertAdjacentHTML("afterbegin", '<button class="wide-btn secondary" data-world-events-open>🌍 События мира</button>');
-    (gs.diplomaticProposals || []).forEach(function (proposal) { if (proposal.status === "pending" && !proposalValid(gs, proposal)) proposal.status = "cancelled"; });
     const event = (gs.eventLog || []).find(function (item) { return MAJOR.has(item.eventType) && gs.majorEventsSeen.indexOf(item.eventId) < 0; });
     if (event && event.eventId !== lastMajorId) { lastMajorId = event.eventId; gs.majorEventsSeen.push(event.eventId); document.getElementById("stabilityMajorContent").textContent = event.text; document.getElementById("stabilityMajorModal").classList.add("show"); }
   }
@@ -154,6 +144,6 @@
     render();
   }
 
-  window.EpohiCombatWorldStability = { version:VERSION, migrate:migrate, resolveFactionDefeat:resolveFactionDefeat, createUrgentDecision:createUrgentDecision, resolveUrgentDecision:resolveUrgentDecision, expireUrgentDecisions:expireUrgentDecisions, administrationCost:administrationCost, expandAdministration:expandAdministration, proposalValid:proposalValid, render:render };
+  window.EpohiCombatWorldStability = { version:VERSION, migrate:migrate, resolveFactionDefeat:resolveFactionDefeat, createUrgentDecision:createUrgentDecision, resolveUrgentDecision:resolveUrgentDecision, expireUrgentDecisions:expireUrgentDecisions, administrationCost:administrationCost, expandAdministration:expandAdministration, proposalValid:window.EpohiStabilityRules.proposalValid, render:render };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install, { once:true }); else install();
 })();
