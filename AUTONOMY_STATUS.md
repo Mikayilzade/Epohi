@@ -1,17 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_27_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_28_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 26 is published at `61d2501`. Stage 27 is locally
-  validated on Lead; PR #103 remains the only target.
+- **STATUS:** Stage 27 published at `62236db`. Stage 28 locally validated
+  on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** New-game form renders before asynchronous suggested-name lookup;
-  delayed storage can no longer leave the new-game screen without controls.
-- **EVIDENCE:** Tier 3 local desktop Chrome menu/create/journey 15/15;
-  immediate-form regression and syntax/diff checks pass. Stage 26 CI pending.
-- **NEXT:** Publish Stage 27; inspect WebKit CI evidence, then continue
-  extracting rival/combat rules and eliminating duplicate UI refreshes.
+- **DONE:** Rival production rules moved from `app.js` to `ai-production.js`;
+  founding a city now initializes workforce before rendering; service worker
+  cache list matches current scripts and omits the deleted legacy module.
+- **EVIDENCE:** Tier 3 local desktop Chrome 33/33 rival/coherence and 9/9
+  founding/workforce/production. Stage 27 CI Chromium exposed the founding
+  page error fixed in Stage 28; WebKit camera remains flaky.
+- **NEXT:** Publish Stage 28, verify CI, then extract rival action/combat
+  application and consolidate remaining UI refreshes.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

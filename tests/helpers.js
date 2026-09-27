@@ -5,7 +5,7 @@ function watchConsole(page) {
   page.on('console', (message) => {
     if (message.type() === 'error') problems.push(`console.${message.type()}: ${message.text()}`);
   });
-  page.on('pageerror', (error) => problems.push(`pageerror: ${error.message}`));
+  page.on('pageerror', (error) => problems.push(`pageerror: ${error.stack || error.message}`));
   return problems;
 }
 

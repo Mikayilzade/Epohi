@@ -499,3 +499,24 @@ listeners, so the completion criteria above remain open.
 - Tier 3 local desktop Chrome menu/game creation/journey checks 15/15,
   including a regression that checks form presence before the name promise
   can settle. Syntax and diff checks pass.
+
+### Stage 28: rival production rules and city creation repair
+
+- `src/ai-production.js` now applies rival emergency healing, queue choice,
+  city income, defensive rush and unit completion from explicit state and
+  collaborators. `app.js` only wires the turn's state and domain functions.
+  The previous algorithm body is removed. `AI_PRODUCTION_RULES` in `data.js`
+  owns its thresholds and prices. The existing order and event text remain.
+- Founding a player city initializes its workforce immediately, before the
+  first render. Stage 27 CI exposed the missing command boundary as a
+  `workforce.food` page error in two founding tests. The CI Chromium failures
+  came from this defect; Stage 27's form fix did not cause it.
+- The service worker cache list now matches every script in `index.html` and
+  no longer requests deleted `humans-autonomy-fix.js`. Its cache version was
+  advanced for clients with an earlier incomplete precache.
+- Tier 3 local desktop Chrome: rival production/coherence/living civilization
+  33/33 and founding/workforce/production 9/9. Static script checks pass.
+  Stage 27 CI still has WebKit camera timeouts; mobile remains deferred by
+  `AGENT_TESTING_POLICY.md` while shared runtime failures are addressed.
+- Remaining: rival action/combat application in `app.js`, presentation
+  observers, End Turn render invalidation and final integration gate.

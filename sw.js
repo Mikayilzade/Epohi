@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-v1-8-14-repair-v1";
+  "epohi-architecture-stage-28";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -11,10 +11,16 @@ const APP_FILES = [
   "./styles/humans-strategy.css",
   "./src/config.js",
   "./src/data.js",
+  "./src/combat-rules.js",
+  "./src/ai-strategy.js",
+  "./src/state-schema.js",
   "./src/humans-content.js",
   "./src/utils.js",
+  "./src/ai-production.js",
   "./src/storage.js",
   "./src/save-utils.js",
+  "./src/production-experience.js",
+  "./src/save-service.js",
   "./src/camera-storage.js",
   "./src/camera.js",
   "./src/selectors.js",
@@ -23,12 +29,12 @@ const APP_FILES = [
   "./src/progression.js",
   "./src/app.js",
   "./src/humans-performance.js",
+  "./src/humans-turn-label-stability.js",
   "./src/humans-autonomy.js",
   "./src/humans-outcomes.js",
   "./src/humans-journey-data.js",
   "./src/humans-journey-core.js",
   "./src/humans-journey-ui.js",
-  "./src/humans-autonomy-fix.js",
   "./src/humans-observer.js",
   "./src/humans-visuals.js",
   "./src/humans-pathing-core.js",
