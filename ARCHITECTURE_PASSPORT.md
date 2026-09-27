@@ -616,3 +616,22 @@ listeners, so the completion criteria above remain open.
   the CI gate after that failure. Stage 31 remains the latest full green CI.
 - Remaining: barbarian action application, broader turn/world separation,
   UI invalidation and final architecture gate.
+
+### Stage 34: barbarian action application boundary
+
+- `src/barbarian-actions.js` now owns camp spawning and raider attack, pillage
+  and movement for a turn. It receives game state and explicit combat, event,
+  death and random collaborators. `app.js` retains a thin turn adapter; the
+  replaced action bodies and movement helper were removed. Camp population
+  limits and target scaling are declared in `BARBARIAN_ACTION_RULES`.
+- Local desktop Chrome camp, targeting, living-world and combat checks passed
+  32/32. A seeded eight-barbarian comparison against `870fd5a` after three
+  End Turns found the same gameplay state, positions, health and event order.
+  The only state difference was the wall-clock suffix in the test party name.
+  End Turn samples were 465/198/259 ms before and 315/217/224 ms after;
+  browser scheduling makes these insufficient to claim a speed change.
+- Stage 33 CI passed static, soak and five of six browser shards. One Chromium
+  mobile shard failed; the failure log needs focused diagnosis. The latest
+  full green integration run remains Stage 31.
+- Remaining: consolidate UI turn invalidation, extract other gameplay bodies
+  from the coordinator, and run the final architecture gate.

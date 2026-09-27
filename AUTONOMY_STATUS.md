@@ -1,19 +1,20 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_33_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_34_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 32 published at `5a46dd2`. Stage 33 locally validated
+- **STATUS:** Stage 33 published at `870fd5a`. Stage 34 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Barbarian target selection is a separate rule and scans the map
-  once per action, preserving target priority and random consumption.
+- **DONE:** Barbarian action application now lives in `barbarian-actions.js`;
+  the old action and movement bodies left `app.js`.
 - **EVIDENCE:** Tier 3 local desktop Chrome 32/32; seeded eight-barbarian
-  three-turn state and event results match the previous app. Timings are
-  noisy with no speed claim. Stage 32 CI desktop 3/3, WebKit mobile camera
-  failed; Stage 31 remains the latest full green CI.
-- **NEXT:** Publish Stage 33; separate barbarian action application and
-  continue UI/turn consolidation before the final gate.
+  three-turn gameplay state and event order match the prior coordinator.
+  Timings are noisy with no speed claim. Stage 33 CI static, soak and five
+  browser shards passed; one Chromium mobile shard failed. Stage 31 remains
+  the latest full green CI.
+- **NEXT:** Publish Stage 34; diagnose the CI shard and consolidate End Turn
+  UI invalidation before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

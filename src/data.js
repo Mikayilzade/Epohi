@@ -142,6 +142,7 @@
     sightDistance: 6, homeSightDistance: 5, wanderChoices: 3,
     priority: ['civilian', 'unit', 'improvement', 'outpost', 'city']
   };
+  const BARBARIAN_ACTION_RULES = { perCampLimit: 2, campTargetScale: 2 };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
     direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
@@ -199,6 +200,7 @@
     AI_COMBAT_RULES,
     AI_ACTION_RULES,
     BARBARIAN_TARGET_RULES,
+    BARBARIAN_ACTION_RULES,
     COMBAT_BALANCE,
     TECHS
   };
