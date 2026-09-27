@@ -535,3 +535,24 @@ listeners, so the completion criteria above remain open.
   `camera-2.spec.js` large-map viewport, outside this combat change.
 - Next: isolate action selection and barbarian combat, then remove duplicate
   presentation invalidation and complete final architecture review.
+
+### Stage 30: rival action selection returns an intent
+
+- `src/ai-actions.js` chooses the next rival intent from state and read-only
+  world queries. It owns the former `rivalWarTarget` search and the exact
+  priority of rival war, adjacent player, camp, barbarian, city guard,
+  settlement and travel. `processRivals()` remains the executor that spends
+  the shared AI budget and applies state changes. The old selection branches
+  were removed. Guard distances/counts live in `AI_ACTION_RULES`.
+- Tier 3 desktop Chrome barbarian/combat/living civilization tests 36/36,
+  syntax and diff checks pass. A deterministic one-rival, small-map End Turn
+  comparison routed the prior `264163b` app script against the new script
+  with the same random seed. Serialized state byte counts matched after each
+  of three turns: 50,845 / 50,965 / 51,733. Timings including browser UI
+  were 696/203/214 ms before and 291/223/204 ms after. The first turn is
+  warm-up sensitive; no performance gain is claimed.
+- Stage 29 CI passed all desktop Chromium shards, every Chromium/WebKit soak
+  and two WebKit full shards. WebKit mobile camera-2 large-map viewport was
+  the only failing shard and is being tracked separately.
+- Remaining: turn executor and barbarian rules in `app.js`, broad map redraw
+  and independent UI observers, final passport/gate.

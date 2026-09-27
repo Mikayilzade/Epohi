@@ -137,6 +137,7 @@
     rushGold: 16, rushProgress: 8, rushMinimumRemaining: 4
   };
   const AI_COMBAT_RULES = { defaultAttack: 8, cityDefense: 18, campDefense: 12 };
+  const AI_ACTION_RULES = { homeDistance: 1, lastDefenderCount: 1, adjacentWarDistance: 1 };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
     direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
@@ -192,6 +193,7 @@
     AI_GOAL_RULES,
     AI_PRODUCTION_RULES,
     AI_COMBAT_RULES,
+    AI_ACTION_RULES,
     COMBAT_BALANCE,
     TECHS
   };

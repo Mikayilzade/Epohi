@@ -1,18 +1,20 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_29_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_30_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 28 published at `836136b`. Stage 29 locally validated
+- **STATUS:** Stage 29 published at `264163b`. Stage 30 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Rival attacks on rival factions, player units and camps now use
-  `rival-combat.js`; the replaced damage/death code left `app.js`.
-- **EVIDENCE:** Tier 3 local desktop Chrome barbarian/capture/combat/living
-  civilization 56/56. Stage 28 CI desktop Chromium 3/3 and all soak jobs
-  green; only the WebKit mobile large-map camera viewport test failed.
-- **NEXT:** Publish Stage 29; extract rival action selection and remaining
-  barbarian combat, then consolidate UI refreshes.
+- **DONE:** `ai-actions.js` selects rival intents in the previous priority;
+  `processRivals` executes them with the shared budget. Old selection code
+  was removed from `app.js`.
+- **EVIDENCE:** Tier 3 local desktop Chrome 36/36. Deterministic three-turn
+  before/after state byte counts match exactly; timings are noisy with no
+  performance claim. Stage 29 CI desktop 3/3 and all soak green; only WebKit
+  mobile large-map camera failed.
+- **NEXT:** Publish Stage 30; then isolate remaining turn/barbarian rules and
+  consolidate post-turn UI invalidation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
