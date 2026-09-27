@@ -51,6 +51,8 @@
       snapshot.capitalCityId = capital.id;
       delete snapshot.city;
     }
+    delete snapshot.workerLearningProcessedEvents;
+    delete snapshot.coherenceAiLearningEvents;
     return snapshot;
   }
 

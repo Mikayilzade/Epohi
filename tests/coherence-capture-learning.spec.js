@@ -56,6 +56,29 @@ test('coherence UI refresh leaves trade rules for the explicit turn phase', asyn
   expect(status).toEqual({ afterUi:'pending', afterTurn:'cancelled' });
 });
 
+test('completed production records structured experience in the turn autosave', async ({ page }) => {
+  await openGame(page, 1);
+  await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    state.cities[0].queue = { type:'unit', id:'scout', cost:1, progress:0 };
+    state.rivals[0].cities[0].queue = { type:'unit', id:'warrior', cost:1, progress:0 };
+  });
+  await page.locator('#endTurnBtn').click();
+  await expect(page.locator('#turnValue')).toHaveText('2');
+  await expect.poll(() => page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const record = saves.find(save => save.saveId.endsWith('-autosave-1') && save.turn === 2);
+    if (!record) return null;
+    const state = record.gameState;
+    return {
+      playerScout:state.experience.units.scout,
+      rivalWarrior:state.rivals[0].experience.units.warrior,
+      legacyScanFields:['workerLearningProcessedEvents','coherenceAiLearningEvents'].filter(key => key in state)
+    };
+  })).toEqual({ playerScout:1, rivalWarrior:1, legacyScanFields:[] });
+});
+
 test('captured research insight is applied before the new turn is saved', async ({ page }) => {
   await openGame(page, 0);
   await page.evaluate(() => {

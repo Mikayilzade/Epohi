@@ -1,18 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_15_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_16_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 14 is published at `767d879`. Stage 15 is locally validated
+- **STATUS:** Stage 15 is published at `05e97a4`. Stage 16 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Coherence UI refresh no longer mutates game state or repeatedly
-  scans events; its gameplay repair is owned by the pre-save turn phase.
-- **EVIDENCE:** Stage 15 local desktop Chrome 33 existing checks passed, and
-  the new phase-boundary check passed after correcting its fixture. Stage 14
-  CI Chromium/full soak/static green; three WebKit mobile UI cases failed.
-- **NEXT:** Publish Stage 15; remove history-text-driven AI experience repair
-  by recording production directly at the producing command site.
+- **DONE:** Player and AI production record structured experience at queue
+  completion. Removed two history-text parsers and obsolete event cursors.
+- **EVIDENCE:** Tier 3 local desktop Chrome 25/25 related tests; static checks
+  green. Three End Turn samples: 225/410/183 ms, about 47.6 KB snapshots.
+- **NEXT:** Publish Stage 16; replace AI city-capture post-turn reconstruction
+  with an explicit battle outcome, then continue turn/domain separation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

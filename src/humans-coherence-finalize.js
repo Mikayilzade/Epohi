@@ -47,15 +47,10 @@
     return holder.experience;
   }
 
-  function eventId(item, index) {
-    return String(item && (item.eventId || item.id) || [item && item.turn, item && item.eventType, item && item.text, index || 0].join(":"));
-  }
-
   function ensureState(gs) {
     if (!gs) return null;
     ensureExperience(gs);
     (gs.rivals || []).forEach(ensureExperience);
-    if (!Array.isArray(gs.coherenceAiLearningEvents)) gs.coherenceAiLearningEvents = [];
     return gs;
   }
 
@@ -91,35 +86,6 @@
     }
     const produced = Math.max(0, Number(ensureExperience(holder).units[id]) || 0);
     return Math.min(0.30, Math.floor(produced / 10) * 0.10);
-  }
-
-  function processAiExperience(gs) {
-    ensureState(gs);
-    const processed = new Set(gs.coherenceAiLearningEvents.map(String));
-    (gs.eventLog || []).slice().reverse().forEach(function (item, index) {
-      if (!item) return;
-      const id = eventId(item, index);
-      if (processed.has(id)) return;
-      processed.add(id);
-      if (item.eventType !== "city-production-completed" || item.actorType !== "civilization") return;
-      const civ = civById(gs, item.actorId);
-      if (!civ) return;
-      const exp = ensureExperience(civ);
-      const text = String(item.text || "");
-      Object.keys(UNIT_DEFS).some(function (unitId) {
-        const def = UNIT_DEFS[unitId];
-        if (!def || text.indexOf(def.name) < 0 || (text.indexOf("подготов") < 0 && text.indexOf("готов") < 0)) return false;
-        exp.units[unitId] = (Number(exp.units[unitId]) || 0) + 1;
-        return true;
-      });
-      Object.keys(BUILDINGS).some(function (buildingId) {
-        const def = BUILDINGS[buildingId];
-        if (!def || text.indexOf(def.name) < 0 || text.indexOf("заверш") < 0) return false;
-        exp.buildings[buildingId] = (Number(exp.buildings[buildingId]) || 0) + 1;
-        return true;
-      });
-    });
-    gs.coherenceAiLearningEvents = Array.from(processed).slice(-1200);
   }
 
   function syncForeignBuildingKnowledge(gs) {
@@ -375,7 +341,6 @@
   function processTurn(gs) {
     gs = ensureState(gs);
     if (!gs) return;
-    processAiExperience(gs);
     repairAiCityCaptures(gs);
     syncForeignBuildingKnowledge(gs);
     invalidateImpossibleTrades(gs);
@@ -457,7 +422,6 @@
   window.EpohiCoherenceFinalize = {
     version: 3,
     ensureState: ensureState,
-    processAiExperience: processAiExperience,
     unitProductionCost: unitProductionCost,
     syncForeignBuildingKnowledge: syncForeignBuildingKnowledge,
     invalidateImpossibleTrades: invalidateImpossibleTrades,

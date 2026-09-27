@@ -295,3 +295,23 @@ listeners, so the completion criteria above remain open.
   arrival-at-POI test in shard 3. Those paths were unchanged in Stage 14;
   desktop Chromium and state/save behavior passed. These failures are tracked
   under the PC-first policy rather than reported as green.
+
+### Stage 16: structured production experience
+
+- `production-experience.js` owns the small state operation that increments
+  production experience by completed project id. Both player and AI queue
+  completion call it directly. The player legacy-building migration is also
+  centralized there and remains idempotent. Production events still feed the
+  chronicle, but no rule parses their localized text.
+- Removed `processExperienceEvents` and `processAiExperience`, their
+  per-turn/UI log scans, and their serialized processed-event lists. Old saves
+  keep their existing experience counts and the serializer drops obsolete
+  scan cursors. There is one active way to count new completions.
+- Tier 3 local desktop Chrome: coherence/experience 18/18, save/startup 7/7;
+  syntax and diff checks passed. A three-click small-map no-rival End Turn
+  sample measured 225/410/183 ms and serialized state 47,609-47,660 bytes.
+  The original pre-cleanup sample was 751/535/437 ms with about 48 KB saves;
+  these short runs include scheduling noise and do not establish a stable gain.
+- Next: eliminate the remaining post-AI city-capture repair that reconstructs
+  ownership from a before-turn snapshot and battle log; route capture through
+  the battle command instead.

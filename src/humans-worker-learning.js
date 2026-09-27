@@ -28,10 +28,6 @@
     return Array.isArray(gs.cities) && gs.cities.length ? gs.cities : (gs.city ? [gs.city] : []);
   }
 
-  function eventId(item, index) {
-    return String(item && (item.eventId || item.id) || [item && item.turn, item && item.eventType, item && item.text, index || 0].join(":"));
-  }
-
   function addEvent(gs, type, text, position) {
     if (!gs) return;
     gs.eventCounter = (Number(gs.eventCounter) || 0) + 1;
@@ -74,18 +70,7 @@
 
   function ensureState(gs) {
     if (!gs) return null;
-    ensureExperience(gs);
-    if (!Array.isArray(gs.workerLearningProcessedEvents)) {
-      gs.workerLearningProcessedEvents = (gs.eventLog || []).map(function (item, index) { return eventId(item, index); }).slice(-900);
-    }
-    if (!gs.workerLearningMigrated) {
-      playerCities(gs).forEach(function (city) {
-        (city.buildings || []).forEach(function (id) {
-          if (!city.formerCivilizationId) gs.experience.buildings[id] = (Number(gs.experience.buildings[id]) || 0) + 1;
-        });
-      });
-      gs.workerLearningMigrated = true;
-    }
+    window.EpohiProductionExperience.ensurePlayerState(gs);
     return gs;
   }
 
@@ -182,30 +167,6 @@
       if (cityButton) cityButton.click();
     }, 0);
     return true;
-  }
-
-  function processExperienceEvents(gs) {
-    ensureState(gs);
-    const processed = new Set(gs.workerLearningProcessedEvents.map(String));
-    (gs.eventLog || []).slice().reverse().forEach(function (item, index) {
-      if (!item) return;
-      const id = eventId(item, index);
-      if (processed.has(id)) return;
-      processed.add(id);
-      if (item.eventType !== "city-production-completed" || item.actorType === "civilization") return;
-      const text = String(item.text || "");
-      Object.keys(BUILDINGS).some(function (buildingId) {
-        if (text.indexOf(BUILDINGS[buildingId].name) < 0 || text.indexOf("заверш") < 0) return false;
-        gs.experience.buildings[buildingId] = (Number(gs.experience.buildings[buildingId]) || 0) + 1;
-        return true;
-      });
-      Object.keys(UNIT_DEFS).some(function (unitId) {
-        if (text.indexOf(UNIT_DEFS[unitId].name) < 0 || (text.indexOf("подготов") < 0 && text.indexOf("готов") < 0)) return false;
-        gs.experience.units[unitId] = (Number(gs.experience.units[unitId]) || 0) + 1;
-        return true;
-      });
-    });
-    gs.workerLearningProcessedEvents = Array.from(processed).slice(-1000);
   }
 
   function workerTurns(id, repair) {
@@ -473,13 +434,12 @@
     const turn=Number(gs.turn)||1;
     if(lastTurn===turn)return false;
     lastTurn=turn;
-    processExperienceEvents(gs);
     return processWorkerProjects(gs);
   }
 
   function decorate() {
     const gs=ensureState(state()); if(!gs)return;
-    processExperienceEvents(gs); patchCityUi(gs); patchWorkerUi(gs); patchMapPurchase(gs);
+    patchCityUi(gs); patchWorkerUi(gs); patchMapPurchase(gs);
   }
 
   function schedule(){ if(queued)return; queued=true; requestAnimationFrame(function(){queued=false;decorate();}); }
@@ -504,7 +464,7 @@
 
   window.EpohiWorkerLearning={
     version:1,ensureState:ensureState,buildingDiscount:buildingDiscount,unitDiscount:unitDiscount,effectiveProductionCost:effectiveProductionCost,
-    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processExperienceEvents:processExperienceEvents,processTurn:processTurn,patchWorkerUi:patchWorkerUi
+    workerTurns:workerTurns,startWorkerProject:startWorkerProject,processWorkerProjects:processWorkerProjects,processTurn:processTurn,patchWorkerUi:patchWorkerUi
   };
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true}); else install();
