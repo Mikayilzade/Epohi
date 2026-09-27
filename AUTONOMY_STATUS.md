@@ -1,17 +1,20 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_23_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_24_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 22 is published at `af37772`. Stage 23 is locally
+- **STATUS:** Stage 23 is published at `2b0db46`. Stage 24 is locally
   validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Rival strategic goal selection lives in `ai-strategy.js`, with
-  named AI thresholds in balance data and an adapter in `app.js`.
-- **EVIDENCE:** Tier 3 local desktop Chrome strategy/camp/diplomacy/combat
-  35/35; static checks pass. Stage 22 CI pending.
-- **NEXT:** Publish Stage 23; extract more rival/combat application rules and
-  audit End Turn observers/rendering/performance.
+- **DONE:** Pre-turn autonomy, route and workforce actions moved from click
+  capture listeners into `simulateTurn()`. Scout draining merged into its owner;
+  obsolete `humans-autonomy-fix.js` removed.
+- **EVIDENCE:** Tier 3 local desktop Chrome 37/37 including cancellation guard;
+  syntax/diff checks pass. Three-turn sample 423/296/167 ms, no gain claim.
+  Stage 23 CI desktop Chromium and soak green; one unrelated mobile WebKit
+  camera case failed.
+- **NEXT:** Publish Stage 24; reduce remaining End Turn UI observer fan-out and
+  extract rival/combat application rules from `app.js`.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

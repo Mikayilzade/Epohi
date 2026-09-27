@@ -131,6 +131,32 @@ test.describe('Combat, AI and world stability', () => {
     })).toEqual({ status:'expired', event:true });
   });
 
+  test('declining urgent turn confirmation leaves pre-turn systems untouched', async ({ page }) => {
+    await ready(page, 0, 'small');
+    const before = await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const scout = gs.units.find(unit => unit.type === 'scout');
+      gs.populationWorkforcePreparedTurn = 0;
+      scout.moves = 2;
+      scout.acted = false;
+      window.EpohiHumansAutonomy.assignOrder(scout.id, 'explore');
+      gs.urgentDecisions.push({ id:'cancelled-turn', title:'Pending',
+        cityId:gs.cities[0].id, status:'pending', createdTurn:gs.turn,
+        expiresTurn:gs.turn, options:[] });
+      return { turn:gs.turn, x:scout.x, y:scout.y, moves:scout.moves,
+        prepared:gs.populationWorkforcePreparedTurn };
+    });
+    page.once('dialog', dialog => dialog.dismiss());
+    await page.evaluate(() => document.getElementById('endTurnBtn').click());
+    const after = await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const scout = gs.units.find(unit => unit.type === 'scout');
+      return { turn:gs.turn, x:scout.x, y:scout.y, moves:scout.moves,
+        prepared:gs.populationWorkforcePreparedTurn };
+    });
+    expect(after).toEqual(before);
+  });
+
   test('enemy selected from the map exposes and resolves a visible unit attack', async ({ page }) => {
     await ready(page, 1);
     const setup=await page.evaluate(()=>{const gs=window.__epohiDebug().state,civ=gs.rivals[0],attacker=gs.units[0],enemy=civ.units[0];attacker.type='warrior';attacker.x=5;attacker.y=5;attacker.moves=1;attacker.acted=false;enemy.x=6;enemy.y=5;enemy.hp=1;civ.relation='war';civ.met=true;gs.map[5][5].terrain=gs.map[5][6].terrain='plains';gs.map[5][5].revealed=gs.map[5][6].revealed=true;window.__epohiDebug().render();return{enemyId:enemy.id,attackerId:attacker.id};});

@@ -361,17 +361,6 @@
     selectTargetFromEvent(event);
   }
 
-  function installEndTurnHook() {
-    const endTurn = document.getElementById("endTurnBtn");
-    if (!endTurn) return;
-
-    endTurn.addEventListener("click", function () {
-      const gs = CORE.ensureState(state());
-      if (!gs || endTurn.disabled) return;
-      CORE.processOrders(gs, { render: false });
-    }, true);
-  }
-
   function install() {
     ensurePoiModal();
     CORE.setPoiArrivalHandler(openPoiChoice);
@@ -396,7 +385,6 @@
         notify("Выбор маршрута отменён");
       }
     });
-    installEndTurnHook();
     scheduleUi();
   }
 

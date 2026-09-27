@@ -431,3 +431,24 @@ listeners, so the completion criteria above remain open.
   checks pass. CI pending publication.
 - Remaining: move rival action selection and combat application out of
   `app.js`; shrink the End Turn presentation fan-out and compare timings.
+
+### Stage 24: explicit pre-turn player actions
+
+- `simulateTurn()` now runs autonomous orders, route orders and workforce
+  preparation in the same order they previously ran through End Turn capture
+  listeners. The existing post-increment route pass remains a distinct phase,
+  preserving its current two-pass movement behavior until that mechanic is
+  deliberately reviewed.
+- Scout movement draining was folded into the autonomy owner. Removed the
+  obsolete `humans-autonomy-fix.js` wrapper and four gameplay click hooks,
+  including the extra full render before the timed turn calculation.
+- Declining the urgent-decision confirmation now leaves pre-turn state intact;
+  previously capture listeners could mutate it before the confirmation.
+- Tier 3 local desktop Chrome combat, autonomy, workforce, pathing and turn
+  checks 37/37; static checks pass. Three End Turn clicks on a small no-rival
+  map measured 423/296/167 ms, serialized state 47,657 bytes. Stage 19's
+  comparable single run was 413/446/232 ms; variance is too large to claim a
+  performance gain. CI pending publication.
+- Stage 23 CI desktop Chromium and all soak jobs passed; one WebKit full shard
+  failed the mobile camera viewport test (`camera-2.spec.js`), outside this AI
+  goal change. Mobile remains nonblocking under `AGENT_TESTING_POLICY.md`.

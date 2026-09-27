@@ -1372,6 +1372,9 @@
   function nearestKnownFinitePoi(civ,unit){let best=null;state.map.forEach(function(row,y){row.forEach(function(tile,x){const available=(tile.poi&&!tile.poi.used)||tile.feature==='ruins';if(!available||!(civ.explored&&civ.explored[tileKey(x,y)]))return;const distance=chebyshev(unit.x,unit.y,x,y);if(!best||distance<best.distance)best={x:x,y:y,distance:distance};});});return best;}
 
   function simulateTurn() {
+    if (window.EpohiHumansAutonomy) window.EpohiHumansAutonomy.processOrders(state);
+    if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
+    if (window.EpohiPopulationWorkforce) window.EpohiPopulationWorkforce.prepareTurn(state);
     const aiBudget = { remaining:AI_LIMITS.maxActionsPerTurn, used:0 };
     state.lastAiUnitActions={};
     (state.rivals||[]).forEach(function(civ){(civ.units||[]).forEach(function(unit){unit.moves=UNIT_DEFS[unit.type].maxMoves;unit.acted=false;});});

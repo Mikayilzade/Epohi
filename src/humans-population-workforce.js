@@ -398,17 +398,6 @@
 
   function install() {
     installStyles();
-    const endTurn = document.getElementById("endTurnBtn");
-    if (endTurn && endTurn.dataset.workforceHook !== "1") {
-      endTurn.dataset.workforceHook = "1";
-      endTurn.addEventListener("click", function () {
-        const value = debug();
-        const gs = value && value.state;
-        if (!gs || gs.victory || gs.defeat || (value.isTurnProcessing && value.isTurnProcessing())) return;
-        prepareTurn(gs);
-      }, true);
-    }
-
     document.addEventListener("click", function (event) {
       const specializationButton = event.target.closest && event.target.closest("[data-workforce-specialization]");
       if (specializationButton) {

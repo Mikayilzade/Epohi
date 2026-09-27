@@ -513,7 +513,19 @@
     (state.units || []).slice().forEach(function (unit) {
       processUnitOrder(state, unit);
     });
+    (state.units || []).forEach(function (unit) { drainScoutMoves(state, unit); });
     return state.autonomyReports.length - beforeReports;
+  }
+
+  function drainScoutMoves(state, unit) {
+    if (!unit || unit.type !== "scout" || !unit.order || unit.order.type !== "explore") return 0;
+    let steps = 0;
+    while (steps < 8 && unit.order && unit.order.type === "explore" &&
+      unit.order.status !== "paused" && unit.moves > 0 && !unit.acted && unit.hp > 0) {
+      if (!processUnitOrder(state, unit)) break;
+      steps += 1;
+    }
+    return steps;
   }
 
   function nearestCity(state, unit) {
@@ -721,18 +733,6 @@
     // an incidental observer mutation to create the map report control.
     document.addEventListener("epohi:humans-ui-settled", scheduleRefreshControls);
 
-    const endTurnButton = document.getElementById("endTurnBtn");
-    if (endTurnButton) {
-      endTurnButton.addEventListener("click", function () {
-        const state = ensureAutonomyState(getState());
-        if (!state || endTurnButton.disabled) return;
-        processOrders(state);
-        const debug = getDebug();
-        if (debug && typeof debug.render === "function") debug.render();
-        window.setTimeout(scheduleRefreshControls, 180);
-      }, true);
-    }
-
     scheduleRefreshControls();
   }
 
@@ -744,6 +744,7 @@
     resumeOrder: resumeOrder,
     processOrders: processOrders,
     processUnitOrder: processUnitOrder,
+    drainScoutMoves: drainScoutMoves,
     chooseExploreStep: chooseExploreStep,
     chooseWorkerTarget: chooseWorkerTarget,
     knownHostiles: knownHostiles,
