@@ -26,7 +26,7 @@
         return Promise.resolve(null);
       }
       const identity = options.getIdentity();
-      const snapshot = prepared ? prepared.snapshot : options.cloneState(currentState);
+      const snapshot = prepared ? prepared.snapshot : options.serializeState(currentState);
       const campaignId = prepared ? prepared.campaignId : identity.activeCampaignId;
       const parentTurn = prepared ? prepared.parentTurn : identity.loadedSaveTurn;
       if (!prepared) options.saveLegacySnapshot(snapshot);
@@ -83,7 +83,7 @@
       const gameState = options.getState();
       if (!gameState) return Promise.resolve(null);
       const identity = options.getIdentity();
-      const snapshot = options.cloneState(gameState);
+      const snapshot = options.serializeState(gameState);
       const prepared = { snapshot: snapshot, campaignId: identity.activeCampaignId, parentTurn: identity.loadedSaveTurn, rotate: !!rotate };
       const parentSaveId = identity.loadedSaveId;
       options.saveLegacySnapshot(snapshot);

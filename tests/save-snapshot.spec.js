@@ -18,7 +18,11 @@ test('queued autosave keeps the state from its request time', async ({ page }) =
     const records = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
     const record = records.find((item) => item.saveId.endsWith('-autosave-1'));
     const legacy = JSON.parse(localStorage.getItem(window.EpohiConfig.SAVE_KEY));
+    const restored = debug.migrateState(JSON.parse(JSON.stringify(record.gameState)));
     return { turn, gold, record, legacyTurn: legacy.turn,
+      capitalCityId: record.gameState.capitalCityId,
+      duplicateCity: Object.prototype.hasOwnProperty.call(record.gameState, 'city'),
+      restoredCapitalAlias: restored.city === restored.cities.find(city => city.id === restored.capitalCityId),
       schemaVersion: window.EpohiConfig.SAVE_SCHEMA_VERSION,
       gameVersion: window.EpohiConfig.GAME_VERSION };
   });
@@ -26,6 +30,9 @@ test('queued autosave keeps the state from its request time', async ({ page }) =
   expect(saved.record.turn).toBe(saved.turn);
   expect(saved.record.gameState.turn).toBe(saved.turn);
   expect(saved.record.gameState.resources.gold).toBe(saved.gold);
+  expect(saved.duplicateCity).toBe(false);
+  expect(saved.capitalCityId).toBe('player-cap');
+  expect(saved.restoredCapitalAlias).toBe(true);
   expect(saved.legacyTurn).toBe(saved.turn);
   expect(saved.record.schemaVersion).toBe(saved.schemaVersion);
   expect(saved.record.gameVersion).toBe(saved.gameVersion);

@@ -167,6 +167,7 @@
     makeId,
     makeCampaignId,
     cloneState,
+    serializeState,
     saveMetaLine,
     campaignLine,
     campaignFromState: buildCampaignFromState,
@@ -408,7 +409,7 @@
     const cx = Math.floor(size / 2), cy = Math.floor(size / 2);
     const newState = {
       version: STATE_VERSION, mapSize: size, turn: 1, map: generateMap(size), barbarianActivity: barbarianActivity || "normal",
-      city: { id:"player-cap", x: cx, y: cy, name: "Ардена", population: 1, food: 6, production: 14, buildings: [], queue: null, damage: 0, hp: 180, maxHp: 180, capital: true },
+      city: { id:"player-cap", x: cx, y: cy, name: "Ардена", population: 1, food: 6, production: 14, buildings: [], queue: null, damage: 0, hp: 180, maxHp: 180, capital: true }, capitalCityId:"player-cap",
       units: [],
       barbarians: [], nextUnitId: 1, nextBarbarianId: 1, settlements: [], artifacts: [], permanentBonuses: {},
       resources: { food: 0, production: 0, gold: 8, science: 4 }, researched: [], currentResearch: "agriculture", victory: false, defeat: false, history: [], eventLog: [], eventCounter: 0, rivals: [], nextRivalUnitId: 1
@@ -475,7 +476,7 @@
     putRotatingAutosave: window.EpohiStorage.putRotatingAutosave,
     campaignFromState: campaignFromState,
     validateSaveState: validateSaveState,
-    cloneState: cloneState,
+    serializeState: serializeState,
     buildSaveRecord: buildSaveRecord,
     mapSizeCells: mapSizeCells,
     schemaVersion: SAVE_SCHEMA_VERSION,
@@ -1681,8 +1682,8 @@
     gs.partyName = (record.metadata && record.metadata.name) || gs.partyName || (fallbackId === 'slot-2' ? 'Старая партия 2' : 'Старая партия');
     const c = campaignFromState(gs, gs.partyName, 'campaign-migrated-' + fallbackId, record.createdAt || (record.metadata && record.metadata.createdAt));
     return getCampaign(c.campaignId).then(function(existing){ if(existing) return;
-      const manual = { id:c.campaignId+'-manual-1', saveId:c.campaignId+'-manual-1', campaignId:c.campaignId, name:gs.partyName, gameState:gs, turn:gs.turn, type:'manual', createdAt:c.createdAt, updatedAt:record.updatedAt || (record.metadata && record.metadata.updatedAt) || c.createdAt, schemaVersion:SAVE_SCHEMA_VERSION, parentSaveId:null };
-      const auto = { id:c.campaignId+'-autosave-1', saveId:c.campaignId+'-autosave-1', campaignId:c.campaignId, name:'autosave-1', gameState:cloneState(gs), turn:gs.turn, type:'autosave', createdAt:manual.createdAt, updatedAt:manual.updatedAt, schemaVersion:SAVE_SCHEMA_VERSION, parentSaveId:null };
+      const manual = { id:c.campaignId+'-manual-1', saveId:c.campaignId+'-manual-1', campaignId:c.campaignId, name:gs.partyName, gameState:serializeState(gs), turn:gs.turn, type:'manual', createdAt:c.createdAt, updatedAt:record.updatedAt || (record.metadata && record.metadata.updatedAt) || c.createdAt, schemaVersion:SAVE_SCHEMA_VERSION, parentSaveId:null };
+      const auto = { id:c.campaignId+'-autosave-1', saveId:c.campaignId+'-autosave-1', campaignId:c.campaignId, name:'autosave-1', gameState:serializeState(gs), turn:gs.turn, type:'autosave', createdAt:manual.createdAt, updatedAt:manual.updatedAt, schemaVersion:SAVE_SCHEMA_VERSION, parentSaveId:null };
       c.lastLoadedSaveId = auto.saveId; c.lastPlayedAt = auto.updatedAt;
       return putCampaign(c).then(function(){ return putSaveRecord(manual); }).then(function(){ return putSaveRecord(auto); });
     });

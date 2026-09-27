@@ -1,17 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-26 UTC. State: ARCHITECTURE_STAGE_13_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_14_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 12 is published at `485882d`. Stage 13 is locally validated
+- **STATUS:** Stage 13 is published at `260b389`. Stage 14 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Save migration preserves the living successor capital rather than
-  resetting the first city as capital.
-- **EVIDENCE:** Local desktop Chrome state schema, outcomes and saves 13/13.
-  Stage 12 CI pending.
-- **NEXT:** Review/publish Stage 13; remove duplicate serialized `city` data,
-  then continue separating world/AI rules from presentation.
+- **DONE:** Saves now contain one `cities` collection plus `capitalCityId`;
+  migration restores the in-memory `city` alias and accepts older records.
+- **EVIDENCE:** Tier 3 local desktop Chrome schema/save/baseline/outcome 18/18;
+  syntax and diff checks passed. Stage 14 CI awaits publication.
+- **NEXT:** Review/publish Stage 14; then remove gameplay mutation and repeated
+  history scans from UI decorators while preserving direct action behavior.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

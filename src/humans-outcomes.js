@@ -293,6 +293,7 @@
     allCities(state).forEach(function (city) { city.capital = false; });
     successor.capital = true;
     state.city = successor;
+    state.capitalCityId = successor.id;
     state.defeat = false;
     addNotice(
       state,

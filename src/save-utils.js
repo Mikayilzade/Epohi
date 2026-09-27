@@ -41,6 +41,18 @@
     return "campaign-" + Date.now().toString(36) + "-" + Array.from(bytes).map(function(n){ return n.toString(36); }).join("") + "-" + Math.random().toString(36).slice(2, 10);
   }
   function cloneState(source) { return JSON.parse(JSON.stringify(source)); }
+  function serializeState(source) {
+    const snapshot = cloneState(source);
+    if (Array.isArray(snapshot.cities) && snapshot.cities.length) {
+      const capital = snapshot.cities.find(function (city) { return city.id === snapshot.capitalCityId && city.hp > 0; }) ||
+        snapshot.cities.find(function (city) { return city.capital && city.hp > 0; }) ||
+        snapshot.cities.find(function (city) { return snapshot.city && city.id === snapshot.city.id; }) ||
+        snapshot.cities[0];
+      snapshot.capitalCityId = capital.id;
+      delete snapshot.city;
+    }
+    return snapshot;
+  }
 
   function saveMetaLine(save) { return save ? escapeHtml(save.name) + " · ход " + save.turn + " · " + formatDate(save.updatedAt || save.createdAt) : "Пусто"; }
   function campaignLine(c, count, turn) { return escapeHtml(c.name) + " · ход " + (turn || 1) + " · " + c.mapSize + "×" + c.mapSize + " · " + formatDate(c.lastPlayedAt) + " · сохранений: " + count; }
@@ -70,7 +82,7 @@
       saveId: saveId,
       campaignId: options.campaign.campaignId,
       name: options.name || slotLabel(saveId),
-      gameState: options.gameState,
+      gameState: serializeState(options.gameState),
       turn: options.gameState.turn,
       type: options.type,
       createdAt: options.now,
@@ -88,6 +100,7 @@
     makeId,
     makeCampaignId,
     cloneState,
+    serializeState,
     saveMetaLine,
     campaignLine,
     campaignFromState,

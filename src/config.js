@@ -4,8 +4,8 @@
   const DEFAULT_MAP_SIZE = 28;
   const MAP_SIZES = { small: 20, normal: 28, large: 36 };
   const GAME_VERSION = "v1.4.5.1-hotfix";
-  const SAVE_SCHEMA_VERSION = 4;
-  const STATE_VERSION = 5;
+  const SAVE_SCHEMA_VERSION = 5;
+  const STATE_VERSION = 6;
   const SAVE_KEY = "mika-epohi-v1-state";
   const CAMERA_KEY = "mika-epohi-v12-camera";
   const TUTORIAL_KEY = "mika-epohi-v1-seen";

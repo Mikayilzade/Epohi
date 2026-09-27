@@ -1,6 +1,6 @@
 # Epohi architecture passport
 
-Updated: 2026-09-26. Integration target: PR #103 / `codex-qgq4u5`.
+Updated: 2026-09-27. Integration target: PR #103 / `codex-qgq4u5`.
 
 ## Current audit and completion criteria
 
@@ -127,9 +127,8 @@ listeners, so the completion criteria above remain open.
   `config.js` and used for new games and migrated snapshots. `app.js` supplies
   the existing barbarian and civilization domain migrations through explicit
   callbacks, retaining their behavior without giving the schema DOM access.
-- `city` remains an alias of `cities[0]` after creation/migration; serialization
-  duplicates it, so migration reestablishes the alias on load. This is a
-  documented transitional shape, not a second independently edited city.
+- `city` remains an in-memory alias of the selected capital in `cities` after
+  creation/migration. Stage 14 removed its duplicate serialized copy.
 - `tests/state-schema.spec.js` checks a legacy scout/resource snapshot,
   versioning and repeat-migration idempotence. Local desktop Chrome: 15/15
   save, prototype and barbarian cases plus schema 1/1. End Turn samples after
@@ -264,3 +263,19 @@ listeners, so the completion criteria above remain open.
 - The legacy `city` field still duplicates a city in serialized snapshots;
   a later schema update should make the active-capital id explicit and keep
   one serialized city collection.
+
+### Stage 14: canonical serialized capital
+
+- Save snapshots now store `cities` and `capitalCityId`; `city` is a runtime
+  alias restored by `state-schema.js`. The state and save schema versions are
+  6 and 5. Old snapshots with `city` still load, including successor capitals.
+  An empty `cities` list retains the legacy city field so terminal saves can
+  still be reopened.
+- New games and successor-capital promotion maintain `capitalCityId`.
+  `save-service.js`, record construction and legacy record import use the same
+  serializer. Save request time identity and turn remain intact.
+- Tier 3 local desktop Chrome: schema, save snapshot, baseline and outcome
+  checks 18/18. Static syntax and diff checks passed. CI result pending push.
+- The next architectural risk is gameplay mutation inside UI decorators and
+  repeated history scanning. Inventory those call sites before changing the
+  non-turn action path.

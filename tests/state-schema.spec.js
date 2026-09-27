@@ -60,13 +60,17 @@ test('saved successor capital remains the active city after migration', async ({
     first.capital = false;
     state.cities.push(successor);
     state.city = successor;
-    const saved = JSON.parse(JSON.stringify(state));
+    const saved = window.EpohiSaveUtils.serializeState(state);
+    const serializedCityAbsent = !Object.prototype.hasOwnProperty.call(saved, 'city');
     const restored = debug.migrateState(saved);
     return { capitalId:restored.city.id,
+      serializedCapitalId:saved.capitalCityId,
       alias:restored.city === restored.cities[1],
+      serializedCityAbsent:serializedCityAbsent,
       flags:restored.cities.map(city => city.capital),
       firstHp:restored.cities[0].hp };
   });
-  expect(result).toEqual({ capitalId:'successor-capital', alias:true,
+  expect(result).toEqual({ capitalId:'successor-capital', serializedCapitalId:'successor-capital',
+    serializedCityAbsent:true, alias:true,
     flags:[false,true], firstHp:0 });
 });

@@ -10,13 +10,18 @@
 
   function validState(candidate) {
     return candidate && Array.isArray(candidate.map) && candidate.map.length >= 8 &&
-      candidate.city && candidate.resources && Array.isArray(candidate.researched);
+      (candidate.city || Array.isArray(candidate.cities) && candidate.cities.length) &&
+      candidate.resources && Array.isArray(candidate.researched);
   }
 
   // Normalizes legacy snapshots in place. Domain-specific migrations are
   // supplied by their owner; schema normalization never touches presentation.
   function migrate(candidate, domain) {
     if (!validState(candidate)) return null;
+    if (!candidate.city) {
+      candidate.city = candidate.cities.find(function (city) { return city.id === candidate.capitalCityId; }) ||
+        candidate.cities.find(function (city) { return city.capital; }) || candidate.cities[0];
+    }
     candidate.mapSize = candidate.mapSize || candidate.map.length;
     if (!candidate.barbarianActivity) candidate.barbarianActivity = "normal";
     candidate.map.forEach(function (row) {
@@ -64,14 +69,17 @@
       if (typeof city.hp !== "number") city.hp = city.maxHp;
       if (!city.name) city.name = index ? "Новый город" : "Ардена";
     });
-    const selectedCapital = candidate.cities.find(function (city) { return city.capital && city.hp > 0; }) ||
+    const selectedCapital = candidate.cities.find(function (city) { return city.id === candidate.capitalCityId && city.hp > 0; }) ||
+      candidate.cities.find(function (city) { return city.capital && city.hp > 0; }) ||
       candidate.cities.find(function (city) { return city.id === candidate.city.id && city.hp > 0; }) ||
+      candidate.cities.find(function (city) { return city.id === candidate.capitalCityId; }) ||
       candidate.cities.find(function (city) { return city.capital; }) ||
       candidate.cities.find(function (city) { return city.id === candidate.city.id; }) ||
       candidate.cities[0];
     if (selectedCapital) {
       candidate.cities.forEach(function (city) { city.capital = city === selectedCapital; });
       candidate.city = selectedCapital;
+      candidate.capitalCityId = selectedCapital.id;
     }
     if (!candidate.localResourceMigration142Done) {
       candidate.city.food += legacyFood;
