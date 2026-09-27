@@ -333,3 +333,20 @@ listeners, so the completion criteria above remain open.
   CI run `36305928887` passed all full Chromium/WebKit, soak and static jobs.
 - Next: isolate the End Turn simulation from toast/render/timer/save controls
   while preserving phase order and random consumption.
+
+### Stage 18: one visible turn boundary in the coordinator
+
+- `app.js` now has a single `simulateTurn()` block for the ordered gameplay
+  phases. `endTurn()` owns the delay, control lock, toast, render, outcome
+  presentation and autosave. Phase order and random consumption are unchanged.
+  Removed the unused `grew=false` presentation branch.
+- Autosave is requested only when simulation returned successfully. Previously
+  the `catch` path still saved a partially calculated turn. A focused browser
+  check forces a simulation exception and verifies that controls unlock while
+  no autosave request occurs.
+- Tier 3 local desktop Chrome: save/outcome/coherence/turn checks 34/35 on the
+  first run; the added test had been nested accidentally in a different test.
+  After fixing test placement, turn suite 6/6 passed. Static checks passed.
+- `simulateTurn()` is still in the app closure and some domain adapters still
+  access browser globals. The next steps are to move concrete rules into
+  state/data modules and make their presentation effects explicit.

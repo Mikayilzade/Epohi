@@ -1,18 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_17_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_18_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 16 is published at `2393c44`. Stage 17 is locally validated
+- **STATUS:** Stage 17 is published at `8504540`. Stage 18 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** AI city transfer occurs inside the combat command. Removed the
-  pre-turn city clone and post-turn battle-log reconstruction.
-- **EVIDENCE:** Tier 3 local desktop Chrome 55/55 neighboring checks; new
-  battle check passed five consecutive randomized fixtures. Stage 16 CI all
-  full browser, soak and static jobs green.
-- **NEXT:** Publish Stage 17; isolate End Turn simulation from presentation,
-  timer and autosave controls while preserving phase order.
+- **DONE:** End Turn simulation is a single ordered operation; browser UI and
+  persistence are outside it. A failed calculation no longer requests a save.
+- **EVIDENCE:** Tier 3 local desktop Chrome neighboring checks 34/34 plus
+  corrected turn suite 6/6; static checks green. Stage 17 CI pending.
+- **NEXT:** Publish Stage 18; extract concrete gameplay rules from `app.js`
+  into state/data modules and remove remaining UI-driven mutations.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

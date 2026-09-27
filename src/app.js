@@ -1361,6 +1361,44 @@
   function aiResolvePoi(civ,unit){ const t=state.map[unit.y][unit.x],poi=t.poi&&!t.poi.used?t.poi:(t.feature==='ruins'?{type:'ruins',feature:true}:null); if(!poi)return false; if(poi.feature)t.feature=null;else t.poi.used=true; let key=civ.resources.science<12?'science':(civ.resources.gold<10?'gold':'production'); civ.resources[key]+= key==='production'?12:14; if(t.revealed)logEvent(state,"point-of-interest-resolved",civ.name+" первым исследует " + INTEREST_TYPES[poi.type].name + ".",{x:unit.x,y:unit.y},{actorType:"civilization",actorId:civ.civilizationId,phase:"rivals"}); return true; }
   function nearestKnownFinitePoi(civ,unit){let best=null;state.map.forEach(function(row,y){row.forEach(function(tile,x){const available=(tile.poi&&!tile.poi.used)||tile.feature==='ruins';if(!available||!(civ.explored&&civ.explored[tileKey(x,y)]))return;const distance=chebyshev(unit.x,unit.y,x,y);if(!best||distance<best.distance)best={x:x,y:y,distance:distance};});});return best;}
 
+  function simulateTurn() {
+    const aiBudget = { remaining:AI_LIMITS.maxActionsPerTurn, used:0 };
+    state.lastAiUnitActions={};
+    (state.rivals||[]).forEach(function(civ){(civ.units||[]).forEach(function(unit){unit.moves=UNIT_DEFS[unit.type].maxMoves;unit.acted=false;});});
+    if(window.EpohiLivingCivilizations)window.EpohiLivingCivilizations.processAlliedActions(state,{
+      actionBudget:aiBudget,distance:function(a,b){return chebyshev(a.x,a.y,b.x,b.y);},stepToward:stepToward,
+      attackBarbarian:function(civ,unit){return aiAttackBarbarian(civ,unit);},
+      warAction:performAlliedWarAction
+    });
+    const rivalActions = processRivals(aiBudget);
+    const barbarianText = processBarbarians();
+    const income = calculateIncome();
+    const completedProject = processProduction();
+    const completedTech = finishResearch();
+    state.turn += 1;
+    if (window.EpohiLivingCivilizations) {
+      window.EpohiLivingCivilizations.processTurn(state, {
+        actionBudget:aiBudget,
+        skipAlliedHelp:true,
+        distance:function(a,b){ return chebyshev(a.x,a.y,b.x,b.y); },
+        stepToward:stepToward,
+        attackBarbarian:function(civ,unit){ return aiAttackBarbarian(civ,unit); },
+        warAction:performAlliedWarAction
+      });
+    }
+    state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
+    maintainBarbarianCamps(state, Math.random);
+    state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
+    if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
+    if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
+    if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
+    if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
+    if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
+    const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
+    return { income:income, completedProject:completedProject, completedTech:completedTech,
+      rivalActions:rivalActions, barbarianText:barbarianText, outcomeResult:outcomeResult };
+  }
+
   function endTurn() {
     if (state.victory || state.defeat) { openVictory(); return; }
     if (turnProcessing) return;
@@ -1370,52 +1408,17 @@
     phaseBanner.classList.remove("is-hidden");
     showToast("Ход соперников", 900);
     setTimeout(function(){
-      let completedProject = null;
-      let outcomeResult = null;
+      let result = null;
       try {
-        const aiBudget = { remaining:AI_LIMITS.maxActionsPerTurn, used:0 };
-        state.lastAiUnitActions={};
-        (state.rivals||[]).forEach(function(civ){(civ.units||[]).forEach(function(unit){unit.moves=UNIT_DEFS[unit.type].maxMoves;unit.acted=false;});});
-        if(window.EpohiLivingCivilizations)window.EpohiLivingCivilizations.processAlliedActions(state,{
-          actionBudget:aiBudget,distance:function(a,b){return chebyshev(a.x,a.y,b.x,b.y);},stepToward:stepToward,
-          attackBarbarian:function(civ,unit){return aiAttackBarbarian(civ,unit);},
-          warAction:performAlliedWarAction
-        });
-        const rivalActions = processRivals(aiBudget);
-        const barbarianText = processBarbarians();
-        const income = calculateIncome();
-        completedProject = processProduction();
-        const grew = false;
-        const completedTech = finishResearch();
-        state.turn += 1;
-        if (window.EpohiLivingCivilizations) {
-          window.EpohiLivingCivilizations.processTurn(state, {
-            actionBudget:aiBudget,
-            skipAlliedHelp:true,
-            distance:function(a,b){ return chebyshev(a.x,a.y,b.x,b.y); },
-            stepToward:stepToward,
-            attackBarbarian:function(civ,unit){ return aiAttackBarbarian(civ,unit); },
-            warAction:performAlliedWarAction
-          });
-        }
-        state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
-        maintainBarbarianCamps(state, Math.random);
-        state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
-        if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
-        if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
-        if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
-        if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
-        if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
-        if (window.EpohiHumansOutcomes) outcomeResult = window.EpohiHumansOutcomes.evaluateState(state);
+        result = simulateTurn();
         selected = null;
-        let message = "Города получили: 🍞" + income.food + " · 🔨" + income.production + " · 🪙" + income.gold + " · 🔬" + income.science;
-        if (rivalActions) message = "Соперники действуют: " + rivalActions + ". " + message;
-        if (grew) message = "Население выросло до " + state.city.population + "! " + message;
-        if (completedTech) message = completedTech.icon + " Изучено: " + completedTech.name + ". " + message;
-        if (completedProject) message = completedProject.text + " " + message;
-        if (barbarianText) message += barbarianText;
+        let message = "Города получили: 🍞" + result.income.food + " · 🔨" + result.income.production + " · 🪙" + result.income.gold + " · 🔬" + result.income.science;
+        if (result.rivalActions) message = "Соперники действуют: " + result.rivalActions + ". " + message;
+        if (result.completedTech) message = result.completedTech.icon + " Изучено: " + result.completedTech.name + ". " + message;
+        if (result.completedProject) message = result.completedProject.text + " " + message;
+        if (result.barbarianText) message += result.barbarianText;
         showToast(message, 3600);
-        if (completedProject && completedProject.victory) openVictory();
+        if (result.completedProject && result.completedProject.victory) openVictory();
       } catch (error) {
         console.error(error);
         showToast("Ошибка расчёта хода. Игра разблокирована.", 3600);
@@ -1426,8 +1429,9 @@
         render();
         if (state.turn !== turnAtStart && window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
         if (state.turn !== turnAtStart && window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.refreshUi();
-        if (outcomeResult && window.EpohiHumansOutcomes) window.EpohiHumansOutcomes.presentOutcome(state, outcomeResult, { announce:true, showGoalsOnBlockedVictory:true });
+        if (result && result.outcomeResult && window.EpohiHumansOutcomes) window.EpohiHumansOutcomes.presentOutcome(state, result.outcomeResult, { announce:true, showGoalsOnBlockedVictory:true });
       }
+      if (!result) return;
       autoSave(true).catch(function () {
         setSaveStatus("Ошибка автосохранения");
         showToast(

@@ -60,6 +60,27 @@ test.describe('v1.4.5.1 turn unlock hotfix', () => {
   });
 });
 
+test('failed turn calculation unlocks controls without saving a partial turn', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  await page.evaluate(() => {
+    window.__turnSaveCalls = 0;
+    window.__epohiDebug().setAutoSaveForTests(() => {
+      window.__turnSaveCalls += 1;
+      return Promise.resolve();
+    });
+    window.EpohiLivingCivilizations.processAlliedActions = () => {
+      throw new Error('simulated turn calculation failure');
+    };
+  });
+  await page.locator('#endTurnBtn').click();
+  await expect(page.locator('#toast')).toContainText('Ошибка расчёта хода');
+  await expect(page.locator('#endTurnBtn')).toBeEnabled();
+  await expect.poll(() => page.evaluate(() => window.__epohiDebug().isTurnProcessing())).toBe(false);
+  expect(await page.evaluate(() => ({ turn:window.__epohiDebug().state.turn,
+    saveCalls:window.__turnSaveCalls }))).toEqual({ turn:1, saveCalls:0 });
+});
+
 test('turn history cannot trigger a legacy resource event', async ({ page }) => {
   await clearStorage(page);
   await createGame(page, 0, 'small');
@@ -70,6 +91,7 @@ test('turn history cannot trigger a legacy resource event', async ({ page }) => 
     debug.render();
     Math.random = () => 0;
   });
+
   page.on('dialog', (dialog) => dialog.accept());
   await page.evaluate(() => document.getElementById('endTurnBtn').click());
   await expect(page.locator('#turnValue')).toHaveText('6');
