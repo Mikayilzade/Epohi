@@ -50,7 +50,6 @@
     const line = "Ход " + (Number(gs.turn) || 1) + ": " + text;
     if (gs.history.indexOf(line) < 0) gs.history.unshift(line);
     gs.history = gs.history.slice(0, 300);
-    if (window.EpohiDiplomacyEventFlow && typeof window.EpohiDiplomacyEventFlow.syncChronicle === "function") window.EpohiDiplomacyEventFlow.syncChronicle(gs);
   }
 
   function knownTech(holder, id) {

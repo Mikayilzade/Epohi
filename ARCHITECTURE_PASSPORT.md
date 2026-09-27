@@ -574,3 +574,23 @@ listeners, so the completion criteria above remain open.
   and every soak matrix. This is the current broad integration evidence.
 - Remaining: other independent UI observers and repeated map/panel redraws,
   further world/turn separation and final architecture completion gate.
+
+### Stage 32: chronicle writes at event creation
+
+- `simulateTurn()` no longer reconstructs history by scanning `eventLog` at
+  every turn. Rival living-world and diplomacy-flow events now add their
+  history lines when created. Capture and diplomacy-coherence events already
+  did so; their extra full `syncChronicle()` calls were removed. The full
+  scan remains available on explicit chronicle opening and legacy repair.
+- Tier 3 local desktop Chrome diplomacy/capture/living civilization 39/39,
+  including new checks that rival events immediately enter history and raw
+  legacy events are backfilled only when opening the chronicle. Syntax and
+  diff checks pass. A seeded three-turn, one-rival comparison against
+  `672bd2a` counted cumulative public full-scan calls: 2/4/5 before and
+  1/1/1 after. The remaining call followed event presentation. Timings were
+  734/213/211 ms before and 243/217/203 ms after; warm-up and browser noise
+  prevent a speed claim. Serialized state bytes were 50,313/50,736/51,431
+  before and 50,313/50,722/51,397 after.
+- Stage 31 CI is fully green across static, Chromium, WebKit and soak jobs.
+- Remaining: unify event writers under one owned chronicle boundary, remove
+  other presentation observers, and separate world/turn execution further.

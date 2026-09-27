@@ -25,7 +25,21 @@ async function openGame(page, rivals = 2) {
 }
 
 test.describe('Дипломатия, выбор объектов и события', () => {
-  test('presentation refresh leaves chronicle assembly for the turn boundary', async ({ page }) => {
+  test('new rival events enter history when created', async ({ page }) => {
+    await openGame(page, 1);
+    const result = await page.evaluate(() => {
+      const gs = window.__epohiDebug().state;
+      const civ = gs.rivals[0];
+      window.EpohiLivingCivilizations.createProposal(gs, civ, 'trade', 'Immediate chronicle');
+      return {
+        event:gs.eventLog.some(item => String(item.text).includes('Immediate chronicle')),
+        history:gs.history.some(line => String(line).includes('Immediate chronicle'))
+      };
+    });
+    expect(result).toEqual({ event:true, history:true });
+  });
+
+  test('turn and presentation avoid rebuilding history from raw events', async ({ page }) => {
     await openGame(page, 0);
     await page.waitForTimeout(150);
     const eventText = 'Событие явной фазы летописи';
@@ -40,6 +54,8 @@ test.describe('Дипломатия, выбор объектов и событи
     expect(afterRefresh).toBe(false);
     await page.locator('#endTurnBtn').click();
     await expect(page.locator('#turnValue')).toHaveText('2');
+    expect(await page.evaluate(text => window.__epohiDebug().state.history.some(line => line.includes(text)), eventText)).toBe(false);
+    await page.evaluate(() => window.EpohiChronicleUI.open());
     expect(await page.evaluate(text => window.__epohiDebug().state.history.some(line => line.includes(text)), eventText)).toBe(true);
   });
 

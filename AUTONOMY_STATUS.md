@@ -1,19 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_31_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_32_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 30 published at `4f9fe26`. Stage 31 locally validated
+- **STATUS:** Stage 31 published at `672bd2a`. Stage 32 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Workforce UI now responds to explicit top/city/wiki render
-  signals. Its five-surface DOM observer is removed.
-- **EVIDENCE:** Tier 3 local desktop Chrome browser/world/workforce 20/20;
-  deterministic three-turn before/after state sizes match, with no speed
-  claim from noisy timings. Stage 30 CI fully green across desktop Chromium,
-  WebKit and all soak matrices.
-- **NEXT:** Publish Stage 31; continue removing other redundant observers
-  and broad redraws, and isolate remaining world/turn rules.
+- **DONE:** End Turn no longer scans event history each turn. Living-world
+  and diplomacy-flow events write history when created; duplicate scans from
+  capture/coherence event writers were removed.
+- **EVIDENCE:** Tier 3 local desktop Chrome diplomacy/capture/AI 39/39.
+  Three-turn cumulative full-scan calls fell from 2/4/5 to 1/1/1; no speed
+  claim from noisy browser timings. Stage 31 CI is fully green.
+- **NEXT:** Publish Stage 32; consolidate event ownership and remaining UI
+  observers, then complete world/turn separation and final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

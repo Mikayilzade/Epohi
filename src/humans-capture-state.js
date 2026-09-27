@@ -25,7 +25,6 @@
     const item={eventId:"capture-state-"+gs.eventCounter,turn:Number(gs.turn)||1,phase:"capture-state",actorType:actorId?"civilization":"player",actorId:actorId||"player",eventType:type,text:text,coordinates:position||null,position:position||null};
     gs.eventLog.unshift(item); gs.eventLog=gs.eventLog.slice(0,300);
     const line="Ход "+(Number(gs.turn)||1)+": "+text; if(gs.history.indexOf(line)<0)gs.history.unshift(line); gs.history=gs.history.slice(0,300);
-    if(window.EpohiDiplomacyEventFlow&&typeof window.EpohiDiplomacyEventFlow.syncChronicle==="function")window.EpohiDiplomacyEventFlow.syncChronicle(gs);
     return item;
   }
 

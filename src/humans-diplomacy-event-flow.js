@@ -67,7 +67,12 @@
     };
     gs.eventLog.unshift(item);
     gs.eventLog = gs.eventLog.slice(0, 240);
-    syncChronicle(gs);
+    const id = eventId(item);
+    if (gs.chronicleEventIds.indexOf(id) < 0) gs.chronicleEventIds.push(id);
+    gs.chronicleEventIds = gs.chronicleEventIds.slice(-500);
+    const line = "Ход " + (item.turn || 1) + ": " + text;
+    if (gs.history.indexOf(line) < 0) gs.history.unshift(line);
+    gs.history = gs.history.slice(0, 240);
     return item;
   }
 

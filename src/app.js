@@ -1411,7 +1411,6 @@
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
     const workforceChanges = window.EpohiPopulationWorkforce ? window.EpohiPopulationWorkforce.reconcileState(state).changed : [];
-    if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.syncChronicle(state);
     const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
     return { income:income, completedProject:completedProject, completedTech:completedTech,
       rivalActions:rivalActions, barbarianText:barbarianText, workforceChanges:workforceChanges, outcomeResult:outcomeResult };
