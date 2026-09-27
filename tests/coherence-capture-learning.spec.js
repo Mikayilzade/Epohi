@@ -40,6 +40,22 @@ async function ensureWorker(page) {
   });
 }
 
+test('coherence UI refresh leaves trade rules for the explicit turn phase', async ({ page }) => {
+  await openGame(page, 0);
+  const status = await page.evaluate(async () => {
+    const state = window.__epohiDebug().state;
+    const proposal = { id:'ui-refresh-trade', civId:'absent-civ',
+      type:'trade', status:'pending', createdTurn:state.turn, text:'test' };
+    state.diplomaticProposals = [proposal];
+    window.EpohiCoherenceFinalize.refreshUi();
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const afterUi = proposal.status;
+    window.EpohiCoherenceFinalize.processTurn(state);
+    return { afterUi, afterTurn:proposal.status };
+  });
+  expect(status).toEqual({ afterUi:'pending', afterTurn:'cancelled' });
+});
+
 test('captured research insight is applied before the new turn is saved', async ({ page }) => {
   await openGame(page, 0);
   await page.evaluate(() => {

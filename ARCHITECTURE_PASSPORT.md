@@ -279,3 +279,19 @@ listeners, so the completion criteria above remain open.
 - The next architectural risk is gameplay mutation inside UI decorators and
   repeated history scanning. Inventory those call sites before changing the
   non-turn action path.
+
+### Stage 15: coherence refresh is presentation only
+
+- `humans-coherence-finalize.js` no longer runs AI experience accounting,
+  foreign-building learning or trade invalidation from its UI decorator.
+  Those rules run in its explicit pre-save turn phase. The decorator only
+  restores and updates modal controls and suppresses overlapping toasts.
+- Tier 3 desktop Chrome: coherence, diplomacy activity and living civilization
+  checks 33/34 on the first pass; the new test used an incompatible small-map
+  rival fixture. After correcting that fixture, the new test passed 1/1.
+  Existing 33 checks had passed. CI pending publication.
+- Stage 14 CI run `36304525399`: Chromium full 3/3, static and all soak jobs
+  passed. WebKit mobile failed two camera viewport tests in shard 1 and one
+  arrival-at-POI test in shard 3. Those paths were unchanged in Stage 14;
+  desktop Chromium and state/save behavior passed. These failures are tracked
+  under the PC-first policy rather than reported as green.

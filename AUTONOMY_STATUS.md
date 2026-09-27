@@ -1,17 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_14_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_15_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 13 is published at `260b389`. Stage 14 is locally validated
+- **STATUS:** Stage 14 is published at `767d879`. Stage 15 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Saves now contain one `cities` collection plus `capitalCityId`;
-  migration restores the in-memory `city` alias and accepts older records.
-- **EVIDENCE:** Tier 3 local desktop Chrome schema/save/baseline/outcome 18/18;
-  syntax and diff checks passed. Stage 14 CI awaits publication.
-- **NEXT:** Review/publish Stage 14; then remove gameplay mutation and repeated
-  history scans from UI decorators while preserving direct action behavior.
+- **DONE:** Coherence UI refresh no longer mutates game state or repeatedly
+  scans events; its gameplay repair is owned by the pre-save turn phase.
+- **EVIDENCE:** Stage 15 local desktop Chrome 33 existing checks passed, and
+  the new phase-boundary check passed after correcting its fixture. Stage 14
+  CI Chromium/full soak/static green; three WebKit mobile UI cases failed.
+- **NEXT:** Publish Stage 15; remove history-text-driven AI experience repair
+  by recording production directly at the producing command site.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

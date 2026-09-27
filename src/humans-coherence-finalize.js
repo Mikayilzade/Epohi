@@ -407,11 +407,8 @@
   }
 
   function decorate() {
-    const gs = ensureState(state());
+    const gs = state();
     if (!gs) return;
-    processAiExperience(gs);
-    syncForeignBuildingKnowledge(gs);
-    invalidateImpossibleTrades(gs);
     restorePendingCapture(gs);
     patchCaptureCapacity(gs);
     patchPopulationRequirement(gs);
