@@ -124,6 +124,12 @@
   const AI_COLORS = ["#d75a5a", "#6f8fe8", "#d99a35", "#ba65d9"];
   const AI_LIMITS = { maxCities: 3, maxScouts: 2, maxWorkers: 3, maxUnits: 10, maxActionsPerTurn: 18, minWarTurn: 20, logLimit: 180 };
   const AI_WEIGHTS = { defenseThreat: 90, exploreUnknown: 42, improveNeed: 36, settleRoom: 48, campExpedition: 38, prepareWar: 30, attackAdvantage: 58 };
+  const AI_GOAL_RULES = {
+    unknownMapFraction: 0.28, attackPowerRatio: 1.35,
+    minimumSettlementGold: 10, decisionHistoryLimit: 12,
+    knownMapExplore: 5, capitalDevelopment: 24, noWorkerImprovement: 16,
+    peacefulDefense: 12, noRoomSettlement: 8
+  };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
     direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
@@ -176,6 +182,7 @@
     AI_COLORS,
     AI_LIMITS,
     AI_WEIGHTS,
+    AI_GOAL_RULES,
     COMBAT_BALANCE,
     TECHS
   };

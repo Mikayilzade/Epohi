@@ -78,7 +78,6 @@
     AI_NAMES,
     AI_COLORS,
     AI_LIMITS,
-    AI_WEIGHTS,
     TECHS
   } = window.EpohiData;
 
@@ -1348,7 +1347,10 @@
   function rivalCityAt(x,y){ if (!state) return null; for(const civ of (state.rivals||[])){ const c=(civ.cities||[]).find(function(city){return city.x===x&&city.y===y&&city.hp>0;}); if(c) return {civ:civ,city:c}; } return null; }
   function playerSees(x,y){ return currentPlayerSees(state,x,y); }
   function checkCivilizationDiscovery(){ (state.rivals||[]).forEach(function(civ){ if(civ.defeated||civ.met) return; const seen=(civ.cities||[]).some(function(c){return playerSees(c.x,c.y);})||(civ.units||[]).some(function(u){return playerSees(u.x,u.y);}); if(seen){ civ.met=true; civ.relation="neutral"; logEvent(state,"civilization-discovered","обнаружено государство: "+civ.name,null,{actorType:"civilization",actorId:civ.civilizationId}); alert("Обнаружено государство: "+civ.name+"\nСтатус: нейтральные отношения"+(civ.cities.some(c=>playerSees(c.x,c.y))?"\nСтолица видна на карте":"")); } }); }
-  function chooseAiGoal(civ){ const visibleEnemies=state.units.filter(u=>civ.visible&&civ.visible[tileKey(u.x,u.y)]); const unknown=Object.keys(civ.explored||{}).length < mapSizeCells()*mapSizeCells()*.28; const camps=[]; state.map.forEach((r,y)=>r.forEach((t,x)=>{ if(civKnowsCamp(civ,x,y)) camps.push({x,y}); })); let scores={"исследование":unknown?AI_WEIGHTS.exploreUnknown:5,"развитие столицы":24,"улучшение ресурсов":(civ.units||[]).some(u=>u.type==='worker')?AI_WEIGHTS.improveNeed:16,"защита":visibleEnemies.length?AI_WEIGHTS.defenseThreat:12,"основание нового поселения":(civ.cities.length<AI_LIMITS.maxCities&&civ.resources.gold>=10)?AI_WEIGHTS.settleRoom:8,"уничтожение варварского лагеря":camps.length?AI_WEIGHTS.campExpedition:0,"подготовка к войне":state.turn>=AI_LIMITS.minWarTurn?AI_WEIGHTS.prepareWar:0,"нападение на игрока":0}; const aiPower=civ.units.reduce((s,u)=>s+(UNIT_DEFS[u.type].attack||0),0), playerPower=state.units.reduce((s,u)=>s+(UNIT_DEFS[u.type].attack||0),0); if(state.turn>=AI_LIMITS.minWarTurn && aiPower>playerPower*1.35) scores["нападение на игрока"]=AI_WEIGHTS.attackAdvantage; if(window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.adjustGoalScores(civ,scores); const goal=Object.keys(scores).sort((a,b)=>scores[b]-scores[a])[0]; civ.strategicGoal=goal; civ.currentThreats=visibleEnemies.map(u=>u.id); civ.decisionHistory.unshift("Ход "+state.turn+": цель — "+goal); civ.decisionHistory=civ.decisionHistory.slice(0,12); return goal; }
+  function chooseAiGoal(civ) { return window.EpohiAiStrategy.chooseGoal(state, civ, {
+    mapSize: mapSizeCells(), knowsCamp: civKnowsCamp,
+    adjustScores: window.EpohiLivingCivilizations && window.EpohiLivingCivilizations.adjustGoalScores
+  }); }
   function canRivalEnter(civ,x,y){ return state.map[y] && state.map[y][x] && passableTile(state.map[y][x]) && !rivalUnitAt(x,y) && !rivalCityAt(x,y) && !barbarianAt(x,y) && !campAt(x,y) && !(civ.relation!=="war"&&unitsAt(x,y).length); }
   function reachableRivalStep(unit, target, civ) {
     const start = tileKey(unit.x, unit.y), queue = [{ x:unit.x, y:unit.y }], seen = {}; seen[start] = true;

@@ -1,19 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_22_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_23_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 21 is published at `8d77a81`. Stage 22 is locally
+- **STATUS:** Stage 22 is published at `af37772`. Stage 23 is locally
   validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Shared combat calculation module uses explicit balance profiles
-  for direct, guard-order and route combat. Removed the three formula bodies
-  from their UI/command modules without changing random-draw order.
-- **EVIDENCE:** Tier 3 local desktop Chrome combat/stability/autonomy/pathing
-  23/23; deterministic profile check and static checks pass. Stage 20 full CI
-  green; Stage 21 CI pending.
-- **NEXT:** Publish Stage 22; extract combat application and rival AI from
-  `app.js`, audit End Turn observers/rendering and compare performance.
+- **DONE:** Rival strategic goal selection lives in `ai-strategy.js`, with
+  named AI thresholds in balance data and an adapter in `app.js`.
+- **EVIDENCE:** Tier 3 local desktop Chrome strategy/camp/diplomacy/combat
+  35/35; static checks pass. Stage 22 CI pending.
+- **NEXT:** Publish Stage 23; extract more rival/combat application rules and
+  audit End Turn observers/rendering/performance.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

@@ -417,3 +417,17 @@ listeners, so the completion criteria above remain open.
   CI pending publication.
 - Remaining: extract combat application and rival AI from `app.js`, resolve
   presentation coupling in pathing, and remove redundant End Turn refreshes.
+
+### Stage 23: rival strategic goal boundary
+
+- `src/ai-strategy.js` selects and records each rival's strategic goal from
+  state, map knowledge, unit strength and an optional personality adjustment.
+  The long goal-scoring body and its hidden thresholds left `app.js`;
+  `src/data.js` now holds the named AI goal balance values.
+- The app supplies only its existing camp-knowledge predicate, map size and
+  personality adapter. Goal ordering, tie resolution, threat recording and
+  decision history remain unchanged.
+- Tier 3 local desktop Chrome strategy/camp/diplomacy/combat 35/35 plus static
+  checks pass. CI pending publication.
+- Remaining: move rival action selection and combat application out of
+  `app.js`; shrink the End Turn presentation fan-out and compare timings.
