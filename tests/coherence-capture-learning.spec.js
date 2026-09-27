@@ -119,6 +119,28 @@ test('AI battle transfers a defeated non-capital city directly', async ({ page }
   expect(result.owner).toBe(result.attackerId);
 });
 
+test('resolving one capture exposes the next fallen city without an observer', async ({ page }) => {
+  await openGame(page, 1);
+  const ids = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    const civ = state.rivals[0];
+    const first = civ.cities[0];
+    const second = { ...first, id:'next-fallen-city', name:'Next fallen city',
+      capital:false, hp:0, buildings:[] };
+    civ.cities.push(second);
+    window.EpohiCaptureState.queueCapture(state, civ, first);
+    return { first:first.id, second:second.id };
+  });
+  await page.locator(`[data-capture-choice="annex"][data-city-id="${ids.first}"]`).click();
+  await expect(page.locator(`[data-capture-choice="annex"][data-city-id="${ids.second}"]`)).toBeVisible();
+  const state = await page.evaluate(() => {
+    const gs = window.__epohiDebug().state;
+    return { pending:gs.pendingCityCaptures.map(item => item.cityId),
+      secondPending:gs.rivals[0].cities.find(city => city.id === 'next-fallen-city').capturePending };
+  });
+  expect(state).toEqual({ pending:[ids.second], secondPending:true });
+});
+
 test('captured research insight is applied before the new turn is saved', async ({ page }) => {
   await openGame(page, 0);
   await page.evaluate(() => {

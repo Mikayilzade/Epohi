@@ -10,7 +10,6 @@
   let originalProcessOrders = null;
   let originalLivingProcessTurn = null;
   let captureCounter = 0;
-  let queued = false;
 
   function debug(){ return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null; }
   function state(){ const value=debug(); return value&&value.state?value.state:null; }
@@ -214,7 +213,7 @@
       if(!gs||!civ||!city){modal.classList.remove("show");return;}
       const choice=button.dataset.captureChoice; if(choice==="annex")annex(gs,civ,city); else if(choice==="plunder")plunder(gs,civ,city); else if(choice==="liberate")liberate(gs,civ,city);
       gs.pendingCityCaptures=(gs.pendingCityCaptures||[]).filter(function(item){return String(item.cityId)!==String(city.id);}); modal.classList.remove("show");
-      const value=debug(); if(value&&typeof value.render==="function")value.render(); schedule();
+      const value=debug(); if(value&&typeof value.render==="function")value.render(); checkFallen(gs);
     }); return modal;
   }
 
@@ -316,14 +315,13 @@
   function handleResearchClick(event){if(!event.target.closest||!event.target.closest("[data-research]"))return;window.setTimeout(function(){const gs=ensureState(state());if(gs&&applyInsight(gs)){const value=debug();if(value&&typeof value.render==="function")value.render();}},0);}
 
   function processTurn(gs){gs=ensureState(gs);if(!gs)return false;const applied=applyInsight(gs);return checkFallen(gs)||applied;}
-  function schedule(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;const gs=ensureState(state());if(gs)checkFallen(gs);});}
 
   function installStyles(){
     if(document.getElementById("captureStateStyles"))return; const style=document.createElement("style"); style.id="captureStateStyles";
     style.textContent='.capture-choice-modal{z-index:185!important;align-items:center!important;justify-content:center!important;padding:14px!important}.capture-choice-modal .sheet{width:min(560px,calc(100vw - 28px))!important;max-height:min(84dvh,720px)!important;margin:auto!important;border-radius:18px!important}.capture-card{padding:8px 2px 14px}.capture-card h3{font-size:20px;margin:6px 0}.capture-card>.wide-btn{margin-top:8px;text-align:left}.capture-card>.wide-btn small{display:block;margin-top:4px;font-size:9px;line-height:1.3;opacity:.8}@media(max-width:520px){.capture-choice-modal{padding:10px!important}.capture-card h3{font-size:18px}}'; document.head.appendChild(style);
   }
 
-  function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);schedule();}
+  function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);}
 
   window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,captureAiCity:captureAiCity,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations,processTurn:processTurn};
   wrapFactionDefeat(); wrapPathing(); wrapLiving();

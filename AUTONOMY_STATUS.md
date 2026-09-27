@@ -1,19 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_19_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_20_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 18 is published at `94287da`. Stage 19 is locally validated
+- **STATUS:** Stage 19 is published at `f030578`. Stage 20 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** City income is calculated in `economy.js` from `CITY_ECONOMY` balance
-  data. Fixed late preset mounting that reset chosen scenario controls.
-- **EVIDENCE:** Tier 3 local desktop Chrome 31/31 related checks, scenario and
-  autosave race checks 5/5 each. Stage 18 CI had mobile camera cases plus a
-  WebKit autosave-test race; no desktop gameplay failure. End Turn sample
-  413/446/232 ms versus Stage 16 225/410/183 ms, both noisy.
-- **NEXT:** Publish Stage 19; continue extracting world/AI/combat rules and
-  eliminate remaining UI-driven gameplay mutations.
+- **DONE:** Capture choices explicitly queue the next fallen city. Removed
+  the animation-frame gameplay callback from capture-state.
+- **EVIDENCE:** Tier 3 local desktop Chrome capture/combat/diplomacy 42/42;
+  new two-city chain and static checks pass. Stage 19 CI pending.
+- **NEXT:** Publish Stage 20; centralize state normalization and continue
+  extracting combat/AI rules from `app.js`.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

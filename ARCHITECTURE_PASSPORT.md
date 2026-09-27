@@ -372,3 +372,16 @@ listeners, so the completion criteria above remain open.
   413/446/232 ms versus Stage 16's 225/410/183 ms and original baseline
   751/535/437 ms. One run per stage varies substantially; no performance
   gain or regression is claimed from these numbers.
+
+### Stage 20: capture choice advances synchronously
+
+- Resolving a captured city now checks for the next fallen city in the same
+  explicit choice handler. Removed the `requestAnimationFrame` gameplay pass
+  from `humans-capture-state.js`; no animation frame decides whether another
+  capture becomes pending. Existing pathing and End Turn calls still invoke
+  `checkFallen` directly at their command boundaries.
+- Tier 3 local desktop Chrome capture/combat/diplomacy checks 42/42, including
+  a new two-city capture chain that verifies the second decision is pending
+  after resolving the first. Syntax and diff checks passed. CI pending push.
+- Further work: move state normalization out of UI decorators and remove
+  domain rules still embedded in `app.js`, especially combat and rival AI.
