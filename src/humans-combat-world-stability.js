@@ -103,7 +103,7 @@
   }
 
   function render() {
-    const gs = migrate(state()); if (!gs) return; ensureUi();
+    const gs = state(); if (!gs) return; ensureUi();
     const pending = gs.urgentDecisions.find(function (item) { return item.status === "pending"; });
     const indicator = document.getElementById("urgentDecisionIndicator"); indicator.classList.toggle("show", Boolean(pending));
     if (pending) {

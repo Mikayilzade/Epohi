@@ -1,18 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_37_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_38_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 36 published at `38ec6bd`. Stage 37 locally validated
+- **STATUS:** Stage 37 published at `987ca4d`. Stage 38 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Proposal validity and cancellation are state rules, applied on
-  load, at End Turn and on war declaration, rather than during UI render.
-- **EVIDENCE:** Tier 3 local desktop Chrome 46/46, including render purity
-  and next-turn cancellation. Stage 36 CI static and soak passed; Chromium
-  and WebKit mobile camera assertions failed. Stage 31 is latest full green.
-- **NEXT:** Publish Stage 37; continue removing state mutation from UI and
-  consolidating event ownership before the final gate.
+- **DONE:** Stability migration runs on game creation/load; panel rendering
+  no longer scans `eventLog` to migrate state.
+- **EVIDENCE:** Tier 3 local desktop Chrome 24/24. Two panel renders make
+  zero full migration scans instead of two; no timing gain claimed. Stage 37
+  CI was still in progress. Stage 31 remains latest full green CI.
+- **NEXT:** Publish Stage 38; continue observer/event ownership cleanup and
+  finish the architecture criteria before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

@@ -700,3 +700,20 @@ listeners, so the completion criteria above remain open.
   camera shards failed separate fit/centering assertions.
 - Remaining: other state writes in presentation (`migrate`, modal receipt
   markers), event ownership and broad observer consolidation, then final gate.
+
+### Stage 38: stability migration at state initialization
+
+- `initializeGameSystems()` invokes the stability domain migration once on
+  new and loaded states. `EpohiCombatWorldStability.render()` now reads that
+  normalized state instead of running migration and walking `eventLog` on
+  every panel refresh. The explicit migration API remains for old snapshots
+  and direct legacy import tests.
+- Tier 3 local desktop Chrome state-schema, save and combat/stability checks
+  passed 24/24. A regression confirms new games already have stability
+  version, city capacity and urgent-decision shape, while two explicit UI
+  renders make zero `eventLog.forEach` passes. The previous render called
+  migration once per invocation, so it made two full passes in that setup.
+  Syntax/diff checks pass; no wall-time gain is claimed from this small scan.
+- Stage 37 CI was still in progress at this checkpoint.
+- Remaining: clarify persisted presentation receipts versus gameplay state,
+  consolidate further observer/render paths and complete the final gate.

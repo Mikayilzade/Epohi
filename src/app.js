@@ -422,6 +422,7 @@
 
   function initializeGameSystems(gameState) {
     if (!gameState) return null;
+    if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.migrate(gameState);
     window.EpohiStabilityRules.cancelInvalidProposals(gameState);
     if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
     if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);

@@ -23,3 +23,30 @@ test('invalid diplomacy is cancelled by turn rules, not panel rendering', async 
   expect(await page.evaluate(() => window.__epohiDebug().state.diplomaticProposals[0].status))
     .toBe('cancelled');
 });
+
+test('stability schema is initialized before UI render and not rescanned by it', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const result = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    const original = state.eventLog.forEach;
+    let scans = 0;
+    state.eventLog.forEach = function (...args) {
+      scans += 1;
+      return original.apply(this, args);
+    };
+    window.EpohiCombatWorldStability.render();
+    window.EpohiCombatWorldStability.render();
+    delete state.eventLog.forEach;
+    return {
+      scans,
+      version:state.combatWorldStabilityVersion,
+      capacity:state.cityCapacity,
+      decisions:Array.isArray(state.urgentDecisions)
+    };
+  });
+  expect(result.scans).toBe(0);
+  expect(result.version).toBe(1);
+  expect(result.capacity).toBeGreaterThanOrEqual(4);
+  expect(result.decisions).toBe(true);
+});
