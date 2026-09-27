@@ -1,20 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_30_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_31_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 29 published at `264163b`. Stage 30 locally validated
+- **STATUS:** Stage 30 published at `4f9fe26`. Stage 31 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** `ai-actions.js` selects rival intents in the previous priority;
-  `processRivals` executes them with the shared budget. Old selection code
-  was removed from `app.js`.
-- **EVIDENCE:** Tier 3 local desktop Chrome 36/36. Deterministic three-turn
-  before/after state byte counts match exactly; timings are noisy with no
-  performance claim. Stage 29 CI desktop 3/3 and all soak green; only WebKit
-  mobile large-map camera failed.
-- **NEXT:** Publish Stage 30; then isolate remaining turn/barbarian rules and
-  consolidate post-turn UI invalidation.
+- **DONE:** Workforce UI now responds to explicit top/city/wiki render
+  signals. Its five-surface DOM observer is removed.
+- **EVIDENCE:** Tier 3 local desktop Chrome browser/world/workforce 20/20;
+  deterministic three-turn before/after state sizes match, with no speed
+  claim from noisy timings. Stage 30 CI fully green across desktop Chromium,
+  WebKit and all soak matrices.
+- **NEXT:** Publish Stage 31; continue removing other redundant observers
+  and broad redraws, and isolate remaining world/turn rules.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

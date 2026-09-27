@@ -13,7 +13,6 @@
 
   let uiSyncQueued = false;
   let uiSyncRunning = false;
-  let observer = null;
 
   function debug() {
     return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
@@ -420,20 +419,7 @@
       scheduleUiSync();
     });
 
-    if (window.MutationObserver && document.body) {
-      observer = new MutationObserver(scheduleUiSync);
-      [
-        { id: "gameApp", options: { attributes: true, attributeFilter: ["class"] } },
-        { id: "cityContent", options: { childList: true } },
-        { id: "wikiContent", options: { childList: true } },
-        { id: "turnValue", options: { childList: true } },
-        { id: "resourceScope", options: { childList: true } }
-      ].forEach(function (entry) {
-        const node = document.getElementById(entry.id);
-        if (!node) return;
-        observer.observe(node, entry.options);
-      });
-    }
+    document.addEventListener("epohi:ui-rendered", scheduleUiSync);
     scheduleUiSync();
   }
 

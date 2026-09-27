@@ -28,6 +28,14 @@ async function openCapital(page) {
 }
 
 test.describe('Население и рабочая сила', () => {
+  test('workforce wiki decoration follows the explicit wiki render', async ({ page }) => {
+    const problems = await openFreshGame(page);
+    await page.locator('#menuBtn').click();
+    await page.locator('#wikiBtn').click();
+    await expect(page.locator('#wikiContent [data-workforce-wiki]')).toHaveCount(1);
+    await expectNoConsoleProblems(problems);
+  });
+
   test('UI refresh does not assign workers without a state command', async ({ page }) => {
     await openFreshGame(page);
     const result = await page.evaluate(async () => {

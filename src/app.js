@@ -854,6 +854,7 @@
     prodIncome.textContent = "+" + (resourceView.type === "city" ? cityIncomeValue.production : income.production) + (resourceView.type === "city" && city && city.queue ? " в очередь" : " за ход");
     goldIncome.textContent = "+" + income.gold + " за ход";
     scienceIncome.textContent = "+" + income.science + " за ход";
+    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
   function actionButton(label, className, handler, disabled, actionKey) {
@@ -1596,6 +1597,7 @@
       '<div class="inline-note">Форпост пока не является полноценным вторым городом: у него нет собственного населения и очереди. Варвары — первая нейтральная угроза; дипломатии и дорог пока нет.</div>';
 
     openModal("wikiModal");
+    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
 
@@ -2205,6 +2207,7 @@
     cityContent.querySelectorAll('[data-queue-type]').forEach(b=>b.onclick=function(){ queueProject(b.dataset.queueType,b.dataset.queueId); });
     const rush=document.getElementById('rushQueueBtn'); if(rush)rush.onclick=rushQueue; const cancel=document.getElementById('cancelQueueBtn'); if(cancel)cancel.onclick=cancelQueue;
     openModal('cityModal');
+    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
   resourcePrev.addEventListener("click", function(){ cycleResourceView(-1); });

@@ -556,3 +556,21 @@ listeners, so the completion criteria above remain open.
   the only failing shard and is being tracked separately.
 - Remaining: turn executor and barbarian rules in `app.js`, broad map redraw
   and independent UI observers, final passport/gate.
+
+### Stage 31: workforce presentation uses explicit render signals
+
+- `renderTop()`, `openCity()` and `openWiki()` emit `epohi:ui-rendered` after
+  rebuilding their UI. Workforce presentation listens to that signal and
+  coalesces updates on the next frame. Its prior MutationObserver watched
+  five unrelated DOM surfaces; that observer is removed. Gameplay state is
+  still changed only by explicit workforce commands.
+- Tier 3 local desktop Chrome browser/living-world/workforce 19/19, plus a
+  new wiki-decoration regression 1/1. Syntax/diff checks pass. A seeded
+  one-rival three-turn comparison routed both previous scripts from
+  `4f9fe26`: serialized state lengths matched exactly (50,596 / 51,029 /
+  51,725 bytes). Before timings were 706/189/185 ms; after 207/234/232 ms.
+  These short browser samples are noisy and do not support a speed claim.
+- Stage 30 CI is entirely green: static, all Chromium and WebKit full shards,
+  and every soak matrix. This is the current broad integration evidence.
+- Remaining: other independent UI observers and repeated map/panel redraws,
+  further world/turn separation and final architecture completion gate.
