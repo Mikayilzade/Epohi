@@ -1,20 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_24_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_25_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 23 is published at `2b0db46`. Stage 24 is locally
+- **STATUS:** Stage 24 is published at `b66304f`. Stage 25 is locally
   validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Pre-turn autonomy, route and workforce actions moved from click
-  capture listeners into `simulateTurn()`. Scout draining merged into its owner;
-  obsolete `humans-autonomy-fix.js` removed.
-- **EVIDENCE:** Tier 3 local desktop Chrome 37/37 including cancellation guard;
-  syntax/diff checks pass. Three-turn sample 423/296/167 ms, no gain claim.
-  Stage 23 CI desktop Chromium and soak green; one unrelated mobile WebKit
-  camera case failed.
-- **NEXT:** Publish Stage 24; reduce remaining End Turn UI observer fan-out and
-  extract rival/combat application rules from `app.js`.
+- **DONE:** Diplomatic UI refresh no longer rebuilds event-log history.
+  Chronicle sync runs explicitly at the turn boundary before autosave and at
+  event/open commands; state entry initializes diplomacy flow fields.
+- **EVIDENCE:** Tier 3 local desktop Chrome diplomacy/chronicle/save 18/18;
+  syntax/diff checks pass. Stage 24 CI pending.
+- **NEXT:** Publish Stage 25; audit remaining UI state repair/observer fan-out
+  and continue extracting rival/combat application from `app.js`.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

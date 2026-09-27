@@ -127,9 +127,11 @@
     }, 1800);
   }
 
-  function syncEvents(gs) {
-    ensureState(gs);
-    syncChronicle(gs);
+  function syncEvents(gs, options) {
+    if (!(options && options.presentationOnly)) {
+      ensureState(gs);
+      syncChronicle(gs);
+    }
     const oldPanel = document.getElementById("feedbackWorldEvents");
     if (oldPanel) {
       oldPanel.classList.remove("show");
@@ -428,11 +430,10 @@
       uiQueued = false;
       const gs = state();
       if (!gs) return;
-      ensureState(gs);
       decorateDiplomacy(gs);
       decorateProposals(gs);
       patchWorldEventEntry();
-      syncEvents(gs);
+      syncEvents(gs, { presentationOnly:true });
     });
   }
 

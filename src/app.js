@@ -424,6 +424,7 @@
     if (!gameState) return null;
     if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
     if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);
+    if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.ensureState(gameState);
     return gameState;
   }
 
@@ -1407,6 +1408,7 @@
     if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
+    if (window.EpohiDiplomacyEventFlow) window.EpohiDiplomacyEventFlow.syncChronicle(state);
     const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
     return { income:income, completedProject:completedProject, completedTech:completedTech,
       rivalActions:rivalActions, barbarianText:barbarianText, outcomeResult:outcomeResult };

@@ -452,3 +452,18 @@ listeners, so the completion criteria above remain open.
 - Stage 23 CI desktop Chromium and all soak jobs passed; one WebKit full shard
   failed the mobile camera viewport test (`camera-2.spec.js`), outside this AI
   goal change. Mobile remains nonblocking under `AGENT_TESTING_POLICY.md`.
+
+### Stage 25: chronicle assembly leaves diplomatic redraws
+
+- The diplomacy presentation scheduler no longer repairs state or walks the
+  event log to rebuild history on every refresh. New/load state initializes
+  its diplomacy event-flow fields at the state boundary.
+- `simulateTurn()` synchronizes the chronicle once after all game phases and
+  before autosave. Explicit event commands and opening the chronicle still
+  synchronize immediately; direct `syncEvents()` calls retain their previous
+  contract. UI refresh only decorates panels and shows the latest toast.
+- Tier 3 local desktop Chrome diplomacy/chronicle/save checks 18/18,
+  including a refresh-versus-turn boundary regression; syntax and diff checks
+  pass. CI pending publication.
+- Remaining: eliminate remaining command/observer state repair, split rival
+  action/combat application from `app.js`, and consolidate UI invalidation.

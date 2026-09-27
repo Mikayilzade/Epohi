@@ -25,6 +25,24 @@ async function openGame(page, rivals = 2) {
 }
 
 test.describe('Дипломатия, выбор объектов и события', () => {
+  test('presentation refresh leaves chronicle assembly for the turn boundary', async ({ page }) => {
+    await openGame(page, 0);
+    await page.waitForTimeout(150);
+    const eventText = 'Событие явной фазы летописи';
+    const afterRefresh = await page.evaluate(async text => {
+      const gs = window.__epohiDebug().state;
+      gs.eventLog.unshift({ eventId:'chronicle-turn-boundary', turn:gs.turn,
+        eventType:'city-growth', text });
+      window.EpohiDiplomacyEventFlow.refresh();
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return gs.history.some(line => line.includes(text));
+    }, eventText);
+    expect(afterRefresh).toBe(false);
+    await page.locator('#endTurnBtn').click();
+    await expect(page.locator('#turnValue')).toHaveText('2');
+    expect(await page.evaluate(text => window.__epohiDebug().state.history.some(line => line.includes(text)), eventText)).toBe(true);
+  });
+
   test('категория сначала выбирает готовый отряд и сбрасывает при переходе к городу', async ({ page }) => {
     const problems = await openGame(page, 0);
 
