@@ -1,19 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_28_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_29_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 27 published at `62236db`. Stage 28 locally validated
+- **STATUS:** Stage 28 published at `836136b`. Stage 29 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Rival production rules moved from `app.js` to `ai-production.js`;
-  founding a city now initializes workforce before rendering; service worker
-  cache list matches current scripts and omits the deleted legacy module.
-- **EVIDENCE:** Tier 3 local desktop Chrome 33/33 rival/coherence and 9/9
-  founding/workforce/production. Stage 27 CI Chromium exposed the founding
-  page error fixed in Stage 28; WebKit camera remains flaky.
-- **NEXT:** Publish Stage 28, verify CI, then extract rival action/combat
-  application and consolidate remaining UI refreshes.
+- **DONE:** Rival attacks on rival factions, player units and camps now use
+  `rival-combat.js`; the replaced damage/death code left `app.js`.
+- **EVIDENCE:** Tier 3 local desktop Chrome barbarian/capture/combat/living
+  civilization 56/56. Stage 28 CI desktop Chromium 3/3 and all soak jobs
+  green; only the WebKit mobile large-map camera viewport test failed.
+- **NEXT:** Publish Stage 29; extract rival action selection and remaining
+  barbarian combat, then consolidate UI refreshes.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

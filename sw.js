@@ -17,6 +17,7 @@ const APP_FILES = [
   "./src/humans-content.js",
   "./src/utils.js",
   "./src/ai-production.js",
+  "./src/rival-combat.js",
   "./src/storage.js",
   "./src/save-utils.js",
   "./src/production-experience.js",

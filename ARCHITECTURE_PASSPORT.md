@@ -520,3 +520,18 @@ listeners, so the completion criteria above remain open.
   `AGENT_TESTING_POLICY.md` while shared runtime failures are addressed.
 - Remaining: rival action/combat application in `app.js`, presentation
   observers, End Turn render invalidation and final integration gate.
+
+### Stage 29: rival combat application boundary
+
+- `src/rival-combat.js` applies rival attacks against rival units/cities,
+  player units and camps. The module receives state and collaborators;
+  `app.js` retains turn ordering, target choice, presentation event dispatch
+  and the capture/reward calls. The replaced damage and death branches were
+  removed from the coordinator. Existing random draws and damage profiles
+  remain in the same order. `AI_COMBAT_RULES` owns the former inline defaults.
+- Tier 3 local desktop Chrome barbarian/capture/combat/living civilization
+  tests 56/56, plus syntax/diff checks. Stage 28 CI passed all three desktop
+  Chromium shards and every soak matrix; the only failure was WebKit mobile
+  `camera-2.spec.js` large-map viewport, outside this combat change.
+- Next: isolate action selection and barbarian combat, then remove duplicate
+  presentation invalidation and complete final architecture review.

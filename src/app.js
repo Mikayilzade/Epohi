@@ -2148,14 +2148,12 @@
     resolveAiToAiCombat(civ,unit,war.enemy,war.target,'rival-battle',civ.name+' атакует '+war.enemy.name+'.');
   }
   function resolveAiToAiCombat(attacker,unit,enemy,target,eventType,text){
-    const baseDefense=target.type?(UNIT_DEFS[target.type].defense||0):18;
-    target.hp-=damageAmount(UNIT_DEFS[unit.type].attack||8,baseDefense+defenseBonus(target.x,target.y,baseDefense));
-    logEvent(state,eventType,text,{x:target.x,y:target.y},{actorType:'civilization',actorId:attacker.civilizationId,phase:'rivals'});
-    if(target.hp>0)return false;
-    target.hp=0;
-    if(target.type)enemy.units=enemy.units.filter(function(item){return item!==target;});
-    else window.EpohiCaptureState.captureAiCity(state,attacker,enemy,target);
-    return true;
+    return window.EpohiRivalCombat.resolveAiToAiCombat(state,attacker,unit,enemy,target,eventType,text,{
+      damageAmount:damageAmount,
+      defenseBonus:defenseBonus,
+      logEvent:logEvent,
+      captureAiCity:window.EpohiCaptureState.captureAiCity
+    });
   }
   function performAlliedWarAction(ally,enemy){
     const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.moves>0&&!item.acted&&item.type!=="worker"&&item.type!=="settler";});
@@ -2177,10 +2175,10 @@
         const war=rivalWarTarget(civ,u); if(war&&u.type!=='scout'&&!(home&&u.type==='warrior'&&warriors.length<=1&&war.distance>1)){if(!spend())return;if(war.distance<=1)attackRivalTarget(civ,u,war);else stepToward(u,war.target,civ);finish(u);return;}
         if(civ.relation==='war'&&u.type!=='scout'){
           const victim=state.units.find(function(target){return isAdjacent(u.x,u.y,target.x,target.y);});
-          if(victim){if(!spend())return;victim.hp-=damageAmount(UNIT_DEFS[u.type].attack||8,(UNIT_DEFS[victim.type].defense||0)+defenseBonus(victim.x,victim.y,UNIT_DEFS[victim.type].defense||0));logEvent(state,'attack',civ.name+' атакует юнит Ардены.',{x:victim.x,y:victim.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'});if(window.EpohiLivingCivilizations)window.EpohiLivingCivilizations.recordAttack(state,civ,'enemy');if(victim.hp<=0)killUnit(victim);finish(u);return;}
+          if(victim){if(!spend())return;window.EpohiRivalCombat.attackPlayerUnit(state,civ,u,victim,{damageAmount:damageAmount,defenseBonus:defenseBonus,logEvent:logEvent,recordAttack:window.EpohiLivingCivilizations&&window.EpohiLivingCivilizations.recordAttack,killUnit:killUnit});finish(u);return;}
         }
         const adjCamp=neighborsOf(u.x,u.y,mapSizeCells()).find(function(p){return campAt(p.x,p.y);});
-        if(adjCamp&&u.type!=='scout'){if(!spend())return;const camp=campAt(adjCamp.x,adjCamp.y);camp.hp-=damageAmount(UNIT_DEFS[u.type].attack||8,12);if(camp.hp<=0)campReward(civ,u,adjCamp.x,adjCamp.y);finish(u);return;}
+        if(adjCamp&&u.type!=='scout'){if(!spend())return;const camp=campAt(adjCamp.x,adjCamp.y);if(window.EpohiRivalCombat.attackCamp(u,camp,{damageAmount:damageAmount}))campReward(civ,u,adjCamp.x,adjCamp.y);finish(u);return;}
         const adjacentBarbarian=state.barbarians.some(function(item){return isAdjacent(u.x,u.y,item.x,item.y);});
         if(adjacentBarbarian&&u.type!=='scout'){if(!spend())return;aiAttackBarbarian(civ,u);finish(u);return;}
         if(home&&u.type==='warrior'&&warriors.length<=1){finish(u);return;}
