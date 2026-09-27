@@ -268,7 +268,8 @@
     create.addEventListener("click", function () {
       CORE.armScenario(presetFromControls(select.value));
     }, true);
-    apply();
+    select.value = presetFromControls(select.value);
+    description.textContent = (DATA.scenarios[select.value] || DATA.scenarios.balanced).description;
   }
 
   function schedule() {

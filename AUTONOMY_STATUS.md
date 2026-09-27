@@ -1,17 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_18_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_19_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 17 is published at `8504540`. Stage 18 is locally validated
+- **STATUS:** Stage 18 is published at `94287da`. Stage 19 is locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** End Turn simulation is a single ordered operation; browser UI and
-  persistence are outside it. A failed calculation no longer requests a save.
-- **EVIDENCE:** Tier 3 local desktop Chrome neighboring checks 34/34 plus
-  corrected turn suite 6/6; static checks green. Stage 17 CI pending.
-- **NEXT:** Publish Stage 18; extract concrete gameplay rules from `app.js`
-  into state/data modules and remove remaining UI-driven mutations.
+- **DONE:** City income is calculated in `economy.js` from `CITY_ECONOMY` balance
+  data. Fixed late preset mounting that reset chosen scenario controls.
+- **EVIDENCE:** Tier 3 local desktop Chrome 31/31 related checks, scenario and
+  autosave race checks 5/5 each. Stage 18 CI had mobile camera cases plus a
+  WebKit autosave-test race; no desktop gameplay failure. End Turn sample
+  413/446/232 ms versus Stage 16 225/410/183 ms, both noisy.
+- **NEXT:** Publish Stage 19; continue extracting world/AI/combat rules and
+  eliminate remaining UI-driven gameplay mutations.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

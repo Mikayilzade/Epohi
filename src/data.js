@@ -106,6 +106,11 @@
   const BARBARIAN = { campHealth: 140, raiderHealth: 75, raiderAttack: 20, raiderDefense: 10, maxRaiders: 9, graceTurns: 12, spawnMin: 8, spawnMax: 12 };
   const BARBARIAN_ACTIVITY = { low:{label:"низкая", camps:.65, grace:16, min:11, max:15, limit:6}, normal:{label:"обычная", camps:1, grace:12, min:8, max:12, limit:9}, high:{label:"высокая", camps:1.35, grace:8, min:6, max:9, limit:14}, off:{label:"отключены", camps:0, grace:999, min:99, max:99, limit:0} };
   const CITY_MIN_DISTANCE = 4;
+  const CITY_ECONOMY = {
+    baseFood: 2, foodPerTwoPopulation: 1, baseProduction: 2,
+    youngProductionPenalty: 1, baseGold: 1, baseScience: 2,
+    minimumProduction: 1, settlementYield: { food:1, production:1, gold:1 }
+  };
   const INTEREST_TYPES = {
     ruins: { name: "Древние руины", icon: "⌁" }, depot: { name: "Заброшенный склад", icon: "▣" }, grove: { name: "Священная роща", icon: "♧" },
     mine: { name: "Старая шахта", icon: "◇" }, caravan: { name: "Потерянный караван", icon: "⊙" }, cave: { name: "Пещера", icon: "△" },
@@ -156,6 +161,7 @@
     BARBARIAN,
     BARBARIAN_ACTIVITY,
     CITY_MIN_DISTANCE,
+    CITY_ECONOMY,
     INTEREST_TYPES,
     ARTIFACT_BONUSES,
     AI_NAMES,

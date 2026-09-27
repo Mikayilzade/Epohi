@@ -350,3 +350,25 @@ listeners, so the completion criteria above remain open.
 - `simulateTurn()` is still in the app closure and some domain adapters still
   access browser globals. The next steps are to move concrete rules into
   state/data modules and make their presentation effects explicit.
+
+### Stage 19: city economy rule and scenario form repair
+
+- `economy.js` now calculates player-city income from state and balance data;
+  `data.js` groups its base yields, young-city penalty, minimum production and
+  settlement yield under `CITY_ECONOMY`. `app.js` delegates through its existing
+  `cityIncome` API, so gameplay and UI read the same rule. Removed unused
+  `rivalIncome` code from `app.js`.
+- The new-game preset decorator used to reapply the default preset when it
+  mounted, sometimes replacing a player's already selected small map with a
+  normal map. Initial mount now reflects current controls; explicit preset
+  changes still apply values. The affected scenario test passed five repeated
+  runs after the fix, then the related economy/save suite passed 31/31.
+- A WebKit mobile CI failure at Stage 18 read autosave slot 1 before the
+  asynchronous new-turn write completed. Its test now waits for the turn-2
+  record before inspecting the decision. The focused test passed five repeated
+  local desktop runs. Stage 18 CI also failed known mobile camera cases; full
+  desktop Chromium shards 2/3 passed, shard 1 failed only a mobile camera case.
+- End Turn three-click small-map no-rival sample after this extraction:
+  413/446/232 ms versus Stage 16's 225/410/183 ms and original baseline
+  751/535/437 ms. One run per stage varies substantially; no performance
+  gain or regression is claimed from these numbers.

@@ -15,19 +15,42 @@
     return result;
   }
 
-  function calculateIncome(state, cities, cityIncome) {
+  function cityIncome(state, city, data) {
+    const balance = data.CITY_ECONOMY;
+    const income = {
+      food: balance.baseFood + Math.floor(city.population / 2) * balance.foodPerTwoPopulation,
+      production: balance.baseProduction - (city.youngUntil && state.turn <= city.youngUntil ? balance.youngProductionPenalty : 0),
+      gold: balance.baseGold,
+      science: balance.baseScience
+    };
+    addYield(income, data.TERRAIN[state.map[city.y][city.x].terrain].base);
+    (city.buildings || []).forEach(function (id) { addYield(income, data.BUILDINGS[id].yield); });
+    state.map.forEach(function (row) { row.forEach(function (tile) {
+      if (tile.owner !== (city.id || city.name) || !tile.improvement || tile.pillaged) return;
+      addYield(income, data.TERRAIN[tile.terrain].base);
+      addYield(income, data.IMPROVEMENTS[tile.improvement].yield);
+      if (tile.feature) addYield(income, data.FEATURES[tile.feature].bonus);
+    }); });
+    income.production = Math.max(balance.minimumProduction, income.production + (state.permanentBonuses.production || 0));
+    income.gold += state.permanentBonuses.gold || 0;
+    income.science += state.permanentBonuses.science || 0;
+    return income;
+  }
+
+  function calculateIncome(state, cities, cityIncomeForCity, data) {
     const total = { food: 0, production: 0, gold: 0, science: 0 };
     cities.forEach(function (city) {
-      addYield(total, cityIncome(city));
+      addYield(total, cityIncomeForCity(city));
     });
     state.settlements.forEach(function () {
-      addYield(total, { food: 1, production: 1, gold: 1 });
+      addYield(total, data.CITY_ECONOMY.settlementYield);
     });
     return total;
   }
 
   window.EpohiEconomy = {
     getTileYield,
+    cityIncome,
     calculateIncome
   };
 })();

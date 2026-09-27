@@ -120,9 +120,12 @@ test.describe('Combat, AI and world stability', () => {
       const campaigns = await window.EpohiStorage.getCampaigns(true);
       const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
       const latest = saves.find(save => save.saveId.endsWith('-autosave-1'));
-      const gs = latest && latest.gameState;
-      return gs && {
-        status: gs.urgentDecisions.find(item => item.id === 'expires-this-turn').status,
+      if (!latest || latest.turn !== 2) return null;
+      const gs = latest.gameState;
+      const decision = (gs.urgentDecisions || []).find(item => item.id === 'expires-this-turn');
+      if (!decision) return null;
+      return {
+        status: decision.status,
         event: gs.eventLog.some(item => item.eventType === 'urgent-decision-expired')
       };
     })).toEqual({ status:'expired', event:true });
