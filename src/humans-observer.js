@@ -143,18 +143,12 @@
   }
 
   function install() {
-    const turn = document.getElementById("turnValue");
     const menu = document.getElementById("menuModal");
 
-    // Deliberately no screenRoot/map/body/menuContent subtree observers here.
-    // A turn text change is a bounded semantic signal that async turn processing settled.
-    if (turn) {
-      new MutationObserver(function () {
-        runtimeStats.turnSignals += 1;
-        schedule("turn-changed");
-      }).observe(turn, { childList: true, subtree: true, characterData: true });
-      runtimeStats.narrowObservers += 1;
-    }
+    document.addEventListener("epohi:ui-rendered", function () {
+      runtimeStats.turnSignals += 1;
+      schedule("ui-rendered");
+    });
 
     // The menu's own show/hide class is the only DOM state needed to inject its control.
     if (menu) {

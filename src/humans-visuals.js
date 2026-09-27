@@ -188,12 +188,17 @@
     });
   }
 
+  let lastDecoratedTile = null;
+
   function decorate() {
     setBrand();
     const debug = typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null;
     const gs = debug && debug.state;
     const map = document.getElementById("map");
     if (!gs || !map) return;
+    // app.js replaces map tiles on render. A later UI flush need not scan the
+    // same tile tree again; position history also advances only on a new map.
+    if (map.firstElementChild && map.firstElementChild === lastDecoratedTile) return;
 
     const selectedId = typeof debug.getSelectedUnitId === "function" ? debug.getSelectedUnitId() : null;
     const tileSpan = 47;
@@ -269,6 +274,7 @@
 
     previousPositions.clear();
     currentPositions.forEach(function (position, id) { previousPositions.set(id, position); });
+    lastDecoratedTile = map.firstElementChild;
     document.body.classList.add("painted-world-ready");
   }
 

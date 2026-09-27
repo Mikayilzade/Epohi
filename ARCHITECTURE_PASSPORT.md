@@ -630,8 +630,34 @@ listeners, so the completion criteria above remain open.
   The only state difference was the wall-clock suffix in the test party name.
   End Turn samples were 465/198/259 ms before and 315/217/224 ms after;
   browser scheduling makes these insufficient to claim a speed change.
-- Stage 33 CI passed static, soak and five of six browser shards. One Chromium
-  mobile shard failed; the failure log needs focused diagnosis. The latest
-  full green integration run remains Stage 31.
+- Stage 33 CI passed static, soak and five of six browser shards. Chromium
+  mobile `camera-2.spec.js:261` failed a stored camera scale assertion (99
+  expected, 1.3 observed), outside the barbarian change. The latest full
+  green integration run remains Stage 31.
 - Remaining: consolidate UI turn invalidation, extract other gameplay bodies
   from the coordinator, and run the final architecture gate.
+
+### Stage 35: explicit render signal and visual map deduplication
+
+- `humans-observer.js` now listens to `epohi:ui-rendered`, already emitted by
+  `app.js`, instead of observing `turnValue` text mutations. It still observes
+  menu visibility for its menu control. `humans-visuals.js` records the first
+  tile of the decorated map tree and skips further full-map decoration until
+  `renderMap()` replaces that tree. Unit arrival history advances only when
+  the map changes.
+- A focused regression checks zero visual tile scans for two flushes on an
+  unchanged map and one scan after a fresh render. Routing the Stage 34 visual
+  script through the same check produced two scans on the unchanged map.
+  Local desktop Chrome art, runtime and mobile stability checks passed 11/11.
+  Two obsolete assertions that `openMapMode` did not exist were removed from
+  the Show Map test; the fog behavior assertion and separate open-map test
+  remain.
+- Seeded one-rival, three-turn comparison against Stage 34 preserved turns and
+  event order. Visual tile scans were 2/2/2 before and 1/1/1 after. End Turn
+  timings were 580/329/281 ms before and 409/275/298 ms after; short browser
+  samples do not establish a sustained speed gain.
+- Stage 34 CI passed static, all desktop Chromium shards and other browser
+  shards, but WebKit mobile `camera-2.spec.js:195` failed its short-viewport
+  centering assertion (6.5 px). Camera instability remains separately tracked.
+- Remaining: presentation observers beyond this owner, broad map rebuilding,
+  further game rule extraction and final integration gate.

@@ -86,15 +86,11 @@ test.describe('Визуальная демка и режим наблюдени�
     const before = await page.evaluate(() => {
       const state = window.__epohiDebug().state;
       return {
-        hiddenTiles: state.map.flat().filter(tile => !tile.revealed).length,
-        hasLegacyOpenMapState: Object.prototype.hasOwnProperty.call(state, 'openMapMode'),
-        hasLegacyOpenMapControl: Boolean(document.querySelector('#openMapMode'))
+        hiddenTiles: state.map.flat().filter(tile => !tile.revealed).length
       };
     });
 
     expect(before.hiddenTiles).toBeGreaterThan(0);
-    expect(before.hasLegacyOpenMapState).toBe(false);
-    expect(before.hasLegacyOpenMapControl).toBe(false);
 
     await page.locator('#showMapBtn').click();
     await page.waitForFunction(() => !document.querySelector('#map').classList.contains('camera-smooth'));

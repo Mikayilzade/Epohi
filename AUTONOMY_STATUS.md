@@ -1,20 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_34_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_35_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 33 published at `870fd5a`. Stage 34 locally validated
+- **STATUS:** Stage 34 published at `1e78d2d`. Stage 35 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Barbarian action application now lives in `barbarian-actions.js`;
-  the old action and movement bodies left `app.js`.
-- **EVIDENCE:** Tier 3 local desktop Chrome 32/32; seeded eight-barbarian
-  three-turn gameplay state and event order match the prior coordinator.
-  Timings are noisy with no speed claim. Stage 33 CI static, soak and five
-  browser shards passed; one Chromium mobile shard failed. Stage 31 remains
-  the latest full green CI.
-- **NEXT:** Publish Stage 34; diagnose the CI shard and consolidate End Turn
-  UI invalidation before the final gate.
+- **DONE:** The observer follows explicit UI render signals. The visual
+  decorator scans each rebuilt map tree once, rather than at every flush.
+- **EVIDENCE:** Tier 3 local desktop Chrome 11/11. Seeded three-turn event
+  order matches Stage 34; visual map scans fall from 2/2/2 to 1/1/1 per turn.
+  Timings are noisy with no speed claim. Stage 34 CI failed only the recurring
+  WebKit mobile camera viewport assertion; Stage 31 is latest full green.
+- **NEXT:** Publish Stage 35; continue removing duplicate presentation
+  invalidation and split remaining gameplay bodies from `app.js`.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
