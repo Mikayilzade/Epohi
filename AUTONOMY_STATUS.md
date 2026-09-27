@@ -1,19 +1,20 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_35_LOCAL_VALIDATED.
+Updated: 2026-09-27 UTC. State: ARCHITECTURE_STAGE_36_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 34 published at `1e78d2d`. Stage 35 locally validated
+- **STATUS:** Stage 35 published at `25eecf3`. Stage 36 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** The observer follows explicit UI render signals. The visual
-  decorator scans each rebuilt map tree once, rather than at every flush.
-- **EVIDENCE:** Tier 3 local desktop Chrome 11/11. Seeded three-turn event
-  order matches Stage 34; visual map scans fall from 2/2/2 to 1/1/1 per turn.
-  Timings are noisy with no speed claim. Stage 34 CI failed only the recurring
-  WebKit mobile camera viewport assertion; Stage 31 is latest full green.
-- **NEXT:** Publish Stage 35; continue removing duplicate presentation
-  invalidation and split remaining gameplay bodies from `app.js`.
+- **DONE:** Map presentation indexes actors once per render; attack-target
+  checks skip distant tiles before searching actors.
+- **EVIDENCE:** Tier 3 local desktop Chrome 32/32; seeded two-rival map HTML
+  matches Stage 35 after two End Turns. Large-map render samples changed from
+  8/6/6/6/5 to 7/5/5/4/4 ms, too short for a gain claim. Stage 35 CI static
+  and soak passed; mobile camera/pathing shards failed. Desktop pathing passed
+  locally. Stage 31 remains latest full green CI.
+- **NEXT:** Publish Stage 36; continue turn-rule extraction and presentation
+  consolidation, then complete the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

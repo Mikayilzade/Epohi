@@ -661,3 +661,24 @@ listeners, so the completion criteria above remain open.
   centering assertion (6.5 px). Camera instability remains separately tracked.
 - Remaining: presentation observers beyond this owner, broad map rebuilding,
   further game rule extraction and final integration gate.
+
+### Stage 36: one render-time lookup pass for map actors
+
+- `app.js` builds temporary tile indexes for player cities, settlements,
+  player units, rival cities/units and barbarians before constructing map DOM.
+  It preserves first-match ordering and stacked player units. The previous
+  render walked these actor arrays for every tile. The selected unit is read
+  once. `canAttack()` now rejects distant and ineligible tiles before looking
+  for targets; attack behavior and target precedence are unchanged.
+- Local desktop Chrome browser, combat and visual coverage passed 32/32.
+  A seeded two-rival comparison against `25eecf3` found identical decorated
+  map HTML at creation and after two End Turns, with matching turn numbers and
+  event types. On a large three-rival map, five explicit render samples were
+  8/6/6/6/5 ms before and 7/5/5/4/4 ms after. The difference is small and
+  the samples are too short to claim a sustained gain.
+- Stage 35 CI passed static and all soak jobs. Mobile camera assertions failed
+  in Chromium and WebKit; WebKit mobile pathing explicit invalidation timed out.
+  That pathing scenario passed in local desktop Chrome. Mobile failures remain
+  open under the PC-first policy, and no full-green result is claimed.
+- Remaining: consolidate other presentation observers, split further turn
+  rules from the coordinator, and complete the final gate.

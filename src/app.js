@@ -666,7 +666,7 @@
   function barbarianAt(x, y) { return (state.barbarians || []).find(function (b) { return b.x === x && b.y === y && b.hp > 0; }) || null; }
   function campAt(x, y) { const tile = state.map[y] && state.map[y][x]; return tile && tile.camp && tile.camp.hp > 0 ? tile.camp : null; }
   function defenseBonus(x, y, baseDefense) { return window.EpohiCombatRules.terrainBonus(state.map[y][x], baseDefense, !!settlementAt(x,y)); }
-  function canAttack(unit, x, y) { const ru = rivalUnitAt(x,y), rc = rivalCityAt(x,y); const hostileRival = (ru && ru.civ.relation === "war") || (rc && rc.civ.relation === "war"); return unit && unit.moves > 0 && (UNIT_DEFS[unit.type].attack || 0) > 0 && isAdjacent(unit.x, unit.y, x, y) && (barbarianAt(x,y) || campAt(x,y) || hostileRival); }
+  function canAttack(unit, x, y) { if (!unit || unit.moves <= 0 || (UNIT_DEFS[unit.type].attack || 0) <= 0 || !isAdjacent(unit.x, unit.y, x, y)) return false; const ru = rivalUnitAt(x,y), rc = rivalCityAt(x,y); const hostileRival = (ru && ru.civ.relation === "war") || (rc && rc.civ.relation === "war"); return !!(barbarianAt(x,y) || campAt(x,y) || hostileRival); }
   function damageAmount(base, defense) { return window.EpohiCombatRules.damage("direct", base, defense, Math.random()); }
   function killUnit(unit) { state.units = state.units.filter(function (u) { return u.id !== unit.id; }); if (selectedUnitId === unit.id) selectedUnitId = state.units.length ? state.units[0].id : null; }
   function maybeAddArtifact(reason) { if (Math.random() > .18 && reason !== "poi") return false; const bonus = randomChoice(ARTIFACT_BONUSES); const art = { name: "Артефакт " + (state.artifacts.length + 1), bonus: bonus.id, text: bonus.name }; state.artifacts.push(art); state.permanentBonuses[bonus.id] = (state.permanentBonuses[bonus.id] || 0) + 1; state.history.unshift("Ход " + state.turn + ": найден артефакт — " + bonus.name + "."); return true; }
@@ -711,12 +711,44 @@
   }
 
   function renderMap() {
+    const size = mapSizeCells();
+    const key = function (x, y) { return y * size + x; };
+    const playerCityByTile = new Map();
+    const settlementByTile = new Map();
+    const unitsByTile = new Map();
+    const rivalCityByTile = new Map();
+    const rivalUnitByTile = new Map();
+    const barbarianByTile = new Map();
+    function putFirst(index, x, y, value) {
+      const position = key(x, y);
+      if (!index.has(position)) index.set(position, value);
+    }
+    playerCities().forEach(function (city) { if (city.hp > 0) putFirst(playerCityByTile, city.x, city.y, city); });
+    state.settlements.forEach(function (outpost) { putFirst(settlementByTile, outpost.x, outpost.y, outpost); });
+    state.units.forEach(function (unit) {
+      const position = key(unit.x, unit.y);
+      if (!unitsByTile.has(position)) unitsByTile.set(position, []);
+      unitsByTile.get(position).push(unit);
+    });
+    (state.rivals || []).forEach(function (civ) {
+      (civ.cities || []).forEach(function (city) {
+        if (city.hp > 0) putFirst(rivalCityByTile, city.x, city.y, { civ:civ, city:city });
+      });
+      (civ.units || []).forEach(function (unit) {
+        if (unit.hp > 0) putFirst(rivalUnitByTile, unit.x, unit.y, { civ:civ, unit:unit });
+      });
+    });
+    (state.barbarians || []).forEach(function (barbarian) {
+      if (barbarian.hp > 0) putFirst(barbarianByTile, barbarian.x, barbarian.y, barbarian);
+    });
+    const activeUnit = getUnit(selectedUnitId);
     const fragment = document.createDocumentFragment();
     mapEl.innerHTML = "";
-    mapEl.style.setProperty("--map-size", mapSizeCells());
+    mapEl.style.setProperty("--map-size", size);
 
-    for (let y = 0; y < mapSizeCells(); y++) {
-      for (let x = 0; x < mapSizeCells(); x++) {
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const position = key(x, y);
         const tile = state.map[y][x];
         const button = document.createElement("button");
         button.className = "tile";
@@ -746,7 +778,7 @@
           if (playerKnowsCamp(state,x,y)) { const camp = document.createElement("span"); camp.className = "piece camp"; camp.textContent = "♜"; button.appendChild(camp); button.appendChild(healthBar(tile.camp.hp, tile.camp.maxHp)); }
         }
 
-        const pc = playerCities().find(function(c){ return c.x === x && c.y === y && c.hp > 0; });
+        const pc = playerCityByTile.get(position);
         if (pc && tile.revealed) {
           const city = document.createElement("span");
           city.className = "piece city " + (pc.capital ? "player-capital" : "player-city");
@@ -755,7 +787,7 @@
           const pop = document.createElement("span"); pop.className = "city-pop"; pop.textContent = String(pc.population || 1); button.appendChild(pop);
         }
 
-        const outpost = settlementAt(x, y);
+        const outpost = settlementByTile.get(position);
         if (outpost) {
           const marker = document.createElement("span");
           marker.className = "piece outpost";
@@ -763,7 +795,7 @@
           button.appendChild(marker);
         }
 
-        const tileUnits = unitsAt(x, y);
+        const tileUnits = unitsByTile.get(position) || [];
         if (tileUnits.length) {
           const shown = tileUnits.find(function (unit) { return unit.id === selectedUnitId; }) || tileUnits[0];
           const piece = document.createElement("span");
@@ -779,7 +811,7 @@
           }
         }
 
-        const rc = rivalCityAt(x, y);
+        const rc = rivalCityByTile.get(position);
         if (rc && tile.revealed && rc.city.hp > 0 && (rc.civ.met || playerSees(x,y))) {
           button.style.setProperty("--civ-color", rc.civ.color);
           button.classList.add("ai-territory");
@@ -787,16 +819,15 @@
           const pop = document.createElement("span"); pop.className = "city-pop"; pop.textContent = String(rc.city.population || 1); button.appendChild(pop);
           button.appendChild(healthBar(rc.city.hp, rc.city.maxHp));
         }
-        const ru = rivalUnitAt(x, y);
+        const ru = rivalUnitByTile.get(position);
         if (ru && tile.revealed) {
           button.style.setProperty("--civ-color", ru.civ.color);
           const piece = document.createElement("span"); piece.className = "piece ai-unit unit-" + ru.unit.type + (ru.civ.relation === "war" ? " ai-target" : ""); piece.textContent = (ru.civ.symbol || "◆") + UNIT_DEFS[ru.unit.type].mapIcon; button.appendChild(piece); if (ru.unit.hp < ru.unit.maxHp) button.appendChild(healthBar(ru.unit.hp, ru.unit.maxHp));
         }
 
-        const barb = barbarianAt(x, y);
+        const barb = barbarianByTile.get(position);
         if (barb && tile.revealed) { const enemy = document.createElement("span"); enemy.className = "piece enemy"; enemy.textContent = "⚔"; button.appendChild(enemy); button.appendChild(healthBar(barb.hp, barb.maxHp)); }
         if (inspectedTile && inspectedTile.x === x && inspectedTile.y === y) { button.classList.add("selected", "inspect-tile", "inspect-layer-" + inspectLayer); }
-        const activeUnit = getUnit(selectedUnitId);
         if (activeUnit && activeUnit.x === x && activeUnit.y === y) button.classList.add("unit-active");
         if (activeUnit && canAttack(activeUnit, x, y)) button.classList.add("attack-target");
         fragment.appendChild(button);
