@@ -79,6 +79,46 @@ test('completed production records structured experience in the turn autosave', 
   })).toEqual({ playerScout:1, rivalWarrior:1, legacyScanFields:[] });
 });
 
+test('AI battle transfers a defeated non-capital city directly', async ({ page }) => {
+  await openGame(page, 1);
+  const result = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    const attacker = state.rivals[0];
+    const defender = JSON.parse(JSON.stringify(attacker));
+    defender.civilizationId = 'test-defender';
+    defender.name = 'Test defender';
+    defender.units = [];
+    const direction = attacker.cities[0].x < state.map.length - 2 ? 1 : -1;
+    defender.cities[0].id = 'test-defender-capital';
+    defender.cities[0].x = Math.max(0, Math.min(state.map.length - 1, attacker.cities[0].x - direction * 5));
+    defender.cities[0].y = attacker.cities[0].y;
+    const city = { ...defender.cities[0], id:'test-defender-secondary',
+      x:attacker.cities[0].x + direction, y:attacker.cities[0].y,
+      name:'Test secondary', capital:false, hp:1, population:3, buildings:['granary'] };
+    defender.cities.push(city);
+    const warrior = window.EpohiData.UNIT_DEFS.warrior;
+    attacker.units = [{ id:'test-ai-warrior', civilizationId:attacker.civilizationId,
+      type:'warrior', x:attacker.cities[0].x, y:attacker.cities[0].y,
+      moves:1, acted:false, hp:warrior.maxHealth, maxHp:warrior.maxHealth }];
+    attacker.diplomacy[defender.civilizationId] = 'war';
+    defender.diplomacy[attacker.civilizationId] = 'war';
+    state.rivals = [attacker, defender];
+    state.map[city.y][city.x].owner = defender.civilizationId;
+    window.__epohiDebug().processRivals({ remaining:1, used:0 });
+    return { captured:attacker.cities.includes(city), attackerId:attacker.civilizationId,
+      defenderKeepsCity:defender.cities.includes(city),
+      former:city.formerCivilizationId, hp:city.hp,
+      owner:state.map[city.y][city.x].owner,
+      captures:state.eventLog.filter(event => event.eventType === 'city-captured' &&
+        (event.position || event.coordinates || {}).x === city.x).length };
+  });
+  expect(result).toEqual({ captured:true, attackerId:expect.any(String), defenderKeepsCity:false,
+    former:'test-defender', hp:expect.any(Number),
+    owner:expect.any(String), captures:1 });
+  expect(result.hp).toBeGreaterThan(0);
+  expect(result.owner).toBe(result.attackerId);
+});
+
 test('captured research insight is applied before the new turn is saved', async ({ page }) => {
   await openGame(page, 0);
   await page.evaluate(() => {

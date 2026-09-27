@@ -2144,8 +2144,7 @@
     if(target.hp>0)return false;
     target.hp=0;
     if(target.type)enemy.units=enemy.units.filter(function(item){return item!==target;});
-    else if(target.capital){if(window.EpohiCombatWorldStability)window.EpohiCombatWorldStability.resolveFactionDefeat(state,enemy,attacker);else{enemy.defeated=true;enemy.units=[];}}
-    else enemy.cities=enemy.cities.filter(function(item){return item!==target;});
+    else window.EpohiCaptureState.captureAiCity(state,attacker,enemy,target);
     return true;
   }
   function performAlliedWarAction(ally,enemy){

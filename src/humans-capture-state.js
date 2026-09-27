@@ -6,7 +6,6 @@
   const SPECIALIZATION_NAMES = { food:"Житница", production:"Кузницы", science:"Школа мудрецов", gold:"Торговый квартал" };
   const PLUNDER_SCIENCE_SHARE = 0.20;
 
-  let originalFactionDefeat = null;
   let originalAssignTravelOrder = null;
   let originalProcessOrders = null;
   let originalLivingProcessTurn = null;
@@ -103,6 +102,31 @@
   }
 
   function removeCity(civ,city){ civ.cities=(civ.cities||[]).filter(function(item){return String(item.id)!==String(city.id);}); }
+
+  function captureAiCity(gs,attacker,defender,city){
+    if(!gs||!attacker||!defender||!city||(defender.cities||[]).indexOf(city)<0)return false;
+    const oldOwner=defender.civilizationId;
+    const wasCapital=!!city.capital;
+    removeCity(defender,city);
+    city.formerCivilizationId=oldOwner;
+    city.formerCivilizationName=defender.name;
+    city.historicCapital=city.historicCapital||wasCapital;
+    city.capital=false;
+    city.population=Math.max(1,Number(city.population||1)-1);
+    city.hp=Math.max(1,Math.round(Number(city.maxHp||150)*.35));
+    city.queue=null;
+    attacker.cities=attacker.cities||[];
+    attacker.cities.push(city);
+    const pop=Number(city.population||1), radius=pop>=6?3:(pop>=3?2:1);
+    if(window.EpohiUtils&&typeof window.EpohiUtils.chebyshev==="function"){
+      (gs.map||[]).forEach(function(row,y){row.forEach(function(tile,x){
+        if(tile.owner===oldOwner&&window.EpohiUtils.chebyshev(city.x,city.y,x,y)<=radius)tile.owner=attacker.civilizationId;
+      });});
+    }
+    finalizeFaction(gs,defender);
+    addEvent(gs,"city-captured",attacker.name+" захватил город "+city.name+" у "+defender.name+".",attacker.civilizationId,{x:city.x,y:city.y});
+    return true;
+  }
 
   function chooseNewCapital(civ){
     if(!civ||!civ.cities||!civ.cities.length)return null;
@@ -229,14 +253,12 @@
 
   function wrapFactionDefeat(){
     const stability=window.EpohiCombatWorldStability; if(!stability||stability.captureStateWrapped||typeof stability.resolveFactionDefeat!=="function")return;
-    stability.captureStateWrapped=true; originalFactionDefeat=stability.resolveFactionDefeat;
+    stability.captureStateWrapped=true;
     stability.resolveFactionDefeat=function(gs,civ,captor){
       const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
       const fallen=(civ.cities||[]).find(function(city){return city.capital&&Number(city.hp||0)<=0;})||(civ.cities||[]).find(function(city){return Number(city.hp||0)<=0;});
       if(!fallen)return false;
-      removeCity(civ,fallen); fallen.capital=false; fallen.formerCivilizationId=civ.civilizationId; fallen.formerCivilizationName=civ.name; fallen.population=Math.max(1,Number(fallen.population||1)-1); fallen.hp=Math.max(1,Math.round(Number(fallen.maxHp||150)*.35)); fallen.queue=null;
-      captor.cities=captor.cities||[]; captor.cities.push(fallen); if(civ.cities.length&&!civ.cities.some(function(city){return city.capital;}))chooseNewCapital(civ); finalizeFaction(gs,civ);
-      addEvent(gs,"city-captured",(captor.name||"Держава")+" захватил город "+fallen.name+" у "+civ.name+".",captor.civilizationId,{x:fallen.x,y:fallen.y}); return true;
+      return captureAiCity(gs,captor,civ,fallen);
     };
   }
 
@@ -303,7 +325,7 @@
 
   function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);schedule();}
 
-  window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations,processTurn:processTurn};
+  window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,captureAiCity:captureAiCity,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations,processTurn:processTurn};
   wrapFactionDefeat(); wrapPathing(); wrapLiving();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
 })();

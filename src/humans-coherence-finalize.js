@@ -10,7 +10,6 @@
     BASE_UNIT_COST[id] = Number(UNIT_DEFS[id] && UNIT_DEFS[id].cost && UNIT_DEFS[id].cost.production) || 0;
   });
 
-  let beforeAiTurn = null;
   let queued = false;
 
   function debug() {
@@ -52,32 +51,6 @@
     ensureExperience(gs);
     (gs.rivals || []).forEach(ensureExperience);
     return gs;
-  }
-
-  function addEvent(gs, type, text, civ, position) {
-    if (!gs) return;
-    gs.eventCounter = (Number(gs.eventCounter) || 0) + 1;
-    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
-    if (!Array.isArray(gs.history)) gs.history = [];
-    const item = {
-      eventId: "coherence-final-" + gs.eventCounter,
-      turn: Number(gs.turn) || 1,
-      phase: "coherence-final",
-      actorType: civ ? "civilization" : "system",
-      actorId: civ ? civ.civilizationId : null,
-      eventType: type,
-      text: text,
-      coordinates: position || null,
-      position: position || null
-    };
-    gs.eventLog.unshift(item);
-    gs.eventLog = gs.eventLog.slice(0, 300);
-    const line = "Ход " + (Number(gs.turn) || 1) + ": " + text;
-    if (gs.history.indexOf(line) < 0) gs.history.unshift(line);
-    gs.history = gs.history.slice(0, 300);
-    if (window.EpohiDiplomacyEventFlow && typeof window.EpohiDiplomacyEventFlow.syncChronicle === "function") {
-      window.EpohiDiplomacyEventFlow.syncChronicle(gs);
-    }
   }
 
   function unitDiscount(holder, id) {
@@ -258,65 +231,6 @@
     modal.classList.add("show");
   }
 
-  function captureRivalSnapshot(gs) {
-    beforeAiTurn = {
-      turn: Number(gs.turn) || 1,
-      cities: []
-    };
-    (gs.rivals || []).forEach(function (civ) {
-      (civ.cities || []).forEach(function (city) {
-        beforeAiTurn.cities.push({
-          ownerId: civ.civilizationId,
-          city: JSON.parse(JSON.stringify(city))
-        });
-      });
-    });
-  }
-
-  function transferAiTerritory(gs, city, oldOwner, newOwner) {
-    if (!window.EpohiUtils || typeof window.EpohiUtils.chebyshev !== "function") return;
-    const pop = Number(city.population || 1);
-    const radius = pop >= 6 ? 3 : (pop >= 3 ? 2 : 1);
-    (gs.map || []).forEach(function (row, y) {
-      row.forEach(function (tile, x) {
-        if (tile.owner === oldOwner && window.EpohiUtils.chebyshev(city.x, city.y, x, y) <= radius) tile.owner = newOwner;
-      });
-    });
-  }
-
-  function repairAiCityCaptures(gs) {
-    if (!beforeAiTurn) return;
-    const snapshot = beforeAiTurn;
-    beforeAiTurn = null;
-    snapshot.cities.forEach(function (entry) {
-      const city = entry.city;
-      const stillExists = (gs.rivals || []).some(function (civ) {
-        return (civ.cities || []).some(function (item) { return String(item.id) === String(city.id); });
-      }) || playerCities(gs).some(function (item) { return String(item.id) === String(city.id); });
-      if (stillExists) return;
-      const battle = (gs.eventLog || []).find(function (item) {
-        const point = item && (item.position || item.coordinates);
-        return item && ["rival-battle", "allied-war-battle"].indexOf(item.eventType) >= 0 && Number(item.turn || 0) === Number(snapshot.turn) && point && Number(point.x) === Number(city.x) && Number(point.y) === Number(city.y) && String(item.actorId || "") !== String(entry.ownerId);
-      });
-      const attacker = battle && civById(gs, battle.actorId);
-      const defender = civById(gs, entry.ownerId);
-      if (!attacker || !defender) return;
-      city.formerCivilizationId = defender.civilizationId;
-      city.formerCivilizationName = defender.name;
-      city.historicCapital = city.historicCapital || !!city.capital;
-      city.capital = false;
-      city.population = Math.max(1, Number(city.population || 1) - 1);
-      city.hp = Math.max(1, Math.round(Number(city.maxHp || 150) * 0.35));
-      city.queue = null;
-      attacker.cities = attacker.cities || [];
-      attacker.cities.push(city);
-      transferAiTerritory(gs, city, defender.civilizationId, attacker.civilizationId);
-      syncForeignBuildingKnowledge(gs);
-      if (window.EpohiCaptureState && typeof window.EpohiCaptureState.finalizeFaction === "function") window.EpohiCaptureState.finalizeFaction(gs, defender);
-      addEvent(gs, "city-captured", attacker.name + " захватил город " + city.name + " у " + defender.name + ".", attacker, {x:city.x,y:city.y});
-    });
-  }
-
   function priorityModalOpen() {
     return ["coherenceProposalModal", "captureChoiceModal", "stabilityDecisionModal", "victoryModal"].some(function (id) {
       const node = document.getElementById(id);
@@ -332,16 +246,9 @@
     if (flow) flow.classList.remove("show");
   }
 
-  function onEndTurnCapture(event) {
-    if (!event.target.closest || !event.target.closest("#endTurnBtn")) return;
-    const gs = ensureState(state());
-    if (gs) captureRivalSnapshot(gs);
-  }
-
   function processTurn(gs) {
     gs = ensureState(gs);
     if (!gs) return;
-    repairAiCityCaptures(gs);
     syncForeignBuildingKnowledge(gs);
     invalidateImpossibleTrades(gs);
     repairWorkerAutonomy(gs);
@@ -405,7 +312,6 @@
   function install() {
     installStyles();
     ensureState(state());
-    window.addEventListener("click", onEndTurnCapture, true);
     document.addEventListener("click", handleClick);
     // Coherence proposals have their own priority observer in EventOverlayPolicy. The
     // finalizer does not decorate proposal content, so observing proposal class changes
@@ -429,7 +335,6 @@
     patchPopulationRequirement: patchPopulationRequirement,
     patchUrgentDecision: patchUrgentDecision,
     patchCaptureCapacity: patchCaptureCapacity,
-    repairAiCityCaptures: repairAiCityCaptures,
     processTurn: processTurn,
     refreshUi: schedule,
     suppressOverlappingToasts: suppressOverlappingToasts

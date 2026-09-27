@@ -315,3 +315,21 @@ listeners, so the completion criteria above remain open.
 - Next: eliminate the remaining post-AI city-capture repair that reconstructs
   ownership from a before-turn snapshot and battle log; route capture through
   the battle command instead.
+
+### Stage 17: direct AI city capture
+
+- AI combat now calls `EpohiCaptureState.captureAiCity` on the defeated city
+  object. The existing faction-defeat compatibility hook uses that same state
+  operation. It transfers the object, applies siege effects, transfers nearby
+  territory, finalizes the defender and writes one capture event.
+- Removed the before-turn clone of every rival city, the capture-phase End Turn
+  listener and `repairAiCityCaptures`, which searched battle-log text/positions
+  after the turn to reconstruct lost cities. Capture history is now an output,
+  not an input to ownership. The compatibility hook remains for other callers
+  of the legacy faction-defeat API; there is one active AI transfer operation.
+- Tier 3 local desktop Chrome: battle, capture, diplomacy and outcomes 55/55;
+  a randomized coordinate fixture for the new direct-battle check was fixed,
+  then the check passed five consecutive runs. Static checks passed. Stage 16
+  CI run `36305928887` passed all full Chromium/WebKit, soak and static jobs.
+- Next: isolate the End Turn simulation from toast/render/timer/save controls
+  while preserving phase order and random consumption.
