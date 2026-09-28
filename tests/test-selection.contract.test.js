@@ -9,7 +9,7 @@ const test = require('node:test');
 const manifest = require('../scripts/test-selection-manifest.json');
 const { combineBrowserPolicies, selectTests, validateManifest } = require('../scripts/select-tests');
 const { classify, failSafe, mapPlan } = require('../scripts/map-ci-test-plan');
-const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/playwright.yml'), 'utf8');
+const workflow = fs.readFileSync(path.join(__dirname, '../.github/workflows/playwright.yml'), 'utf8').replace(/\r\n/g, '\n');
 
 function manifestWith(mutate) {
   const candidate = structuredClone(manifest);

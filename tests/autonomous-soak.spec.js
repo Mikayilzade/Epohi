@@ -53,7 +53,11 @@ async function resolveBlockingInteraction(page, seed) {
     if (await visible(urgent)) {
       const count = await urgent.count();
       const index = Math.abs(seed + pass) % Math.max(1, count);
-      await urgent.nth(index).click();
+      await urgent.nth(index).click({ timeout: 3000 }).catch(async (error) => {
+        const stillPending = await page.evaluate(() =>
+          (window.__epohiDebug?.().state?.urgentDecisions || []).some(item => item.status === 'pending'));
+        if (stillPending) throw error;
+      });
       await page.waitForTimeout(0);
       continue;
     }

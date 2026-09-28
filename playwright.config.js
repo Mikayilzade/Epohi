@@ -9,6 +9,14 @@ const mobileUse = {
   screenshot: 'only-on-failure',
   video: 'retain-on-failure'
 };
+const desktopUse = {
+  baseURL: 'http://127.0.0.1:4173',
+  viewport: { width: 1280, height: 800 },
+  browserName: 'chromium',
+  trace: 'retain-on-failure',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure'
+};
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -18,6 +26,10 @@ module.exports = defineConfig({
   reporter: [['line'], ['html', { open: 'never' }], ['./scripts/failure-diagnostics-reporter.js']],
   use: mobileUse,
   projects: [
+    {
+      name: 'chromium-desktop',
+      use: desktopUse
+    },
     {
       name: 'chromium-mobile',
       use: {

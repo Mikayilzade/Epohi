@@ -248,35 +248,18 @@
     return null;
   }
 
-  function wrapFactionDefeat(){
-    const stability=window.EpohiCombatWorldStability; if(!stability||stability.captureStateWrapped||typeof stability.resolveFactionDefeat!=="function")return;
-    stability.captureStateWrapped=true;
-    stability.resolveFactionDefeat=function(gs,civ,captor){
-      const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
-      const fallen=(civ.cities||[]).find(function(city){return city.capital&&Number(city.hp||0)<=0;})||(civ.cities||[]).find(function(city){return Number(city.hp||0)<=0;});
-      if(!fallen)return false;
-      return captureAiCity(gs,captor,civ,fallen);
-    };
-  }
-
-  function withFactionDefeatOwnership(callback,thisArg,args){
-    const stability=window.EpohiCombatWorldStability;
-    if(!stability||typeof stability.resolveFactionDefeat!=="function")return callback.apply(thisArg,args);
-    const current=stability.resolveFactionDefeat;
-    const guarded=function(gs,civ,captor){
-      const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
-      return current.apply(stability,arguments);
-    };
-    stability.resolveFactionDefeat=guarded;
-    try{return callback.apply(thisArg,args);}
-    finally{if(stability.resolveFactionDefeat===guarded)stability.resolveFactionDefeat=current;}
+  function resolveFactionDefeat(gs,civ,captor){
+    const playerResult=playerCaptureDefeat(gs,civ,captor); if(playerResult!==null)return playerResult;
+    const fallen=(civ.cities||[]).find(function(city){return city.capital&&Number(city.hp||0)<=0;})||(civ.cities||[]).find(function(city){return Number(city.hp||0)<=0;});
+    if(!fallen)return false;
+    return captureAiCity(gs,captor,civ,fallen);
   }
 
   function wrapPathing(){
     const pathing=window.EpohiHumansPathing; if(!pathing||pathing.captureStateWrapped)return; pathing.captureStateWrapped=true;
     originalAssignTravelOrder=pathing.assignTravelOrder; originalProcessOrders=pathing.processOrders;
-    pathing.assignTravelOrder=function(){const result=withFactionDefeatOwnership(originalAssignTravelOrder,this,arguments),gs=ensureState(state());if(gs)checkFallen(gs);return result;};
-    pathing.processOrders=function(){const result=withFactionDefeatOwnership(originalProcessOrders,this,arguments),gs=ensureState(arguments[0]||state());if(gs)checkFallen(gs);return result;};
+    pathing.assignTravelOrder=function(){const result=originalAssignTravelOrder.apply(this,arguments),gs=ensureState(state());if(gs)checkFallen(gs);return result;};
+    pathing.processOrders=function(){const result=originalProcessOrders.apply(this,arguments),gs=ensureState(arguments[0]||state());if(gs)checkFallen(gs);return result;};
   }
 
   function chooseSpecialization(civ){
@@ -319,9 +302,9 @@
     style.textContent='.capture-choice-modal{z-index:185!important;align-items:center!important;justify-content:center!important;padding:14px!important}.capture-choice-modal .sheet{width:min(560px,calc(100vw - 28px))!important;max-height:min(84dvh,720px)!important;margin:auto!important;border-radius:18px!important}.capture-card{padding:8px 2px 14px}.capture-card h3{font-size:20px;margin:6px 0}.capture-card>.wide-btn{margin-top:8px;text-align:left}.capture-card>.wide-btn small{display:block;margin-top:4px;font-size:9px;line-height:1.3;opacity:.8}@media(max-width:520px){.capture-choice-modal{padding:10px!important}.capture-card h3{font-size:18px}}'; document.head.appendChild(style);
   }
 
-  function install(){installStyles();ensureModal();ensureState(state());wrapFactionDefeat();wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);}
+  function install(){installStyles();ensureModal();ensureState(state());wrapPathing();wrapLiving();window.addEventListener("click",handleResearchClick,true);}
 
-  window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,captureAiCity:captureAiCity,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations,processTurn:processTurn};
-  wrapFactionDefeat(); wrapPathing(); wrapLiving();
+  window.EpohiCaptureState={version:3,ensureState:ensureState,learnBuildings:learnBuildings,plunderScience:plunderScience,applyInsight:applyInsight,annex:annex,plunder:plunder,liberate:liberate,queueCapture:queueCapture,resolveFactionDefeat:resolveFactionDefeat,captureAiCity:captureAiCity,finalizeFaction:finalizeFaction,processAiSpecializations:processAiSpecializations,processTurn:processTurn};
+  wrapPathing(); wrapLiving();
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",install,{once:true});else install();
 })();

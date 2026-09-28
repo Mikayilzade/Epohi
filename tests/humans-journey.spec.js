@@ -149,6 +149,7 @@ test.describe('Сага Ардены, сценарии и визуальный �
       const state = window.__epohiDebug().state;
       state.turn = 5;
       window.EpohiHumansJourney.sync({ render: true });
+      window.__epohiDebug().render();
       return state.resources.science;
     });
 

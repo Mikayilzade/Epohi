@@ -383,7 +383,7 @@
       } else if (located.kind === "rival-city" && located.civ) {
         located.target.hp = 0;
         if (located.target.capital) {
-          if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.resolveFactionDefeat(gs, located.civ, gs);
+          if (window.EpohiCaptureState) window.EpohiCaptureState.resolveFactionDefeat(gs, located.civ, gs);
           else { located.civ.defeated = true; located.civ.units = []; }
         }
       }

@@ -39,7 +39,8 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       const style = getComputedStyle(node);
       return { overflowX: style.overflowX, flexWrap: style.flexWrap, touchAction: style.touchAction };
     });
-    expect(mobileActions).toEqual({ overflowX: 'auto', flexWrap: 'nowrap', touchAction: 'pan-x' });
+    const narrowViewport = await page.evaluate(() => window.innerWidth <= 720);
+    expect(mobileActions).toEqual({ overflowX: 'auto', flexWrap: narrowViewport ? 'nowrap' : 'wrap', touchAction: 'pan-x' });
     await build.click();
     await expect(page.locator('[data-worker-time-status]')).toContainText('Выполнено: 1/2 действий рабочего');
     await expect(page.locator('[data-worker-time-status]')).toContainText('осталось: 1');

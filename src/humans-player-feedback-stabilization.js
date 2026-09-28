@@ -167,30 +167,6 @@
     }, true);
   }
 
-  function installCameraResizeGuard() {
-    const viewport = document.getElementById("mapViewport");
-    if (!viewport || !window.ResizeObserver || viewport.dataset.ci179ResizeGuard === "1") return;
-    viewport.dataset.ci179ResizeGuard = "1";
-    let frame = 0;
-    let lastMinimum = null;
-    const initial = debug();
-    if (initial && typeof initial.getCameraScaleBounds === "function") lastMinimum = initial.getCameraScaleBounds().min;
-    new ResizeObserver(function () {
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(function () {
-        frame = 0;
-        const app = document.getElementById("gameApp");
-        const value = debug();
-        if (!app || app.classList.contains("is-hidden") || !value || !value.state || typeof value.applyCamera !== "function") return;
-        const camera = typeof value.getCamera === "function" ? value.getCamera() : null;
-        const wasFit = camera && lastMinimum != null && Math.abs(camera.scale - lastMinimum) <= 0.002;
-        if (wasFit && typeof value.showEntireMap === "function") value.showEntireMap(true);
-        else value.applyCamera(true);
-        if (typeof value.getCameraScaleBounds === "function") lastMinimum = value.getCameraScaleBounds().min;
-      });
-    }).observe(viewport);
-  }
-
   function closeUrgentDecisionForJourney() {
     const journeyModal = document.getElementById("humansJourneyModal");
     const urgentModal = document.getElementById("stabilityDecisionModal");
@@ -246,7 +222,6 @@
     installImmediateAdjacentOrders();
     installVisibleAttackResolver();
     installJourneyEntryGuard();
-    installCameraResizeGuard();
     ensureStableControls();
     preserveFreePlay();
     stabilizeMovementExplanation();

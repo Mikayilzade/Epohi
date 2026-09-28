@@ -164,6 +164,35 @@
     settlementDefense: 5,
     improvementDefense: 2
   };
+  const PLAYER_COMBAT_RULES = {
+    fallbackAttack: 8, cityDefense: 18, campProductionReward: 6,
+    rivalCounterattackFactor: 0.45, barbarianCounterattackFactor: 0.55
+  };
+  const PLAYER_EXPLORATION_RULES = {
+    artifactChance: 0.18, caveAmbushChance: 0.35, workerFindChance: 0.08,
+    ruinsScience: 14, ruinsGold: 18, groveProduction: 24,
+    randomRewards: [
+      {k:"gold",a:14,t:"+14 золота."},{k:"science",a:10,t:"+10 науки."},
+      {k:"food",a:12,t:"+12 еды."},{k:"production",a:12,t:"+12 производства."},
+      {k:"reveal",a:2,t:"открыты земли вокруг."},{k:"heal",a:25,t:"юнит вылечен."},
+      {k:"worker",a:1,t:"найден рабочий."},{k:"artifact",a:1,t:"найден артефакт."},
+      {k:"ambush",a:1,t:"засада варваров!"}
+    ],
+    ancientRuins: [
+      { key:"science", amount:8, text:"В руинах найдены древние записи: +8 🔬" },
+      { key:"gold", amount:10, text:"В руинах найден клад: +10 🪙" },
+      { key:"production", amount:8, text:"Найдены старые инструменты: +8 🔨" },
+      { key:"food", amount:10, text:"Найдены запасы зерна: +10 🍞" }
+    ]
+  };
+  const RIVAL_TURN_RULES = {
+    poiScienceThreshold: 12, poiGoldThreshold: 10,
+    poiProductionReward: 12, poiResourceReward: 14,
+    campGoldReward: 25, campScienceReward: 6, campHeal: 20
+  };
+  const WORLD_STABILITY_RULES = {
+    administrationBaseCost: 60, administrationCostStep: 40
+  };
 
   const TECHS = {
     agriculture: {
@@ -218,6 +247,10 @@
     PRODUCTION_EXPERIENCE_RULES,
     WORKER_PROJECT_RULES,
     COMBAT_BALANCE,
+    PLAYER_COMBAT_RULES,
+    PLAYER_EXPLORATION_RULES,
+    RIVAL_TURN_RULES,
+    WORLD_STABILITY_RULES,
     TECHS
   };
 })();

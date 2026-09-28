@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-architecture-stage-28";
+  "epohi-architecture-2026-09-28";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -18,9 +18,13 @@ const APP_FILES = [
   "./src/barbarian-actions.js",
   "./src/stability-rules.js",
   "./src/player-production.js",
+  "./src/player-combat.js",
+  "./src/player-exploration.js",
   "./src/player-settlements.js",
+  "./src/rival-turn.js",
   "./src/worker-projects.js",
   "./src/event-journal.js",
+  "./src/world-stability-actions.js",
   "./src/state-schema.js",
   "./src/humans-content.js",
   "./src/utils.js",

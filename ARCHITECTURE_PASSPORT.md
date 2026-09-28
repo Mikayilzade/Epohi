@@ -2,11 +2,31 @@
 
 Updated: 2026-09-28. Integration target: PR #103 / `codex-qgq4u5`.
 
+## Current ownership map
+
+| Responsibility | Canonical owner | Presentation boundary |
+| --- | --- | --- |
+| State shape and legacy normalization | `state-schema.js` | `cities` owns settlements; `city` is a runtime reference to the chosen capital and is omitted from serialized snapshots. |
+| Balance and content | `data.js`, `humans-journey-data.js` | Player combat/exploration and rival turn read named domain rules. |
+| Turn simulation | `app.js` coordinator plus domain modules | One `simulateTurn` order, followed by one full `render` and asynchronous snapshot save. |
+| Player and rival actions | `player-combat.js`, `player-exploration.js`, `player-settlements.js`, `rival-turn.js`, `ai-actions.js`, `rival-combat.js` | UI handlers provide intent and show returned results; these action modules do not read the DOM. |
+| World stability and capture | `world-stability-actions.js`, `stability-rules.js`, `humans-capture-state.js` | Urgent-decision and administration rules are DOM-free; capture owns faction defeat; the stability adapter owns its modal. |
+| Events and history | `event-journal.js` | Structured event append updates bounded history; Chronicle reads current records and imports old entries only when opened. |
+| Saves and versions | `state-schema.js`, `save-utils.js`, `save-service.js`, `storage.js` | Save request captures state and campaign identity before the async IndexedDB queue. |
+| Map camera | `camera.js` rules, `app.js` viewport owner | One viewport `ResizeObserver` preserves fitted maps and clamps other scales. |
+| UI refresh | `app.js` render plus `humans-runtime-invalidation.js` and focused decorators | Full render emits one `epohi:ui-rendered`; wiki construction emits `epohi:wiki-rendered`. |
+
+The `humans-*` compatibility presentation scripts remain loaded in order by
+`index.html`. They still contain some domain adapters; their state changes must
+remain explicit in the turn or action path, and a decorative render must never
+advance gameplay. The save schema version and game version are separate record
+fields; migration callback wiring still lives in the app coordinator.
+
 ## Current audit and completion criteria
 
-The browser loads ordered classic scripts from `index.html`. `src/app.js` is a
-2,469-line coordinator containing state creation/migration, save orchestration,
-turn rules, AI, rendering and input. Later `humans-*` scripts augment it through
+At the initial audit, the browser loaded ordered classic scripts from `index.html`.
+`src/app.js` was a 2,469-line coordinator containing state creation/migration,
+save orchestration, turn rules, AI, rendering and input. Later `humans-*` scripts augmented it through
 `window.__epohiDebug`, click handlers and DOM observation. `src/data.js` holds much
 of the balance data; `src/storage.js` handles IndexedDB and `src/save-utils.js`
 handles save records, but orchestration and migration still live in `app.js`.
@@ -58,7 +78,7 @@ Architecture cleanup is complete when:
 
 ## Change map and tests
 
-This section is updated after each architectural stage. Current save tests live
+This section records the completed architectural packages. Current save tests live
 in `tests/prototype-baseline.spec.js` and `tests/turn-unlock.spec.js`; observer
 and performance tests live in `tests/runtime-invalidation*.spec.js` and
 `tests/humans-pathing-performance.spec.js`. `AGENT_TESTING_POLICY.md` sets scope.
@@ -983,3 +1003,64 @@ listeners, so the completion criteria above remain open.
 - Local desktop Chromium focused suite passed 38/38 after one missed new-game
   navigation signal was fixed; the navigation case and new autosave/render
   regressions passed separately. Full desktop integration remains pending.
+
+### Package 4: final ownership and integration audit
+
+- The duplicate, unreachable observer-safety implementation in
+  `humans-event-overlay-policy.js` was deleted. `humans-performance.js` remains
+  the sole observer-safety owner. Camera resize work moved from two presentation
+  scripts and the window handler to one viewport observer in `app.js`.
+- Overlay dismissal no longer invokes Chronicle's legacy journal-to-history
+  import during End Turn. The event journal writes new history at event creation;
+  opening Chronicle remains the explicit compatibility import for old records.
+- End Turn now checks free-play state and the urgent-decision confirmation in
+  its own handler. Stability UI no longer schedules a render after every click;
+  only city/treasury inputs refresh its sheet. Wiki construction has an explicit
+  `epohi:wiki-rendered` signal for workforce decoration.
+- Saga rules no longer call UI refresh, full render or workforce presentation.
+  The decision UI adapter presents returned workforce changes and renders after
+  a command. Urgent decisions, expiry and administration changes now live in
+  DOM-free `world-stability-actions.js`; `humans-combat-world-stability.js`
+  presents them. The old faction-defeat implementation was shadowed by the
+  capture module and has been removed. `EpohiCaptureState.resolveFactionDefeat`
+  is the single capture entry point for routed capital attacks.
+- Tunables from player combat/exploration, rival turns and administration were
+  placed in named domain objects in `data.js` without changing their values.
+  `sw.js` now precaches every script in `index.html` and has a refreshed cache
+  identity. The permanent Playwright gate includes a three-shard desktop
+  Chromium job alongside the existing mobile jobs.
+- A full local desktop run before the final capture split passed 224/224.
+  After the split, 225/226 cases passed; the sole failure was a test fixture
+  that inserted a raw event and expected overlay dismissal to rebuild history.
+  The fixture now uses `EpohiEventJournal.append`, matching actual creation,
+  and its focused rerun passed. Mobile Chrome emulation passed 13/13 after
+  camera consolidation. Short autonomous soak passed 2 seeds × 30 turns after
+  the final split. The CI desktop gate for the exact package SHA is pending.
+- Syntax passed for 119 JavaScript files, contract tests passed 35/35, and
+  `git diff --check` passed. The local full run also included a temporary
+  End Turn measurement spec that is not committed.
+- On five no-rival, small-map local End Turns after the observer/camera cleanup,
+  completion times were 474/299/302/306/330 ms; each turn emitted one full
+  render signal, one invalidation flush and one observer sync. Serialized state
+  was 47,944–49,699 bytes. Earlier five-turn samples were
+  533/315/308/311/318 ms before Package 3 and 527/315/294/308/300 ms after
+  it. The samples confirm fewer redundant updates, not a stable wall-time gain.
+- A final five-turn sample on the current rules measured
+  312/302/297/299/343 ms with one full render, invalidation flush and
+  observer sync per turn; snapshot sizes were 47,931–49,686 bytes. This is
+  still a short local sample and does not establish a wall-time speedup.
+
+### Known architecture debt after the cleanup
+
+- `app.js` still coordinates creation, legacy domain-migration callbacks and
+  several older UI paths. The serialized `cities` collection is authoritative;
+  the in-memory `city` reference is a compatibility alias to the chosen capital.
+  A future schema version can remove the alias after all `humans-*` consumers
+  migrate. This is not a second serialized city record.
+- Some legacy `humans-*` adapters still combine state commands and presentation
+  or install wrappers around older extension APIs, notably capture and living
+  civilization UI. They do not replace the extracted player/rival executors,
+  but can be simplified further as those panels are rebuilt.
+- Balance data in older untouched extensions is less centralized than the new
+  player/rival modules. Save record `gameVersion` identifies rules broadly; a
+  dedicated rules manifest or hash would need a separate compatibility policy.

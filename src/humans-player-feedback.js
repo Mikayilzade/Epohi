@@ -815,15 +815,6 @@
     }
   }
 
-  function preparePostOutcomeTurn(event) {
-    const button = event.target.closest && event.target.closest("#endTurnBtn");
-    const gs = state();
-    if (!button || !gs || !gs.continueAfterOutcome) return;
-    gs.victory = false;
-    gs.defeat = false;
-    if (gs.outcome) gs.outcome.status = "active";
-  }
-
   function hideRepeatedOutcome() {
     const gs = state();
     const modal = document.getElementById("victoryModal");
@@ -876,7 +867,6 @@
       if (gift) handleGift(gift, event);
       blockStaleContextAction(event);
       handleOutcomeButtons(event);
-      preparePostOutcomeTurn(event);
     }, true);
     refresh();
   }

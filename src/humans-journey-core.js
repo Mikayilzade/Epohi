@@ -296,7 +296,7 @@
     }
   }
 
-  function resolveEvent(eventId, choiceId) {
+  function resolveEvent(eventId, choiceId, result) {
     const gs = state();
     if (!gs) return false;
     const journey = ensure(gs);
@@ -306,13 +306,11 @@
     applyChoice(gs, event, choice);
     if (event.id === "refugees" && choice.id === "welcome" && window.EpohiPopulationWorkforce) {
       const workforceResult = window.EpohiPopulationWorkforce.reconcileState(gs);
-      window.EpohiPopulationWorkforce.presentChanges(workforceResult.changed);
+      if (result) result.workforceChanges = workforceResult.changed;
     }
     journey.queuedEvents = journey.queuedEvents.filter(function (id) { return id !== eventId; });
     journey.resolvedEvents.push(eventId);
     log(gs, "story-decision-resolved", event.title + ": " + choice.label + ".");
-    const value = debug();
-    if (value && typeof value.render === "function") value.render();
     sync({ render: false });
     return true;
   }
@@ -342,23 +340,17 @@
     return elapsed > 0;
   }
 
-  function sync(options) {
+  function sync() {
     if (syncing) return null;
     const gs = state();
     if (!gs) return null;
     syncing = true;
     try {
       const journey = ensure(gs);
-      let changed = false;
-      changed = grantScenarioBonus(gs, journey) || changed;
-      changed = specializationBonuses(gs, journey) || changed;
-      changed = completeChapters(gs, journey) || changed;
-      changed = queueEvent(gs, journey) || changed;
-      if (window.EpohiHumansJourneyUI) window.EpohiHumansJourneyUI.refresh(gs);
-      if (changed && (!options || options.render !== false)) {
-        const value = debug();
-        if (value && typeof value.render === "function") value.render();
-      }
+      grantScenarioBonus(gs, journey);
+      specializationBonuses(gs, journey);
+      completeChapters(gs, journey);
+      queueEvent(gs, journey);
       return journey;
     } finally {
       syncing = false;

@@ -426,7 +426,7 @@
 
   function initializeGameSystems(gameState) {
     if (!gameState) return null;
-    if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.migrate(gameState);
+    if (window.EpohiWorldStabilityActions) window.EpohiWorldStabilityActions.migrate(gameState);
     window.EpohiStabilityRules.cancelInvalidProposals(gameState);
     if (window.EpohiProductionExperience) window.EpohiProductionExperience.ensurePlayerState(gameState);
     if (window.EpohiDiplomacyCoherence) window.EpohiDiplomacyCoherence.ensureRivalResearch(gameState);
@@ -586,6 +586,7 @@
     mapEl.classList.add("camera-smooth");
     showEntireMapBounds(camera, mapViewport, mapEl, mapSizeCells);
     applyCamera(shouldSave);
+    previousCameraMinimum = getCameraScaleBounds(mapViewport, mapEl, mapSizeCells).min;
     scheduleCameraTransitionEnd();
   }
 
@@ -1317,7 +1318,7 @@
     maintainBarbarianCamps(state, Math.random);
     state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
     if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
-    if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.expireUrgentDecisions(state);
+    if (window.EpohiWorldStabilityActions) window.EpohiWorldStabilityActions.expireUrgentDecisions(state);
     if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
@@ -1330,6 +1331,13 @@
   }
 
   function endTurn() {
+    if (state.continueAfterOutcome) {
+      state.victory = false;
+      state.defeat = false;
+      if (state.outcome) state.outcome.status = "active";
+    }
+    if (window.EpohiCombatWorldStability && window.EpohiCombatWorldStability.confirmEndTurn
+      && !window.EpohiCombatWorldStability.confirmEndTurn(state)) return;
     if (state.victory || state.defeat) { openVictory(); return; }
     if (turnProcessing) return;
     const turnAtStart = state.turn;
@@ -1509,6 +1517,7 @@
       '<div class="inline-note">Форпост пока не является полноценным вторым городом: у него нет собственного населения и очереди. Варвары — первая нейтральная угроза; дипломатии и дорог пока нет.</div>';
 
     openModal("wikiModal");
+    document.dispatchEvent(new Event("epohi:wiki-rendered"));
   }
 
 
@@ -2097,7 +2106,23 @@
 
   document.addEventListener("gesturestart", function (event) { event.preventDefault(); }, { passive: false });
   window.addEventListener("contextmenu", function (event) { event.preventDefault(); });
-  window.addEventListener("resize", function () { applyCamera(true); });
+  let previousCameraMinimum = null;
+  let cameraResizeFrame = 0;
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(function () {
+      if (cameraResizeFrame) cancelAnimationFrame(cameraResizeFrame);
+      cameraResizeFrame = requestAnimationFrame(function () {
+        cameraResizeFrame = 0;
+        if (gameApp.classList.contains("is-hidden")) return;
+        const minimum = getCameraScaleBounds(mapViewport, mapEl, mapSizeCells).min;
+        const wasFitted = previousCameraMinimum !== null
+          && Math.abs(camera.scale - previousCameraMinimum) <= 0.002;
+        if (wasFitted) showEntireMap(false);
+        else applyCamera(false);
+        previousCameraMinimum = minimum;
+      });
+    }).observe(mapViewport);
+  }
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
       saveGame();

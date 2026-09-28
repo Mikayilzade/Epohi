@@ -50,3 +50,28 @@ test('stability schema is initialized before UI render and not rescanned by it',
   expect(result.capacity).toBeGreaterThanOrEqual(4);
   expect(result.decisions).toBe(true);
 });
+
+test('world stability actions change only the supplied state', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const result = await page.evaluate(() => {
+    const live = window.__epohiDebug().state;
+    const detached = structuredClone(live);
+    const modal = document.getElementById('stabilityDecisionModal');
+    const originalMarkup = modal.innerHTML;
+    const originalPending = live.urgentDecisions.length;
+    const rules = window.EpohiWorldStabilityActions;
+    const decision = rules.createUrgentDecision(detached, {
+      id:'detached-decision', cityId:detached.cities[0].id,
+      options:[{id:'accept',label:'Принять',gold:3}]
+    });
+    const beforeGold = detached.resources.gold;
+    const resolved = rules.resolveUrgentDecision(detached, decision.id, 'accept');
+    return {
+      resolved, goldGain:detached.resources.gold - beforeGold,
+      livePending:live.urgentDecisions.length - originalPending,
+      modalChanged:modal.innerHTML !== originalMarkup
+    };
+  });
+  expect(result).toEqual({ resolved:true, goldGain:3, livePending:0, modalChanged:false });
+});

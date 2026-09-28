@@ -410,6 +410,7 @@
     });
 
     document.addEventListener("epohi:ui-rendered", scheduleUiSync);
+    document.addEventListener("epohi:wiki-rendered", scheduleUiSync);
     scheduleUiSync();
   }
 

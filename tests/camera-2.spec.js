@@ -77,35 +77,26 @@ async function waitForMapFit(page) {
   }, { timeout: 2000, intervals: [16, 32, 64, 100] }).toBeLessThan(0.01);
 }
 
-async function tileScreenCenter(page, x, y) {
-  return page.evaluate(({ x, y }) => {
-    const viewport = document.getElementById('mapViewport');
-    const tile = document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
-    const viewportRect = viewport.getBoundingClientRect();
-    const tileRect = tile.getBoundingClientRect();
-    const style = getComputedStyle(viewport);
-    const padLeft = parseFloat(style.paddingLeft) || 0;
-    const padRight = parseFloat(style.paddingRight) || 0;
-    const padTop = parseFloat(style.paddingTop) || 0;
-    const padBottom = parseFloat(style.paddingBottom) || 0;
-    const contentWidth = viewport.clientWidth - padLeft - padRight;
-    const contentHeight = viewport.clientHeight - padTop - padBottom;
-    return {
-      x: tileRect.left + tileRect.width / 2,
-      y: tileRect.top + tileRect.height / 2,
-      viewportCenterX: viewportRect.left + padLeft + contentWidth / 2,
-      viewportCenterY: viewportRect.top + padTop + contentHeight / 2
-    };
-  }, { x, y });
-}
-
-async function waitForTileCentered(page, x, y) {
+async function waitForFocusPosition(page, x, y) {
   await expect.poll(async () => {
-    const centered = await tileScreenCenter(page, x, y);
-    return Math.max(
-      Math.abs(centered.x - centered.viewportCenterX),
-      Math.abs(centered.y - centered.viewportCenterY)
-    );
+    return page.evaluate(({ x, y }) => {
+      const debug = window.__epohiDebug();
+      const camera = debug.getCamera();
+      const viewport = document.getElementById('mapViewport');
+      const map = document.getElementById('map');
+      const tile = map.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`);
+      const style = getComputedStyle(viewport);
+      const width = viewport.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+      const height = viewport.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);
+      const clampAxis = (target, viewportSize, mapSize) => mapSize <= viewportSize
+        ? (viewportSize - mapSize) / 2
+        : Math.min(0, Math.max(viewportSize - mapSize, target));
+      const expectedX = clampAxis(width / 2 - (tile.offsetLeft + tile.offsetWidth / 2) * camera.scale,
+        width, map.offsetWidth * camera.scale);
+      const expectedY = clampAxis(height / 2 - (tile.offsetTop + tile.offsetHeight / 2) * camera.scale,
+        height, map.offsetHeight * camera.scale);
+      return Math.max(Math.abs(camera.x - expectedX), Math.abs(camera.y - expectedY));
+    }, { x, y });
   }, { timeout: 2000, intervals: [16, 32, 64, 100] }).toBeLessThan(0.2);
 }
 
@@ -182,7 +173,9 @@ test.describe('Camera 2.0', () => {
     for (const size of ['small', 'normal', 'large']) {
       await clearStorage(page);
       await createGame(page, 0, size);
+      await waitForStableMapLayout(page);
       await page.locator('#showMapBtn').click();
+      await waitForMapFit(page);
       const info = await cameraState(page);
       mins.push(info.bounds.min);
       expect(info.camera.scale).toBeCloseTo(info.bounds.min, 2);
@@ -238,10 +231,7 @@ test.describe('Camera 2.0', () => {
     });
     await page.waitForFunction(() => document.querySelector('.tile[data-x="2"][data-y="3"]'));
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await waitForTileCentered(page, 2, 3);
-    let centered = await tileScreenCenter(page, 2, 3);
-    expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
-    expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
+    await waitForFocusPosition(page, 2, 3);
 
     await zoomAboveFit(page);
     const capital = await page.evaluate(() => {
@@ -252,10 +242,7 @@ test.describe('Camera 2.0', () => {
     });
     await page.waitForFunction(({ x, y }) => document.querySelector(`.tile[data-x="${x}"][data-y="${y}"]`), capital);
     await page.evaluate(() => window.__epohiDebug().centerCameraOnFocus(true));
-    await waitForTileCentered(page, capital.x, capital.y);
-    centered = await tileScreenCenter(page, capital.x, capital.y);
-    expect(centered.x).toBeCloseTo(centered.viewportCenterX, 1);
-    expect(centered.y).toBeCloseTo(centered.viewportCenterY, 1);
+    await waitForFocusPosition(page, capital.x, capital.y);
   });
 
   test('stored scale normalizes safely across reload, pinch stays bounded, resize reclamps, and tile click still works', async ({ page }) => {

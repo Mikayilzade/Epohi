@@ -1,7 +1,8 @@
 (function () {
   "use strict";
 
-  const { TERRAIN, INTEREST_TYPES, ARTIFACT_BONUSES, BARBARIAN } = window.EpohiData;
+  const { TERRAIN, INTEREST_TYPES, ARTIFACT_BONUSES, BARBARIAN,
+    PLAYER_EXPLORATION_RULES: BALANCE } = window.EpohiData;
   const { isAdjacent, neighborsOf } = window.EpohiUtils;
 
   function create(state, rules) {
@@ -33,7 +34,7 @@
     }
 
     function maybeAddArtifact(reason) {
-      if (rules.random() > .18 && reason !== "poi") return false;
+      if (rules.random() > BALANCE.artifactChance && reason !== "poi") return false;
       const bonus = rules.randomChoice(ARTIFACT_BONUSES);
       const artifact = { name:"Артефакт " + (state.artifacts.length + 1),
         bonus:bonus.id, text:bonus.name };
@@ -61,28 +62,22 @@
       tile.poi.used = true;
       let text = def.name + ": ";
       if (type === "ruins") {
-        if (choice) { rewardResource("science", 14); text += "+14 науки."; }
-        else { rewardResource("gold", 18); text += "+18 золота."; }
+        if (choice) { rewardResource("science", BALANCE.ruinsScience); text += "+14 науки."; }
+        else { rewardResource("gold", BALANCE.ruinsGold); text += "+18 золота."; }
       } else if (type === "grove") {
         if (choice) {
           state.permanentBonuses.science = (state.permanentBonuses.science || 0) + 1;
           text += "+1 наука за ход.";
-        } else { rewardResource("production", 24); text += "+24 производства."; }
+        } else { rewardResource("production", BALANCE.groveProduction); text += "+24 производства."; }
       } else if (type === "cave") {
         if (choice) {
-          if (rules.random() < .35) spawnAmbush(unit.x, unit.y);
+          if (rules.random() < BALANCE.caveAmbushChance) spawnAmbush(unit.x, unit.y);
           else { maybeAddArtifact("poi"); text += "найден артефакт."; }
         } else text += "вы оставили её в покое.";
       } else {
-        const rewards = [
-          {k:"gold",a:14,t:"+14 золота."},{k:"science",a:10,t:"+10 науки."},
-          {k:"food",a:12,t:"+12 еды."},{k:"production",a:12,t:"+12 производства."},
-          {k:"reveal",a:2,t:"открыты земли вокруг."},{k:"heal",a:25,t:"юнит вылечен."},
-          {k:"worker",a:1,t:"найден рабочий."},{k:"artifact",a:1,t:"найден артефакт."},
-          {k:"ambush",a:1,t:"засада варваров!"}
-        ];
+        const rewards = BALANCE.randomRewards;
         let reward = rules.randomChoice(rewards);
-        if (reward.k === "worker" && rules.random() > .08) reward = rewards[0];
+        if (reward.k === "worker" && rules.random() > BALANCE.workerFindChance) reward = rewards[0];
         if (["gold","science","food","production"].indexOf(reward.k) !== -1)
           rewardResource(reward.k, reward.a);
         else if (reward.k === "reveal") rules.revealAround(state, unit.x, unit.y, 3);
@@ -100,13 +95,7 @@
     }
 
     function resolveRuins(tile) {
-      const outcomes = [
-        { key:"science", amount:8, text:"В руинах найдены древние записи: +8 🔬" },
-        { key:"gold", amount:10, text:"В руинах найден клад: +10 🪙" },
-        { key:"production", amount:8, text:"Найдены старые инструменты: +8 🔨" },
-        { key:"food", amount:10, text:"Найдены запасы зерна: +10 🍞" }
-      ];
-      const outcome = rules.randomChoice(outcomes);
+      const outcome = rules.randomChoice(BALANCE.ancientRuins);
       state.resources[outcome.key] += outcome.amount;
       tile.feature = null;
       rules.logEvent(state, "point-of-interest-resolved", "исследованы древние руины.",

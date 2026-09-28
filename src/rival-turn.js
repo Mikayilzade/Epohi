@@ -4,7 +4,8 @@
   // The caller supplies the current state and all game services. No presentation
   // or persistence work belongs to a rival turn.
   function create(state, data, deps) {
-    const { AI_LIMITS, UNIT_DEFS, BARBARIAN, INTEREST_TYPES, CITY_MIN_DISTANCE } = data;
+    const { AI_LIMITS, UNIT_DEFS, BARBARIAN, INTEREST_TYPES, CITY_MIN_DISTANCE,
+      PLAYER_CITY_RULES, RIVAL_TURN_RULES: BALANCE } = data;
     const { chebyshev, isAdjacent, neighborsOf, passableTile } = deps;
     const mapSize = function () { return deps.mapSizeCells(state); };
     const tileKey = function (x, y) { return x + "," + y; };
@@ -108,9 +109,9 @@
         : (tile.feature === 'ruins' ? { type:'ruins', feature:true } : null);
       if (!poi) return false;
       if (poi.feature) tile.feature = null; else tile.poi.used = true;
-      const key = civ.resources.science < 12 ? 'science'
-        : (civ.resources.gold < 10 ? 'gold' : 'production');
-      civ.resources[key] += key === 'production' ? 12 : 14;
+      const key = civ.resources.science < BALANCE.poiScienceThreshold ? 'science'
+        : (civ.resources.gold < BALANCE.poiGoldThreshold ? 'gold' : 'production');
+      civ.resources[key] += key === 'production' ? BALANCE.poiProductionReward : BALANCE.poiResourceReward;
       if (tile.revealed) logEvent('point-of-interest-resolved',
         civ.name + ' первым исследует ' + INTEREST_TYPES[poi.type].name + '.',
         { x:unit.x, y:unit.y },
@@ -168,9 +169,9 @@
         ? { x:x, y:y, turn:state.turn, campId:removedCamp.campId } : null;
       deps.scheduleNextCampSpawn(state, state.turn, deps.random);
       const target = civ.resources || state.resources;
-      target.gold = (target.gold || 0) + 25;
-      target.science = (target.science || 0) + 6;
-      if (unit) unit.hp = Math.min(unit.maxHp, unit.hp + 20);
+      target.gold = (target.gold || 0) + BALANCE.campGoldReward;
+      target.science = (target.science || 0) + BALANCE.campScienceReward;
+      if (unit) unit.hp = Math.min(unit.maxHp, unit.hp + BALANCE.campHeal);
       if (civ.civilizationId) logEvent('rival-destroyed-camp',
         civ.name + ' уничтожил варварский лагерь.', { x, y },
         { actorType:'civilization', actorId:civ.civilizationId, phase:'rivals' });
@@ -295,7 +296,8 @@
               id:civ.civilizationId + '-city' + civ.cities.length,
               name:'Ривен ' + civ.cities.length, x:unit.x, y:unit.y,
               population:1, food:0, production:0, buildings:[], queue:null,
-              hp:150, maxHp:150, youngUntil:state.turn + 3
+              hp:PLAYER_CITY_RULES.foundingHealth, maxHp:PLAYER_CITY_RULES.foundingHealth,
+              youngUntil:state.turn + PLAYER_CITY_RULES.youngTurns
             };
             civ.cities.push(city);
             civ.units = civ.units.filter(function (item) { return item.id !== unit.id; });

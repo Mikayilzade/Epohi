@@ -20,7 +20,6 @@
   let diplomacyModal = null;
   let poiModal = null;
   let pendingRivalCount = null;
-  let cameraResizeObserver = null;
   const cycleIndex = { units: -1, workers: -1, cities: -1 };
 
   function debug() { return typeof window.__epohiDebug === "function" ? window.__epohiDebug() : null; }
@@ -364,23 +363,16 @@
     if (camera.scale < bounds.min - 0.001 || camera.scale > bounds.max + 0.001) value.applyCamera(false);
   }
 
-  function installCameraResizeClamp() {
-    const viewport = document.getElementById("mapViewport"); if (!viewport || cameraResizeObserver || typeof ResizeObserver === "undefined") return;
-    let last = "";
-    cameraResizeObserver = new ResizeObserver(function () { const key = viewport.clientWidth + "x" + viewport.clientHeight; if (key === last) return; last = key; window.requestAnimationFrame(stabilizeCamera); }); cameraResizeObserver.observe(viewport);
-  }
-
   function refresh() {
-    frame = 0; const gs = state(); ensureThreeRivalsOption(); installWheelZoom(); installCameraResizeClamp(); if (!gs) return;
+    frame = 0; const gs = state(); ensureThreeRivalsOption(); installWheelZoom(); if (!gs) return;
     const identityChanged = ensureIdentity(gs); if (identityChanged) { const value = debug(); if (value && typeof value.render === "function") { value.render(); window.requestAnimationFrame(schedule); return; } }
     refreshReadiness(gs); decorateFactions(gs); decorateContext(gs); injectDiplomacyMenu(); ensureAwaitingPoi(gs); stabilizeCamera();
   }
   function schedule() { if (frame) return; frame = window.requestAnimationFrame(refresh); }
 
   function install() {
-    ensureReadinessBar(); ensureDiplomacyModal(); ensureThreeRivalsOption(); installWheelZoom(); installCameraResizeClamp(); PATHING.setPoiArrivalHandler(openPoiChoice);
-    // RuntimeInvalidation owns DOM-change and click refresh. Keep only the bounded
-    // viewport resize signal and module-local explicit schedule() calls here.
+    ensureReadinessBar(); ensureDiplomacyModal(); ensureThreeRivalsOption(); installWheelZoom(); PATHING.setPoiArrivalHandler(openPoiChoice);
+    // RuntimeInvalidation owns DOM-change and click refresh; app.js owns camera resize.
     window.addEventListener("resize", schedule);
     schedule();
   }

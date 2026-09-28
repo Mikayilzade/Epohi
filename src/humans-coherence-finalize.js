@@ -261,11 +261,12 @@
       event.preventDefault();
       event.stopPropagation();
       const gs = ensureState(state());
-      const stability = window.EpohiCombatWorldStability;
+      const stability = window.EpohiWorldStabilityActions;
       if (gs && stability && typeof stability.expandAdministration === "function") {
         stability.expandAdministration(gs);
         const value = debug();
         if (value && typeof value.render === "function") value.render();
+        if (window.EpohiCombatWorldStability) window.EpohiCombatWorldStability.render();
         window.setTimeout(schedule, 0);
       }
       return;

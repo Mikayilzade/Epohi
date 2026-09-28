@@ -7,6 +7,10 @@ function safeName(value) {
   return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-|-$/g, '').slice(0, 120) || 'failure';
 }
 
+function relativePath(value) {
+  return path.relative(process.cwd(), value).split(path.sep).join('/');
+}
+
 function failureRecord(test, result) {
   const annotations = Object.fromEntries((test.annotations || []).map(({ type, description }) => [type, description || '']));
   return {
@@ -18,7 +22,7 @@ function failureRecord(test, result) {
       runAttempt: process.env.GITHUB_RUN_ATTEMPT || null
     },
     project: test.parent && test.parent.project ? test.parent.project().name : null,
-    file: test.location ? path.relative(process.cwd(), test.location.file) : null,
+    file: test.location ? relativePath(test.location.file) : null,
     title: test.titlePath ? test.titlePath().join(' > ') : test.title,
     status: result.status,
     retry: result.retry,
@@ -28,7 +32,7 @@ function failureRecord(test, result) {
     attachments: (result.attachments || []).map(({ name, contentType, path: attachmentPath }) => ({
       name,
       contentType,
-      path: attachmentPath ? path.relative(process.cwd(), attachmentPath) : null
+      path: attachmentPath ? relativePath(attachmentPath) : null
     }))
   };
 }

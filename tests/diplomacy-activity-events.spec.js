@@ -189,7 +189,9 @@ test.describe('Дипломатия, выбор объектов и событи
     const text = 'Пала столица тестового государства.';
     await page.evaluate(eventText => {
       const state = window.__epohiDebug().state;
-      state.eventLog.unshift({ eventId: 'flow-major-test', turn: state.turn, eventType: 'capital-fallen', text: eventText });
+      window.EpohiEventJournal.append(state, () => ({
+        eventId: 'flow-major-test', turn: state.turn, eventType: 'capital-fallen', text: eventText
+      }), { eventLimit: 240, historyLimit: 240 });
       window.EpohiCombatWorldStability.render();
       window.EpohiEventOverlayPolicy.normalize();
     }, text);

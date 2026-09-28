@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const { UNIT_DEFS, BARBARIAN } = window.EpohiData;
+  const { UNIT_DEFS, BARBARIAN, PLAYER_COMBAT_RULES: BALANCE } = window.EpohiData;
   const { isAdjacent } = window.EpohiUtils;
 
   function targets(state, x, y) {
@@ -44,8 +44,8 @@
     const def = UNIT_DEFS[unit.type];
     if (rules.recordAttack && (ru || rc)) rules.recordAttack(state, (ru || rc).civ, "player");
     const defense = barb ? BARBARIAN.raiderDefense
-      : (ru ? (UNIT_DEFS[ru.unit.type].defense || 0) : 18);
-    victim.hp -= rules.damageAmount(def.attack || 8,
+      : (ru ? (UNIT_DEFS[ru.unit.type].defense || 0) : BALANCE.cityDefense);
+    victim.hp -= rules.damageAmount(def.attack || BALANCE.fallbackAttack,
       defense + rules.defenseBonus(x, y, defense));
     rules.logEvent(state, rc ? "city-attacked" : "attack",
       def.name + " атакует цель.", { x:x, y:y },
@@ -60,7 +60,7 @@
         message = "Варвар повержен.";
       } else if (camp) {
         rules.campReward({ resources:state.resources }, unit, x, y);
-        state.resources.production += 6;
+        state.resources.production += BALANCE.campProductionReward;
         message = rules.maybeAddArtifact("camp")
           ? "Лагерь уничтожен: +25 золота, +6 науки/производства и артефакт."
           : "Лагерь уничтожен: +25 золота, +6 науки/производства.";
@@ -91,12 +91,12 @@
         rules.revealAround(state, x, y, unit.type === "scout" ? rules.scoutSight() : 1);
       }
     } else if (ru && isAdjacent(unit.x, unit.y, ru.unit.x, ru.unit.y)) {
-      unit.hp -= rules.damageAmount((UNIT_DEFS[ru.unit.type].attack || 8) * .45,
+      unit.hp -= rules.damageAmount((UNIT_DEFS[ru.unit.type].attack || BALANCE.fallbackAttack) * BALANCE.rivalCounterattackFactor,
         (def.defense || 0) + rules.defenseBonus(unit.x, unit.y, def.defense || 0));
       message += " Ответный удар: здоровье " + Math.max(0, Math.ceil(unit.hp)) + "/" + unit.maxHp + ".";
       attackerDied = unit.hp <= 0;
     } else if (barb && isAdjacent(unit.x, unit.y, barb.x, barb.y)) {
-      unit.hp -= rules.damageAmount(BARBARIAN.raiderAttack * .55,
+      unit.hp -= rules.damageAmount(BARBARIAN.raiderAttack * BALANCE.barbarianCounterattackFactor,
         (def.defense || 0) + rules.defenseBonus(unit.x, unit.y, def.defense || 0));
       message += " Ответный удар: здоровье " + Math.max(0, Math.ceil(unit.hp)) + "/" + unit.maxHp + ".";
       attackerDied = unit.hp <= 0;

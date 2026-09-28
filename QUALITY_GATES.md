@@ -16,9 +16,9 @@ not automatic blockers for ordinary PC gameplay development.
 
 At the 2026-09-23 audit SHA (`2c6b2a1`), `playwright.config.js` defines only
 `chromium-mobile` and `webkit-mobile`, and the workflow invokes those projects.
-Desktop Chromium validation required for a PC release is therefore an open
-coverage gap. Do not count a mobile-emulated Chromium job or a docs-only CI
-scope-classifier success as proof that the desktop gate passed. See
+The architecture cleanup adds `chromium-desktop` and a three-shard full desktop
+job when CI selects full regression. Count its actual green result, not a
+mobile-emulated Chromium job or a docs-only scope-classifier success. See
 [PROJECT_DECISION_AUDIT.md](PROJECT_DECISION_AUDIT.md), D23–D24.
 
 ## Gate A — static integrity

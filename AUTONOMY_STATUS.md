@@ -1,20 +1,23 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: PRESENTATION_PACKAGE_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: FINAL_PACKAGE_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Gameplay package published at `562fca2`; presentation/observer
-  package locally validated on Lead. PR #103 remains the only target.
-- **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Saga rules run before autosave; full render has one completion
-  signal; save status has targeted update; redundant decorator wrappers and
-  broad observers were removed/narrowed.
-- **EVIDENCE:** Desktop focused suite 38/38; separate navigation/autosave/
-  render tests pass. End Turn signals 4->1 and observer syncs 3->1 per turn;
-  five wall-time samples remain within prior noise.
-- **NEXT:** Publish presentation package, then final architecture audit,
-  End Turn/performance comparison and desktop integration gate.
-- **BLOCKER:** None. No user decision needed for these technical stages.
+- **STATUS:** Stage 51 and architecture packages 1-3 published through
+  `f69228b`; final package locally validated, uncommitted. PR #103 remains
+  the only target.
+- **DONE:** Domain rules and structured journal have explicit owners; End Turn,
+  saga, camera, overlay and stability paths were consolidated. Duplicate
+  observer safety and shadowed faction-defeat code were removed. The live
+  architecture map and residual debt are in `ARCHITECTURE_PASSPORT.md`.
+- **EVIDENCE:** Latest desktop run 225/226; the one stale raw-event fixture
+  was corrected and passed focused. Final short soak 2 seeds x 30 turns,
+  static syntax 119 files and contracts 35/35 passed. Five End Turns emitted
+  one full render, invalidation flush and observer sync each; timings remain
+  within noise.
+- **NEXT:** Review, commit and push final package to #103; check exact-SHA CI,
+  fix real regressions, then record gate result and report completion.
+- **BLOCKER:** None.
 
 ---
 
