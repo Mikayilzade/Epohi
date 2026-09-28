@@ -130,6 +130,7 @@ test.describe('Player feedback stabilization and treasury', () => {
       unit.x = 5; unit.y = 5; unit.moves = 1; unit.acted = false;
       gs.map[5][5].terrain = 'plains'; gs.map[5][5].revealed = true;
       gs.map[5][6].terrain = 'plains'; gs.map[5][6].revealed = true;
+      gs.map[5][6].camp = null;
       gs.map[5][6].poi = { type: 'depot', used: false };
       gs.barbarians = [];
       window.__epohiDebug().render();
