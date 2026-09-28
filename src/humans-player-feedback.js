@@ -660,6 +660,7 @@
       '<article class="game-card"><div><h3>🔨 Финансировать мастерские' + (city ? ': ' + escapeText(city.name) : '') + '</h3><p>' + (city ? escapeText(city.name) + ' получает +12 локального производства.' : 'Сначала выбери город.') + '</p></div><button class="card-button" data-treasury-action="production" ' + ((!city || (gs.resources.gold || 0) < 20) ? 'disabled' : '') + '>20 🪙</button></article>' +
       '<article class="game-card"><div><h3>🗺️ Купить карты путешественников</h3><p>Открывает участок 5×5 у границы разведанных земель.</p></div><button class="card-button" data-treasury-action="map" ' + ((gs.resources.gold || 0) < 24 ? 'disabled' : '') + '>24 🪙</button></article>' +
       '</div>';
+    document.dispatchEvent(new Event("epohi:treasury-rendered"));
   }
 
   function openTreasury() {

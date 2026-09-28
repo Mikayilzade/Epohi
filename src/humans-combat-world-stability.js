@@ -58,6 +58,7 @@
 
   function install() {
     ensureUi();
+    document.addEventListener("epohi:treasury-rendered", render);
     document.addEventListener("click", function (event) {
       const close = event.target.closest && event.target.closest("[data-stability-close]");
       if (close) document.getElementById(close.dataset.stabilityClose === "major" ? "stabilityMajorModal" : "stabilityDecisionModal").classList.remove("show");
@@ -66,7 +67,7 @@
       const expand = event.target.closest && event.target.closest("[data-expand-administration]"); if (expand) expandAdministration(state());
       if (event.target.closest && event.target.closest("[data-world-events-open]")) { if(window.EpohiPlayerFeedback&&window.EpohiPlayerFeedback.reopenWorldEvents)window.EpohiPlayerFeedback.reopenWorldEvents(state()); }
       const needsStabilitySheet = event.target.closest && event.target.closest(
-        "#cityBtn, #menuBtn, [data-context-action='open-city'], [data-city-select], [data-feedback-treasury], [data-treasury-entry], [data-treasury-action]");
+        "#cityBtn, #menuBtn, [data-context-action='open-city'], [data-city-select]");
       if (needsStabilitySheet) window.setTimeout(render, 0);
     });
     if(window.EpohiHumansJourney&&!window.EpohiHumansJourney.stabilityWrapped){
