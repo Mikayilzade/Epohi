@@ -934,3 +934,25 @@ listeners, so the completion criteria above remain open.
   behavior passed 20/20, then 14/14 after the final presentation flag edits.
   Syntax and diff checks pass. Next: extract remaining player/rival actions,
   then remove redundant presentation observers and measure End Turn.
+
+### Package 2: player and rival gameplay actions
+
+- `player-combat.js` now owns attack legality, damage, counterattack, deaths,
+  capture and reward state changes. `app.js` passes game services and uses the
+  returned message/death result only to update selection, toast and render.
+- `player-exploration.js` owns movement cost/application, point-of-interest
+  outcomes, artifact creation, ambushes and civilization discovery. The UI
+  supplies the player's existing three confirmation choices; the rule module
+  consumes the choice and returns presentation text. It never reads DOM or
+  waits for animation.
+- `rival-turn.js` owns rival path choice/execution, action budget, combat
+  dispatch, settlement, POI claims and allied war actions. The app retains
+  turn orchestration and alert presentation. The old rival executor bodies
+  were removed from `app.js`; no second active rival implementation remains.
+- The old outpost action was unreachable because `canFoundOutpost()` always
+  returned false. Its dead button branch and implementation were removed;
+  founding a full city through `player-settlements.js` remains the live rule.
+- Local desktop Chromium focused coverage: player combat/capture 37/37,
+  rival AI and diplomacy 34/34, movement/POI and treasury 31/31, final
+  discovery/action checks 5/5. Syntax and diff checks pass. The full desktop
+  gate and before/after End Turn measurement remain for the final package.

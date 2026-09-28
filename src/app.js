@@ -665,35 +665,21 @@
   function barbarianAt(x, y) { return (state.barbarians || []).find(function (b) { return b.x === x && b.y === y && b.hp > 0; }) || null; }
   function campAt(x, y) { const tile = state.map[y] && state.map[y][x]; return tile && tile.camp && tile.camp.hp > 0 ? tile.camp : null; }
   function defenseBonus(x, y, baseDefense) { return window.EpohiCombatRules.terrainBonus(state.map[y][x], baseDefense, !!settlementAt(x,y)); }
-  function canAttack(unit, x, y) { if (!unit || unit.moves <= 0 || (UNIT_DEFS[unit.type].attack || 0) <= 0 || !isAdjacent(unit.x, unit.y, x, y)) return false; const ru = rivalUnitAt(x,y), rc = rivalCityAt(x,y); const hostileRival = (ru && ru.civ.relation === "war") || (rc && rc.civ.relation === "war"); return !!(barbarianAt(x,y) || campAt(x,y) || hostileRival); }
+  function canAttack(unit, x, y) { return window.EpohiPlayerCombat.canAttack(state, unit, x, y); }
   function damageAmount(base, defense) { return window.EpohiCombatRules.damage("direct", base, defense, Math.random()); }
   function killUnit(unit) { state.units = state.units.filter(function (u) { return u.id !== unit.id; }); if (selectedUnitId === unit.id) selectedUnitId = state.units.length ? state.units[0].id : null; }
-  function maybeAddArtifact(reason) { if (Math.random() > .18 && reason !== "poi") return false; const bonus = randomChoice(ARTIFACT_BONUSES); const art = { name: "Артефакт " + (state.artifacts.length + 1), bonus: bonus.id, text: bonus.name }; state.artifacts.push(art); state.permanentBonuses[bonus.id] = (state.permanentBonuses[bonus.id] || 0) + 1; logEvent(state,"artifact-found","найден артефакт — "+bonus.name+".",null,{actorType:"player",actorId:"player",data:{bonus:bonus.id},historyLimit:Infinity,presentationSilent:true}); return true; }
+  function maybeAddArtifact(reason) { return playerExploration().maybeAddArtifact(reason); }
   function attackEnemy(unitId, x, y) {
-    const unit = getUnit(unitId); if (!canAttack(unit, x, y)) return;
-    const def = UNIT_DEFS[unit.type]; const barb = barbarianAt(x,y); const camp = campAt(x,y); const ru = rivalUnitAt(x,y); const rc = rivalCityAt(x,y); const target = barb || camp || (ru && ru.unit) || (rc && rc.city);
-    if (window.EpohiLivingCivilizations && (ru || rc)) window.EpohiLivingCivilizations.recordAttack(state, (ru || rc).civ, "player");
-    const targetDefense=barb?BARBARIAN.raiderDefense:(ru?(UNIT_DEFS[ru.unit.type].defense||0):18);
-    target.hp -= damageAmount(def.attack || 8, targetDefense + defenseBonus(x,y,targetDefense));
-    logEvent(state, rc ? "city-attacked" : "attack", def.name + " атакует цель.", { x:x, y:y }, { actorType:"player", actorId:"player" });
-    unit.moves = 0; unit.acted = true;
-    let msg = def.name + " атакует.";
-    if (target.hp <= 0) {
-      if (barb) { state.barbarians = state.barbarians.filter(function (b) { return b.id !== barb.id; }); msg = "Варвар повержен."; }
-      else if (camp) { campReward({resources:state.resources}, unit, x, y); state.resources.production += 6; if (maybeAddArtifact("camp")) msg = "Лагерь уничтожен: +25 золота, +6 науки/производства и артефакт."; else msg = "Лагерь уничтожен: +25 золота, +6 науки/производства."; }
-      else if (ru) { ru.civ.units = ru.civ.units.filter(function (u) { return u.id !== ru.unit.id; }); logEvent(state,"unit-destroyed","Уничтожен юнит: "+ru.civ.name+".",{x:x,y:y},{actorType:"player",actorId:"player"}); msg = "Юнит соперника уничтожен."; }
-      else if (rc) { rc.city.hp = 0; rc.civ.defeated = rc.city.capital; logEvent(state,"city-captured","Захвачен город: "+rc.city.name+".",{x:x,y:y},{actorType:"player",actorId:"player"}); if (rc.city.capital) { rc.civ.units=[]; msg = "Столица соперника захвачена."; if ((state.rivals||[]).every(function(c){return c.defeated;})) { state.victory=true; logEvent(state,"victory","Захвачены столицы всех соперников.",null,{actorType:"player",actorId:"player"}); } } else msg = "Город соперника захвачен."; }
-      if (!unitsAt(x,y).length && passableTile(state.map[y][x])) { unit.x = x; unit.y = y; revealAround(state,x,y, unit.type === "scout" ? scoutSight() : 1); }
-    } else if (ru && isAdjacent(unit.x, unit.y, ru.unit.x, ru.unit.y)) {
-      unit.hp -= damageAmount((UNIT_DEFS[ru.unit.type].attack || 8) * .45, (def.defense || 0) + defenseBonus(unit.x, unit.y,def.defense||0));
-      msg += " Ответный удар: здоровье " + Math.max(0, Math.ceil(unit.hp)) + "/" + unit.maxHp + ".";
-      if (unit.hp <= 0) { killUnit(unit); msg = "Юнит погиб в бою."; }
-    } else if (barb && isAdjacent(unit.x, unit.y, barb.x, barb.y)) {
-      unit.hp -= damageAmount(BARBARIAN.raiderAttack * .55, (def.defense || 0) + defenseBonus(unit.x, unit.y,def.defense||0));
-      msg += " Ответный удар: здоровье " + Math.max(0, Math.ceil(unit.hp)) + "/" + unit.maxHp + ".";
-      if (unit.hp <= 0) { killUnit(unit); msg = "Юнит погиб в бою."; }
-    }
-    showToast(msg, 2800); render();
+    const result = window.EpohiPlayerCombat.attack(state, getUnit(unitId), x, y, {
+      recordAttack:window.EpohiLivingCivilizations && window.EpohiLivingCivilizations.recordAttack,
+      damageAmount:damageAmount, defenseBonus:defenseBonus, logEvent:logEvent,
+      campReward:campReward, maybeAddArtifact:maybeAddArtifact,
+      passableTile:passableTile, revealAround:revealAround, scoutSight:scoutSight
+    });
+    if (!result) return;
+    if (result.attackerDied && selectedUnitId === unitId)
+      selectedUnitId = state.units.length ? state.units[0].id : null;
+    showToast(result.message, 2800); render();
   }
   function scoutSight() { return 1 + (state.permanentBonuses.scoutSight || 0); }
 
@@ -1073,12 +1059,6 @@
         }
       }
 
-      if (activeUnit.type === "settler" && canFoundOutpost(activeUnit)) {
-        appendContextActionOnce("found-outpost", "Основать<br>⛺", "alt", function () {
-          foundOutpost(activeUnit.id);
-        }, false);
-      }
-
       if (hereUnits.length > 1) {
         appendStackNavigationControls(x, y, hereUnits);
       }
@@ -1132,78 +1112,46 @@
     scienceBadge.classList.toggle("show", !state.currentResearch && available);
   }
 
-  function canMoveUnitTo(unit, x, y) {
-    if (!unit || unit.moves <= 0) return false;
-    if (!isAdjacent(unit.x, unit.y, x, y)) return false;
-    if (!passableTile(state.map[y][x])) return false;
-    if (barbarianAt(x, y) || campAt(x, y) || rivalUnitAt(x, y) || rivalCityAt(x, y)) return false;
-    return true;
+  let explorationState = null;
+  let explorationService = null;
+  function playerExploration() {
+    if (explorationState !== state) {
+      explorationState = state;
+      explorationService = window.EpohiPlayerExploration.create(state, {
+        passableTile, barbarianAt, campAt, rivalUnitAt, rivalCityAt,
+        scoutSight, revealAround, random:Math.random, randomChoice,
+        logEvent, mapSizeCells, unitsAt, addUnit, playerSees,
+        get allowTravelOrder(){ return !!window.EpohiHumansPathing; }
+      });
+    }
+    return explorationService;
   }
-
+  function canMoveUnitTo(unit, x, y) {
+    return playerExploration().canMove(unit, x, y);
+  }
   function moveUnit(unitId, x, y) {
     const unit = getUnit(unitId);
-    if (!canMoveUnitTo(unit, x, y)) return;
-    const terrainCost=Number((TERRAIN[state.map[y][x].terrain]||{}).movementCost)||1;
-    if(unit.moves<terrainCost&&window.EpohiHumansPathing){window.EpohiHumansPathing.assignTravelOrder(unit.id,{type:'move',targetKind:'tile',targetId:null,x:x,y:y});return;}
-    unit.x = x;
-    unit.y = y;
-    unit.moves -= terrainCost;
-    const radius = unit.type === "scout" ? scoutSight() : (unit.type === "warrior" ? 1 : 0);
-    state.map[y][x].revealed = true;
-    revealAround(state, x, y, radius);
-
-    const tile = state.map[y][x];
-    if (tile.poi && !tile.poi.used && (unit.type === "scout" || unit.type === "warrior")) {
-      explorePointOfInterest(tile, unit);
-    } else if (tile.feature === "ruins" && (unit.type === "scout" || unit.type === "warrior")) {
-      exploreRuins(tile);
-    } else {
-      showToast(UNIT_DEFS[unit.type].name + " перемещён.");
+    const result = playerExploration().move(unit, x, y);
+    if (!result) return;
+    if (result.kind === "travel-order") {
+      window.EpohiHumansPathing.assignTravelOrder(unit.id,
+        { type:"move", targetKind:"tile", targetId:null, x:x, y:y });
+      return;
     }
-    selected = { x: x, y: y };
+    if (result.kind === "poi") {
+      const type = result.tile.poi.type;
+      let choice;
+      if (type === "ruins") choice = window.confirm("Древние руины: разобрать механизм ради науки? Отмена — продать находку за золото.");
+      else if (type === "grove") choice = window.confirm("Священная роща: сохранить её? Отмена — вырубить ради производства.");
+      else if (type === "cave") choice = window.confirm("Пещера: войти внутрь? Отмена — оставить в покое.");
+      showToast(playerExploration().resolvePointOfInterest(result.tile, unit, choice), 3600);
+    } else if (result.kind === "ruins") {
+      showToast(playerExploration().resolveRuins(result.tile));
+    } else showToast(UNIT_DEFS[unit.type].name + " перемещён.");
+    selected = { x:x, y:y };
     selectedUnitId = unit.id;
     checkCivilizationDiscovery();
     render();
-  }
-
-
-  function rewardResource(key, amount) { state.resources[key] = (state.resources[key] || 0) + amount; }
-  function explorePointOfInterest(tile, unit) {
-    const type = tile.poi.type, def = INTEREST_TYPES[type]; tile.poi.used = true;
-    let text = def.name + ": ";
-    if (type === "ruins") {
-      if (window.confirm("Древние руины: разобрать механизм ради науки? Отмена — продать находку за золото.")) { rewardResource("science", 14); text += "+14 науки."; } else { rewardResource("gold", 18); text += "+18 золота."; }
-    } else if (type === "grove") {
-      if (window.confirm("Священная роща: сохранить её? Отмена — вырубить ради производства.")) { state.permanentBonuses.science = (state.permanentBonuses.science || 0) + 1; text += "+1 наука за ход."; } else { rewardResource("production", 24); text += "+24 производства."; }
-    } else if (type === "cave") {
-      if (window.confirm("Пещера: войти внутрь? Отмена — оставить в покое.")) { if (Math.random() < .35) spawnAmbush(unit.x, unit.y); else { maybeAddArtifact("poi"); text += "найден артефакт."; } } else text += "вы оставили её в покое.";
-    } else {
-      const rewards = [{k:"gold",a:14,t:"+14 золота."},{k:"science",a:10,t:"+10 науки."},{k:"food",a:12,t:"+12 еды."},{k:"production",a:12,t:"+12 производства."},{k:"reveal",a:2,t:"открыты земли вокруг."},{k:"heal",a:25,t:"юнит вылечен."},{k:"worker",a:1,t:"найден рабочий."},{k:"artifact",a:1,t:"найден артефакт."},{k:"ambush",a:1,t:"засада варваров!"}];
-      let r = randomChoice(rewards); if (r.k === "worker" && Math.random() > .08) r = rewards[0];
-      if (["gold","science","food","production"].indexOf(r.k) !== -1) rewardResource(r.k, r.a);
-      else if (r.k === "reveal") revealAround(state, unit.x, unit.y, 3);
-      else if (r.k === "heal") unit.hp = Math.min(unit.maxHp, unit.hp + r.a);
-      else if (r.k === "worker") addUnit("worker");
-      else if (r.k === "artifact") maybeAddArtifact("poi");
-      else if (r.k === "ambush") spawnAmbush(unit.x, unit.y);
-      text += r.t;
-    }
-    logEvent(state,"point-of-interest-resolved","исследовано место «"+def.name+"».",{x:unit.x,y:unit.y},{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true}); showToast(text, 3600);
-  }
-  function spawnAmbush(x, y) { const n = neighborsOf(x,y,mapSizeCells()).find(function (p) { return passableTile(state.map[p.y][p.x]) && !unitsAt(p.x,p.y).length && !barbarianAt(p.x,p.y); }); if (n) state.barbarians.push({ id:"b" + state.nextBarbarianId++, x:n.x, y:n.y, hp:BARBARIAN.raiderHealth, maxHp:BARBARIAN.raiderHealth, homeX:x, homeY:y, last:null }); }
-
-  function exploreRuins(tile) {
-    const outcomes = [
-      { key: "science", amount: 8, text: "В руинах найдены древние записи: +8 🔬" },
-      { key: "gold", amount: 10, text: "В руинах найден клад: +10 🪙" },
-      { key: "production", amount: 8, text: "Найдены старые инструменты: +8 🔨" },
-      { key: "food", amount: 10, text: "Найдены запасы зерна: +10 🍞" }
-    ];
-    const outcome = randomChoice(outcomes);
-    state.resources[outcome.key] += outcome.amount;
-    tile.feature = null;
-    logEvent(state,"point-of-interest-resolved","исследованы древние руины.",null,{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true});
-    showToast(outcome.text);
   }
 
   function cityTerritoryOwner(x, y) {
@@ -1237,19 +1185,6 @@
   }
 
 
-  function foundOutpost(unitId) {
-    const unit = getUnit(unitId);
-    if (!canFoundOutpost(unit)) return;
-    const name = "Форпост " + (state.settlements.length + 1);
-    state.settlements.push({ x: unit.x, y: unit.y, name: name });
-    revealAround(state, unit.x, unit.y, 1);
-    state.units = state.units.filter(function (item) { return item.id !== unit.id; });
-    selectedUnitId = state.units.length ? state.units[0].id : null;
-    logEvent(state,"outpost-founded","основан "+name+".",{x:unit.x,y:unit.y},{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true});
-    showToast("⛺ " + name + " основан: +1 🍞, +1 🔨 и +1 🪙 за ход.", 3000);
-    render();
-  }
-
   function techUnlocked(id) {
     return techUnlockedForState(state, id, TECHS);
   }
@@ -1281,13 +1216,6 @@
 
 
 
-  function nearestPlayerTarget(b) {
-    const targets = state.units.concat(state.settlements.map(function (o) { return { x:o.x, y:o.y, outpost:true }; })).concat([{ x:state.city.x, y:state.city.y, city:true }]);
-    targets.sort(function (a, c) { return chebyshev(b.x,b.y,a.x,a.y) - chebyshev(b.x,b.y,c.x,c.y); });
-    return targets[0];
-  }
-
-
   function logEvent(targetState, eventType, text, coords, options) {
     const gs = targetState || state; if (!gs) return;
     return window.EpohiEventJournal.append(gs, function (counter) {
@@ -1303,50 +1231,56 @@
   }
 
   function tileKey(x,y){ return x + "," + y; }
-  function revealForRival(civ, x, y, radius) {
-    civ.explored = civ.explored || {}; civ.visible = {};
-    const size = state ? mapSizeCells(state) : (civ.mapSize || DEFAULT_MAP_SIZE);
-    for (let yy=Math.max(0,y-radius); yy<=Math.min(size-1,y+radius); yy++) for (let xx=Math.max(0,x-radius); xx<=Math.min(size-1,x+radius); xx++) {
-      if (chebyshev(x,y,xx,yy) <= radius) { civ.explored[tileKey(xx,yy)] = true; civ.visible[tileKey(xx,yy)] = true; }
-    }
-    if (state && state.barbarianDirector) updateCampDiscovery(state);
-  }
   function startQuality(gs,x,y){ let score=0, pass=0; neighborsOf(x,y,mapSizeCells(gs)).concat([{x:x,y:y}]).forEach(function(p){ const t=gs.map[p.y][p.x]; if(!passableTile(t)) return; pass++; const yld=getTileYield(t); score += yld.food*3 + yld.production*3 + yld.gold + yld.science + (t.feature?3:0); }); return pass>=5 ? score : -99; }
   function findRivalStart(gs, taken) { const size=mapSizeCells(gs); let best=null; for(let y=2;y<size-2;y++) for(let x=2;x<size-2;x++){ const t=gs.map[y][x]; if(!passableTile(t)||t.camp) continue; if(taken.some(function(p){return chebyshev(x,y,p.x,p.y)<7;})) continue; const q=startQuality(gs,x,y); if(!best || q>best.q) best={x:x,y:y,q:q}; } return best; }
   function initializeRivals(gs, count) {
-    const taken=[{x:gs.city.x,y:gs.city.y}]; gs.rivals=[];
+    const taken=[{x:gs.city.x,y:gs.city.y}]; gs.rivals=[]; const rivalTurn=rivalTurnFor(gs);
     for(let i=0;i<count;i++){ const spot=findRivalStart(gs,taken); if(!spot) break; taken.push(spot); const id="civ"+(i+1), name=AI_NAMES[i % AI_NAMES.length], color=AI_COLORS[i % AI_COLORS.length];
       const civ={ civilizationId:id, name:name, color:color, symbol:String.fromCharCode(65+i), resources:{food:6,production:14,gold:8,science:4}, science:{currentResearch:"agriculture"}, technologies:[], cities:[{id:id+"-cap",name:(i?"Вельм":"Ардан"),x:spot.x,y:spot.y,population:1,buildings:[],queue:null,hp:180,maxHp:180,capital:true}], outposts:[], units:[], explored:{}, visible:{}, productionQueue:null, relation:"unknown", met:false, warStartTurn:null, strategicGoal:"исследование", currentThreats:[], lastKnownInterest:null, decisionHistory:[], defeated:false, mapSize: gs.mapSize };
-      placeStartingUnits(gs, civ.cities[0], civ.units, id); civ.units.forEach(function(u){ revealForRival(civ,u.x,u.y,u.type==="scout"?2:1); }); revealForRival(civ,spot.x,spot.y,2); gs.rivals.push(civ); logEvent(gs,"civilization-founded",name+" основал столицу.",{x:spot.x,y:spot.y},{actorType:"civilization",actorId:id,phase:"setup"}); }
+      placeStartingUnits(gs, civ.cities[0], civ.units, id); civ.units.forEach(function(u){ rivalTurn.revealForRival(civ,u.x,u.y,u.type==="scout"?2:1,true); }); rivalTurn.revealForRival(civ,spot.x,spot.y,2,true); gs.rivals.push(civ); logEvent(gs,"civilization-founded",name+" основал столицу.",{x:spot.x,y:spot.y},{actorType:"civilization",actorId:id,phase:"setup"}); }
   }
   function rivalUnitAt(x,y){ if (!state) return null; for(const civ of (state.rivals||[])){ const u=(civ.units||[]).find(function(unit){return unit.x===x&&unit.y===y&&unit.hp>0;}); if(u) return {civ:civ,unit:u}; } return null; }
   function rivalCityAt(x,y){ if (!state) return null; for(const civ of (state.rivals||[])){ const c=(civ.cities||[]).find(function(city){return city.x===x&&city.y===y&&city.hp>0;}); if(c) return {civ:civ,city:c}; } return null; }
   function playerSees(x,y){ return currentPlayerSees(state,x,y); }
-  function checkCivilizationDiscovery(){ (state.rivals||[]).forEach(function(civ){ if(civ.defeated||civ.met) return; const seen=(civ.cities||[]).some(function(c){return playerSees(c.x,c.y);})||(civ.units||[]).some(function(u){return playerSees(u.x,u.y);}); if(seen){ civ.met=true; civ.relation="neutral"; logEvent(state,"civilization-discovered","обнаружено государство: "+civ.name,null,{actorType:"civilization",actorId:civ.civilizationId}); alert("Обнаружено государство: "+civ.name+"\nСтатус: нейтральные отношения"+(civ.cities.some(c=>playerSees(c.x,c.y))?"\nСтолица видна на карте":"")); } }); }
-  function chooseAiGoal(civ) { return window.EpohiAiStrategy.chooseGoal(state, civ, {
-    mapSize: mapSizeCells(), knowsCamp: civKnowsCamp,
-    adjustScores: window.EpohiLivingCivilizations && window.EpohiLivingCivilizations.adjustGoalScores
-  }); }
-  function canRivalEnter(civ,x,y){ return state.map[y] && state.map[y][x] && passableTile(state.map[y][x]) && !rivalUnitAt(x,y) && !rivalCityAt(x,y) && !barbarianAt(x,y) && !campAt(x,y) && !(civ.relation!=="war"&&unitsAt(x,y).length); }
-  function reachableRivalStep(unit, target, civ) {
-    const start = tileKey(unit.x, unit.y), queue = [{ x:unit.x, y:unit.y }], seen = {}; seen[start] = true;
-    while (queue.length) {
-      const cur = queue.shift();
-      if (cur.x === target.x && cur.y === target.y) return true;
-      neighborsOf(cur.x, cur.y, mapSizeCells()).forEach(function(p){
-        const key = tileKey(p.x, p.y);
-        if (seen[key]) return;
-        if ((p.x === target.x && p.y === target.y) || canRivalEnter(civ, p.x, p.y)) { seen[key] = true; queue.push(p); }
-      });
-    }
-    return false;
+  function checkCivilizationDiscovery(){
+    playerExploration().discoverCivilizations().forEach(function(civ){
+      alert("Обнаружено государство: "+civ.name+"\nСтатус: нейтральные отношения"+
+        (civ.capitalVisible?"\nСтолица видна на карте":""));
+    });
   }
-  function stepToward(unit,target,civ){ const opts=neighborsOf(unit.x,unit.y,mapSizeCells()).filter(p=>canRivalEnter(civ,p.x,p.y)); if(!opts.length){ unit.stuckTurns=(unit.stuckTurns||0)+1; unit.aiTarget=null; return false; } const before={x:unit.x,y:unit.y}; const wasVisible=playerSees(unit.x,unit.y); opts.sort((a,b)=>chebyshev(a.x,a.y,target.x,target.y)-chebyshev(b.x,b.y,target.x,target.y)); let n=opts[0]; if(unit.last&&n.x===unit.last.x&&n.y===unit.last.y&&opts[1]) n=opts[1]; unit.last={x:unit.x,y:unit.y}; unit.x=n.x; unit.y=n.y; unit.moves--; unit.stuckTurns=(unit.x===before.x&&unit.y===before.y)?((unit.stuckTurns||0)+1):0; revealForRival(civ,n.x,n.y,unit.type==='scout'?2:1); const isVisible=playerSees(unit.x,unit.y); if(!wasVisible&&isVisible&&unit.lastMovementNoticeTurn!==state.turn){ unit.lastMovementNoticeTurn=state.turn; const def=UNIT_DEFS[unit.type]||{name:'юнит'}; logEvent(state,"unit-spotted",civ.name+": замечен "+def.name+".",{x:unit.x,y:unit.y},{actorType:"civilization",actorId:civ.civilizationId,phase:"rivals"}); } return true; }
-  function nearestUnknown(unit,civ){ let best=null; for(let y=0;y<mapSizeCells();y++) for(let x=0;x<mapSizeCells();x++){ if(!civ.explored[tileKey(x,y)]&&passableTile(state.map[y][x])){ if(unit.aiTarget&&unit.aiTarget.x===x&&unit.aiTarget.y===y&&unit.stuckTurns>=2) continue; const d=chebyshev(unit.x,unit.y,x,y); if(!best||d<best.d) best={x,y,d}; } } if(best && !reachableRivalStep(unit,best,civ)) best=null; return best; }
-  function rivalPatrolTarget(unit,civ){ const city=(civ.cities||[])[0]; const around=city?neighborsOf(city.x,city.y,mapSizeCells()).filter(p=>canRivalEnter(civ,p.x,p.y)):[]; return around.sort((a,b)=>chebyshev(unit.x,unit.y,a.x,a.y)-chebyshev(unit.x,unit.y,b.x,b.y))[0] || neighborsOf(unit.x,unit.y,mapSizeCells()).find(p=>canRivalEnter(civ,p.x,p.y)) || null; }
-  function aiResolvePoi(civ,unit){ const t=state.map[unit.y][unit.x],poi=t.poi&&!t.poi.used?t.poi:(t.feature==='ruins'?{type:'ruins',feature:true}:null); if(!poi)return false; if(poi.feature)t.feature=null;else t.poi.used=true; let key=civ.resources.science<12?'science':(civ.resources.gold<10?'gold':'production'); civ.resources[key]+= key==='production'?12:14; if(t.revealed)logEvent(state,"point-of-interest-resolved",civ.name+" первым исследует " + INTEREST_TYPES[poi.type].name + ".",{x:unit.x,y:unit.y},{actorType:"civilization",actorId:civ.civilizationId,phase:"rivals"}); return true; }
-  function nearestKnownFinitePoi(civ,unit){let best=null;state.map.forEach(function(row,y){row.forEach(function(tile,x){const available=(tile.poi&&!tile.poi.used)||tile.feature==='ruins';if(!available||!(civ.explored&&civ.explored[tileKey(x,y)]))return;const distance=chebyshev(unit.x,unit.y,x,y);if(!best||distance<best.distance)best={x:x,y:y,distance:distance};});});return best;}
-
+  let activeRivalState = null;
+  let activeRivalTurn = null;
+  function rivalTurnFor(gs) {
+    if (gs === state && activeRivalState === gs && activeRivalTurn) return activeRivalTurn;
+    const service = window.EpohiRivalTurn.create(gs, window.EpohiData, {
+      chebyshev, isAdjacent, neighborsOf, passableTile, mapSizeCells,
+      rivalUnitAt, rivalCityAt, barbarianAt, campAt, unitsAt,
+      currentPlayerSees, updateCampDiscovery, logEvent,
+      aiStrategy:window.EpohiAiStrategy, civKnowsCamp,
+      livingCivilizations:window.EpohiLivingCivilizations,
+      damageAmount, defenseBonus, ensureBarbarianDirector,
+      scheduleNextCampSpawn, random:Math.random,
+      aiProduction:window.EpohiAiProduction, cityIncome,
+      coherenceFinalize:window.EpohiCoherenceFinalize,
+      productionExperience:window.EpohiProductionExperience,
+      playerCities, rivalCombat:window.EpohiRivalCombat,
+      captureState:window.EpohiCaptureState, aiActions:window.EpohiAiActions,
+      killUnit:function(unit){ gs.units=gs.units.filter(function(item){return item.id!==unit.id;}); }
+    });
+    if (gs === state) { activeRivalState = gs; activeRivalTurn = service; }
+    return service;
+  }
+  function stepToward(unit,target,civ){ return rivalTurnFor(state).stepToward(unit,target,civ); }
+  function aiAttackBarbarian(civ,unit){ return rivalTurnFor(state).aiAttackBarbarian(civ,unit); }
+  function performAlliedWarAction(ally,enemy){ return rivalTurnFor(state).performAlliedWarAction(ally,enemy); }
+  function campReward(civ,unit,x,y){ return rivalTurnFor(state).campReward(civ,unit,x,y); }
+  function chooseAiGoal(civ){ return rivalTurnFor(state).chooseAiGoal(civ); }
+  function processRivals(budget){
+    const used=rivalTurnFor(state).processRivals(budget);
+    if(selectedUnitId && !getUnit(selectedUnitId)) selectedUnitId=state.units.length?state.units[0].id:null;
+    checkCivilizationDiscovery();
+    return used;
+  }
   function simulateTurn() {
     if (window.EpohiHumansAutonomy) window.EpohiHumansAutonomy.processOrders(state);
     if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
@@ -2084,7 +2018,6 @@
     centerCameraOnTile(city.x,city.y,true);
     showToast('🏛️ Основан город '+city.name+'.',3000); render(); return true;
   }
-  function canFoundOutpost(unit){ return false; }
   function queueProject(type,id){
     const result=window.EpohiPlayerProduction.startQueue(state,activeCity(),type,id,productionOptions());
     if(result==='busy') return showToast('Очередь этого города занята.');
@@ -2109,68 +2042,6 @@
       defenseBonus:defenseBonus, logEvent:logEvent, killUnit:killUnit
     });
   }
-  function aiAttackBarbarian(civ,u){ const b=state.barbarians.find(bb=>isAdjacent(u.x,u.y,bb.x,bb.y)); if(b&&u.type!=='scout'){ b.hp-=damageAmount(UNIT_DEFS[u.type].attack||8,BARBARIAN.raiderDefense+defenseBonus(b.x,b.y,BARBARIAN.raiderDefense)); logEvent(state,'rival-destroyed-barbarian',civ.name+' атакует варварского налётчика.',{x:b.x,y:b.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'}); if(b.hp<=0){ state.barbarians=state.barbarians.filter(x=>x.id!==b.id); logEvent(state,'rival-destroyed-barbarian',civ.name+' уничтожил налётчика.',{x:b.x,y:b.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'}); } return true; } return false; }
-  function campReward(civ,unit,x,y){ const removedCamp=state.map[y][x].camp; state.map[y][x].camp=null; const d=ensureBarbarianDirector(state); d.lastDestroyedCamp=removedCamp?{x:x,y:y,turn:state.turn,campId:removedCamp.campId}:null; scheduleNextCampSpawn(state, state.turn, Math.random); const target=civ.resources||state.resources; target.gold=(target.gold||0)+25; target.science=(target.science||0)+6; if(unit){ unit.hp=Math.min(unit.maxHp,unit.hp+20); } if(civ.civilizationId) logEvent(state,'rival-destroyed-camp',civ.name+' уничтожил варварский лагерь.',{x,y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'}); else logEvent(state,'barbarian-camp-destroyed','уничтожен варварский лагерь.',{x,y},{actorType:'player',actorId:'player'}); }
-  function produceForAi(civ){
-    window.EpohiAiProduction.produceForAi(state, civ, {
-      cityIncome: cityIncome,
-      chooseProduction: window.EpohiLivingCivilizations && window.EpohiLivingCivilizations.chooseProduction,
-      unitProductionCost: window.EpohiCoherenceFinalize && window.EpohiCoherenceFinalize.unitProductionCost,
-      recordCompletion: window.EpohiProductionExperience.recordCompletion,
-      logEvent: logEvent
-    });
-  }
-  function canRivalFoundCity(civ,u){ if(!u||u.type!=='settler'||civ.cities.length>=AI_LIMITS.maxCities)return false; if(barbarianAt(u.x,u.y)||campAt(u.x,u.y)||rivalCityAt(u.x,u.y)||unitsAt(u.x,u.y).length)return false; return passableTile(state.map[u.y][u.x]) && !state.map[u.y][u.x].poi && civ.cities.every(c=>chebyshev(u.x,u.y,c.x,c.y)>=CITY_MIN_DISTANCE) && playerCities().every(c=>chebyshev(u.x,u.y,c.x,c.y)>=CITY_MIN_DISTANCE); }
-  function setRivalWar(a,b){
-    a.diplomacy=a.diplomacy||{}; b.diplomacy=b.diplomacy||{};
-    a.diplomacy[b.civilizationId]='war'; b.diplomacy[a.civilizationId]='war';
-  }
-  function attackRivalTarget(civ,unit,war){
-    setRivalWar(civ,war.enemy);
-    resolveAiToAiCombat(civ,unit,war.enemy,war.target,'rival-battle',civ.name+' атакует '+war.enemy.name+'.');
-  }
-  function resolveAiToAiCombat(attacker,unit,enemy,target,eventType,text){
-    return window.EpohiRivalCombat.resolveAiToAiCombat(state,attacker,unit,enemy,target,eventType,text,{
-      damageAmount:damageAmount,
-      defenseBonus:defenseBonus,
-      logEvent:logEvent,
-      captureAiCity:window.EpohiCaptureState.captureAiCity
-    });
-  }
-  function performAlliedWarAction(ally,enemy){
-    const unit=(ally.units||[]).find(function(item){return item.hp>0&&item.moves>0&&!item.acted&&item.type!=="worker"&&item.type!=="settler";});
-    const target=(enemy.units||[]).find(function(item){return item.hp>0;})||(enemy.cities||[]).find(function(item){return item.hp>0;});
-    if(!unit||!target)return false;
-    if(isAdjacent(unit.x,unit.y,target.x,target.y))resolveAiToAiCombat(ally,unit,enemy,target,'allied-war-battle',ally.name+' атакует войска '+enemy.name+' в общей войне.');
-    else if(!stepToward(unit,target,ally))return false;
-    unit.moves=0;unit.acted=true;state.lastAiUnitActions=state.lastAiUnitActions||{};state.lastAiUnitActions[unit.id]=(state.lastAiUnitActions[unit.id]||0)+1;return true;
-  }
-  function processRivals(budget){
-    budget=budget||{remaining:AI_LIMITS.maxActionsPerTurn,used:0}; const started=budget.used||0,rivals=state.rivals||[];
-    function spend(){if(budget.remaining<=0)return false;budget.remaining--;budget.used++;return true;}
-    function finish(unit){unit.moves=0;unit.acted=true;state.lastAiUnitActions=state.lastAiUnitActions||{};state.lastAiUnitActions[unit.id]=(state.lastAiUnitActions[unit.id]||0)+1;}
-    rivals.forEach(function(civ){
-      if(civ.defeated)return; produceForAi(civ); chooseAiGoal(civ);
-      civ.units.slice().forEach(function(u){
-        if(budget.remaining<=0||u.acted||u.moves<=0)return;
-        const action = window.EpohiAiActions.chooseAction(state,civ,u,{
-          mapSize:mapSizeCells, campAt:campAt, canFoundCity:canRivalFoundCity,
-          nearestKnownFinitePoi:nearestKnownFinitePoi, nearestUnknown:nearestUnknown
-        });
-        if(action.kind==='rival-war'){if(!spend())return;const war=action.war;if(war.distance<=1)attackRivalTarget(civ,u,war);else stepToward(u,war.target,civ);finish(u);return;}
-        if(action.kind==='player-attack'){if(!spend())return;window.EpohiRivalCombat.attackPlayerUnit(state,civ,u,action.victim,{damageAmount:damageAmount,defenseBonus:defenseBonus,logEvent:logEvent,recordAttack:window.EpohiLivingCivilizations&&window.EpohiLivingCivilizations.recordAttack,killUnit:killUnit});finish(u);return;}
-        if(action.kind==='camp-attack'){if(!spend())return;const camp=campAt(action.spot.x,action.spot.y);if(window.EpohiRivalCombat.attackCamp(u,camp,{damageAmount:damageAmount}))campReward(civ,u,action.spot.x,action.spot.y);finish(u);return;}
-        if(action.kind==='barbarian-attack'){if(!spend())return;aiAttackBarbarian(civ,u);finish(u);return;}
-        if(action.kind==='guard'){finish(u);return;}
-        if(action.kind==='found-city'){if(!spend())return;const city={id:civ.civilizationId+'-city'+civ.cities.length,name:'Ривен '+civ.cities.length,x:u.x,y:u.y,population:1,food:0,production:0,buildings:[],queue:null,hp:150,maxHp:150,youngUntil:state.turn+3};civ.cities.push(city);civ.units=civ.units.filter(function(item){return item.id!==u.id;});logEvent(state,'rival-city-founded',civ.name+' основал город '+city.name+'.',{x:city.x,y:city.y},{actorType:'civilization',actorId:civ.civilizationId,phase:'rivals'});finish(u);return;}
-        if(action.kind==='travel'&&spend()){stepToward(u,action.target,civ);aiResolvePoi(civ,u);finish(u);}
-      });
-    });
-    const livingRivals=rivals.filter(function(civ){return !civ.defeated;});if(livingRivals.length>=2&&state.turn>=AI_LIMITS.minWarTurn&&!livingRivals[0].diplomacy[livingRivals[1].civilizationId]){setRivalWar(livingRivals[0],livingRivals[1]);logEvent(state,'rival-war-declared',livingRivals[0].name+' и '+livingRivals[1].name+' начали войну.',null,{actorType:'civilization',actorId:livingRivals[0].civilizationId,phase:'rivals'});}
-    checkCivilizationDiscovery(); return budget.used-started;
-  }
-
-
   function projectCard(type, id) {
     const city = activeCity();
     const def = projectDef(type, id), isBuilding = type === 'building';

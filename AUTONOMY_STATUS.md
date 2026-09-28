@@ -1,17 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: EVENT_JOURNAL_PACKAGE_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: GAMEPLAY_ACTIONS_PACKAGE_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 51 published at `4b8c09d`; event-journal package locally
-  validated on Lead. PR #103 remains the only target.
+- **STATUS:** Journal package published at `0d9b80e`; player/rival gameplay
+  package locally validated on Lead. PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Global event writers use the shared journal. Core history-only
-  outcomes now have structured events without adding duplicate toasts.
-- **EVIDENCE:** Stage 51 desktop Chrome 70/70; package checks 20/20 and final
-  focused pass 14/14. Syntax/diff checks pass.
-- **NEXT:** Publish journal package. Then tackle player/rival actions as one
-  package, presentation/observer cleanup, and final End Turn gate.
+- **DONE:** Combat, movement/exploration and rival turn actions are in DOM-free
+  rule modules; old rival executor and unreachable outpost path were removed.
+- **EVIDENCE:** Focused desktop Chrome sets 37/37, 34/34, 31/31 and 5/5;
+  syntax/diff checks pass. Full desktop gate remains for final package.
+- **NEXT:** Publish gameplay package; then consolidate presentation observers,
+  finally run architecture audit, End Turn comparison and integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
