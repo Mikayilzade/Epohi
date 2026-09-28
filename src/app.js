@@ -668,7 +668,7 @@
   function canAttack(unit, x, y) { if (!unit || unit.moves <= 0 || (UNIT_DEFS[unit.type].attack || 0) <= 0 || !isAdjacent(unit.x, unit.y, x, y)) return false; const ru = rivalUnitAt(x,y), rc = rivalCityAt(x,y); const hostileRival = (ru && ru.civ.relation === "war") || (rc && rc.civ.relation === "war"); return !!(barbarianAt(x,y) || campAt(x,y) || hostileRival); }
   function damageAmount(base, defense) { return window.EpohiCombatRules.damage("direct", base, defense, Math.random()); }
   function killUnit(unit) { state.units = state.units.filter(function (u) { return u.id !== unit.id; }); if (selectedUnitId === unit.id) selectedUnitId = state.units.length ? state.units[0].id : null; }
-  function maybeAddArtifact(reason) { if (Math.random() > .18 && reason !== "poi") return false; const bonus = randomChoice(ARTIFACT_BONUSES); const art = { name: "Артефакт " + (state.artifacts.length + 1), bonus: bonus.id, text: bonus.name }; state.artifacts.push(art); state.permanentBonuses[bonus.id] = (state.permanentBonuses[bonus.id] || 0) + 1; state.history.unshift("Ход " + state.turn + ": найден артефакт — " + bonus.name + "."); return true; }
+  function maybeAddArtifact(reason) { if (Math.random() > .18 && reason !== "poi") return false; const bonus = randomChoice(ARTIFACT_BONUSES); const art = { name: "Артефакт " + (state.artifacts.length + 1), bonus: bonus.id, text: bonus.name }; state.artifacts.push(art); state.permanentBonuses[bonus.id] = (state.permanentBonuses[bonus.id] || 0) + 1; logEvent(state,"artifact-found","найден артефакт — "+bonus.name+".",null,{actorType:"player",actorId:"player",data:{bonus:bonus.id},historyLimit:Infinity,presentationSilent:true}); return true; }
   function attackEnemy(unitId, x, y) {
     const unit = getUnit(unitId); if (!canAttack(unit, x, y)) return;
     const def = UNIT_DEFS[unit.type]; const barb = barbarianAt(x,y); const camp = campAt(x,y); const ru = rivalUnitAt(x,y); const rc = rivalCityAt(x,y); const target = barb || camp || (ru && ru.unit) || (rc && rc.city);
@@ -1188,7 +1188,7 @@
       else if (r.k === "ambush") spawnAmbush(unit.x, unit.y);
       text += r.t;
     }
-    state.history.unshift("Ход " + state.turn + ": исследовано место «" + def.name + "»."); showToast(text, 3600);
+    logEvent(state,"point-of-interest-resolved","исследовано место «"+def.name+"».",{x:unit.x,y:unit.y},{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true}); showToast(text, 3600);
   }
   function spawnAmbush(x, y) { const n = neighborsOf(x,y,mapSizeCells()).find(function (p) { return passableTile(state.map[p.y][p.x]) && !unitsAt(p.x,p.y).length && !barbarianAt(p.x,p.y); }); if (n) state.barbarians.push({ id:"b" + state.nextBarbarianId++, x:n.x, y:n.y, hp:BARBARIAN.raiderHealth, maxHp:BARBARIAN.raiderHealth, homeX:x, homeY:y, last:null }); }
 
@@ -1202,7 +1202,7 @@
     const outcome = randomChoice(outcomes);
     state.resources[outcome.key] += outcome.amount;
     tile.feature = null;
-    state.history.unshift("Ход " + state.turn + ": исследованы древние руины.");
+    logEvent(state,"point-of-interest-resolved","исследованы древние руины.",null,{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true});
     showToast(outcome.text);
   }
 
@@ -1245,7 +1245,7 @@
     revealAround(state, unit.x, unit.y, 1);
     state.units = state.units.filter(function (item) { return item.id !== unit.id; });
     selectedUnitId = state.units.length ? state.units[0].id : null;
-    state.history.unshift("Ход " + state.turn + ": основан " + name + ".");
+    logEvent(state,"outpost-founded","основан "+name+".",{x:unit.x,y:unit.y},{actorType:"player",actorId:"player",historyLimit:Infinity,presentationSilent:true});
     showToast("⛺ " + name + " основан: +1 🍞, +1 🔨 и +1 🪙 за ход.", 3000);
     render();
   }
@@ -1290,14 +1290,16 @@
 
   function logEvent(targetState, eventType, text, coords, options) {
     const gs = targetState || state; if (!gs) return;
-    window.EpohiEventJournal.append(gs, function (counter) {
-      return { eventId: "ev" + counter, turn: gs.turn || 1,
+    return window.EpohiEventJournal.append(gs, function (counter) {
+      const item = { eventId: "ev" + counter, turn: gs.turn || 1,
         phase: (options && options.phase) || "player",
         actorType: (options && options.actorType) || "system",
         actorId: (options && options.actorId) || null,
         eventType: eventType, text: text, coordinates: coords || null,
         data: (options && options.data) || {} };
-    }, { eventLimit:AI_LIMITS.logLimit, historyLimit:60 });
+      if (options && options.presentationSilent) item.presentationSilent = true;
+      return item;
+    }, { eventLimit:AI_LIMITS.logLimit, historyLimit:options && options.historyLimit != null ? options.historyLimit : 60 });
   }
 
   function tileKey(x,y){ return x + "," + y; }

@@ -29,7 +29,12 @@
     const completed = state.currentResearch;
     state.researched.push(completed);
     state.currentResearch = null;
-    state.history.unshift("Ход " + state.turn + ": исследована технология «" + tech.name + "».");
+    window.EpohiEventJournal.append(state, function (counter) {
+      return { eventId:"research-"+counter, turn:state.turn,
+        phase:"progression", actorType:"player", actorId:"player",
+        eventType:"technology-completed", text:"исследована технология «"+tech.name+"».",
+        presentationSilent:true };
+    });
     return tech;
   }
 

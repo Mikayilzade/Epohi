@@ -136,7 +136,7 @@
       return;
     }
     const newest = (gs.eventLog || []).find(function (item) {
-      if (!item || !item.text) return false;
+      if (!item || !item.text || item.presentationSilent) return false;
       if (dedicatedModalTypes.has(item.eventType) || silentEventTypes.has(item.eventType)) return false;
       return (item.turn || gs.turn || 1) === (gs.turn || 1);
     });

@@ -25,7 +25,8 @@ test('research choice and completion follow prerequisites and accumulated scienc
       selected:state.currentResearch,
       researched:state.researched.filter(id => id === 'agriculture'),
       science:state.resources.science,
-      history:state.history.filter(item => item.includes('исследована технология'))
+      history:state.history.filter(item => item.includes('исследована технология')),
+      event:state.eventLog.find(item => item.eventType === 'technology-completed')
     };
   });
   expect(after.selected).toBe(null);
@@ -33,4 +34,6 @@ test('research choice and completion follow prerequisites and accumulated scienc
   expect(after.science).toBeGreaterThanOrEqual(0);
   expect(after.history).toHaveLength(1);
   expect(after.history[0]).toContain('Земледелие');
+  expect(after.event).toMatchObject({ phase:'progression', actorType:'player',
+    presentationSilent:true });
 });

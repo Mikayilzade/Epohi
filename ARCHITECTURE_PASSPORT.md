@@ -913,3 +913,24 @@ listeners, so the completion criteria above remain open.
   plumbing; no measurable performance claim is made.
 - Remaining: capture, stability, diplomacy, living-world and feedback event
   writers, then player/rival action and presentation cleanup and final gate.
+
+### Package 1: structured event journal
+
+- Stage 51 (`4b8c09d`) moved capture, stability, feedback, diplomacy and
+  living-world event insertion to `event-journal.js`, preserving each event ID,
+  counter policy, history deduplication and retention limit. Desktop Chromium
+  domain checks passed 70/70 before publication.
+- The remaining core history-only outcomes (artifact, point of interest,
+  ancient ruins, outpost and completed research) now record structured events
+  in the same state. Existing Russian history lines and order are preserved.
+  These entries carry `presentationSilent` because their existing action/turn
+  UI already announces them. Relationship-specific `diplomacy.history` is
+  private state for diplomatic reasoning, not a second global event log.
+- Event creation changes here affect neither random draws nor gameplay
+  calculation. The `chronicleEventIds` repair path still imports legacy/raw
+  events when the Chronicle is opened; normal journal writes update history
+  immediately. The full historical record is not replayed during End Turn.
+- Local desktop Chromium checks for research, diplomacy, living world and turn
+  behavior passed 20/20, then 14/14 after the final presentation flag edits.
+  Syntax and diff checks pass. Next: extract remaining player/rival actions,
+  then remove redundant presentation observers and measure End Turn.
