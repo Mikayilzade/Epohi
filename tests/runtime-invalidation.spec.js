@@ -1,6 +1,28 @@
 const { test, expect } = require("@playwright/test");
 const { clearStorage, createGame } = require("./helpers");
 
+test("End Turn announces one completed render while autosave updates", async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, "small");
+  const before = await page.evaluate(() => {
+    window.__endTurnRenderSignals = 0;
+    document.addEventListener("epohi:ui-rendered", () => window.__endTurnRenderSignals++);
+    window.__epohiDebug().state.barbarianActivity = "off";
+    return { turn:window.__epohiDebug().state.turn,
+      syncs:window.EpohiHumansObserver.stats().syncs };
+  });
+  await page.locator("#endTurnBtn").click();
+  await page.waitForFunction(turn => window.__epohiDebug().state.turn > turn
+    && !window.__epohiDebug().isTurnProcessing(), before.turn);
+  await page.waitForTimeout(200);
+  const after = await page.evaluate(() => ({
+    signals:window.__endTurnRenderSignals,
+    syncs:window.EpohiHumansObserver.stats().syncs
+  }));
+  expect(after.signals).toBe(1);
+  expect(after.syncs - before.syncs).toBeLessThanOrEqual(2);
+});
+
 test("runtime invalidation replaces broad visual/context polling with bounded flushes", async ({ page }) => {
   const errors = [];
   page.on("console", msg => { if (msg.type() === "error") errors.push(msg.text()); });

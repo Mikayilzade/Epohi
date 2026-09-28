@@ -956,3 +956,30 @@ listeners, so the completion criteria above remain open.
   rival AI and diplomacy 34/34, movement/POI and treasury 31/31, final
   discovery/action checks 5/5. Syntax and diff checks pass. The full desktop
   gate and before/after End Turn measurement remain for the final package.
+
+### Package 3: presentation and observer ownership
+
+- `humans-journey-ui.js` now refreshes the saga presentation without running
+  journey gameplay from every render, click and suppressed screen observer.
+  The journey calculation runs explicitly at new-game/startup and in the turn
+  pipeline before the autosave snapshot. A new test confirms a specialization
+  bonus and `lastBonusTurn` are present in the new-turn autosave.
+- `app.js` broadcasts `epohi:ui-rendered` once after its full render, not from
+  `renderTop()` or wiki updates. Save status updates only its visible label,
+  avoiding two income/top recalculations per autosave. The city sheet retains
+  its own signal after being rebuilt.
+- Removed duplicated wrappers around living/stability rendering and diplomacy
+  refresh. Diplomacy/finalizer observers now watch modal/toast visibility
+  classes instead of descendant content. The screen's ineffective broad
+  observer and two generic click timers in the saga UI were replaced with a
+  navigation-specific signal.
+- Five local small-map/no-rival End Turns before this package gave 4 render
+  signals and 3 observer syncs per turn; after the package each gave 1 and 1.
+  Runtime invalidation flushes fell from 1–3 to 1 in these samples. Wall times
+  were 533/315/308/311/318 ms before and 527/315/294/308/300 ms after;
+  these samples do not support a stable wall-time speed claim. Serialized
+  state remained about 48–50 KB. A regression test asserts one completed
+  render signal across End Turn and autosave.
+- Local desktop Chromium focused suite passed 38/38 after one missed new-game
+  navigation signal was fixed; the navigation case and new autosave/render
+  regressions passed separately. Full desktop integration remains pending.

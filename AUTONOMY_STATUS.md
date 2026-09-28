@@ -1,17 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: GAMEPLAY_ACTIONS_PACKAGE_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: PRESENTATION_PACKAGE_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Journal package published at `0d9b80e`; player/rival gameplay
+- **STATUS:** Gameplay package published at `562fca2`; presentation/observer
   package locally validated on Lead. PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Combat, movement/exploration and rival turn actions are in DOM-free
-  rule modules; old rival executor and unreachable outpost path were removed.
-- **EVIDENCE:** Focused desktop Chrome sets 37/37, 34/34, 31/31 and 5/5;
-  syntax/diff checks pass. Full desktop gate remains for final package.
-- **NEXT:** Publish gameplay package; then consolidate presentation observers,
-  finally run architecture audit, End Turn comparison and integration gate.
+- **DONE:** Saga rules run before autosave; full render has one completion
+  signal; save status has targeted update; redundant decorator wrappers and
+  broad observers were removed/narrowed.
+- **EVIDENCE:** Desktop focused suite 38/38; separate navigation/autosave/
+  render tests pass. End Turn signals 4->1 and observer syncs 3->1 per turn;
+  five wall-time samples remain within prior noise.
+- **NEXT:** Publish presentation package, then final architecture audit,
+  End Turn/performance comparison and desktop integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

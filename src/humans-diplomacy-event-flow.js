@@ -476,33 +476,9 @@
     document.head.appendChild(style);
   }
 
-  function installHooks() {
-    const living = window.EpohiLivingCivilizations;
-    if (living && !living.diplomacyEventFlowWrapped && typeof living.renderUI === "function") {
-      living.diplomacyEventFlowWrapped = true;
-      const original = living.renderUI;
-      living.renderUI = function (gs) {
-        const result = original.apply(this, arguments);
-        window.setTimeout(scheduleUi, 0);
-        return result;
-      };
-    }
-    const stability = window.EpohiCombatWorldStability;
-    if (stability && !stability.diplomacyEventFlowWrapped && typeof stability.render === "function") {
-      stability.diplomacyEventFlowWrapped = true;
-      const original = stability.render;
-      stability.render = function () {
-        const result = original.apply(this, arguments);
-        window.setTimeout(scheduleUi, 0);
-        return result;
-      };
-    }
-  }
-
   function install() {
     injectStyles();
     ensureToast();
-    installHooks();
     window.addEventListener("click", interceptClicks, true);
     document.addEventListener("click", function (event) {
       if (event.target && event.target.closest && event.target.closest("#endTurnBtn")) return;
@@ -511,7 +487,7 @@
     document.addEventListener("epohi:ui-rendered", scheduleUi);
     ["victoryModal", "stabilityMajorModal", "stabilityDecisionModal", "strategyDiplomacyModal", "livingProposals"].forEach(function (id) {
       const node = document.getElementById(id);
-      if (node) new MutationObserver(scheduleUi).observe(node, { attributes: true, childList: true, subtree: true, attributeFilter: ["class"] });
+      if (node) new MutationObserver(scheduleUi).observe(node, { attributes: true, attributeFilter: ["class"] });
     });
     scheduleUi();
   }

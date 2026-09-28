@@ -318,10 +318,10 @@
     // here duplicated semantic ownership and could keep observer delivery active at idle.
     ["captureChoiceModal", "stabilityDecisionModal", "strategyDiplomacyModal"].forEach(function (id) {
       const node = document.getElementById(id);
-      if (node) new MutationObserver(schedule).observe(node, {attributes:true,childList:true,subtree:true,attributeFilter:["class"]});
+      if (node) new MutationObserver(schedule).observe(node, {attributes:true,attributeFilter:["class"]});
     });
     const toast = document.getElementById("toast");
-    if (toast) new MutationObserver(suppressOverlappingToasts).observe(toast, {attributes:true,childList:true,characterData:true,subtree:true,attributeFilter:["class"]});
+    if (toast) new MutationObserver(suppressOverlappingToasts).observe(toast, {attributes:true,attributeFilter:["class"]});
     schedule();
   }
 

@@ -117,7 +117,6 @@
   function open() {
     const gs = state();
     if (!gs) return false;
-    CORE.sync({ render: false });
     const journey = CORE.ensureJourneyState(gs);
     const progress = CORE.chapterProgress(gs);
     const scenario = DATA.scenarios[journey.scenario] || DATA.scenarios.balanced;
@@ -278,7 +277,8 @@
       syncTimer = null;
       versionLabels();
       newGamePresets();
-      CORE.sync();
+      const gs = state();
+      if (gs) refresh(gs);
     }, 0);
   }
 
@@ -288,21 +288,16 @@
     versionLabels();
     newGamePresets();
 
-    const map = document.getElementById("map");
     const menu = document.getElementById("menuModal");
     const menuContent = document.getElementById("menuContent");
-    const screen = document.getElementById("screenRoot");
-
-    if (map) new MutationObserver(decorateLater).observe(map, { childList: true });
     document.addEventListener("epohi:ui-rendered", schedule);
     if (menu) new MutationObserver(menuButton).observe(menu, { attributes: true, attributeFilter: ["class"] });
     if (menuContent) new MutationObserver(menuButton).observe(menuContent, { childList: true });
-    if (screen) new MutationObserver(schedule).observe(screen, { childList: true, subtree: true });
-
-    document.addEventListener("click", function () {
-      setTimeout(schedule, 20);
-      setTimeout(schedule, 260);
-    }, true);
+    document.addEventListener("click", function (event) {
+      const target = event.target && event.target.closest && event.target.closest(
+        "#newGameScreenBtn, #backMain, #settingsScreenBtn, #wikiScreenBtn");
+      if (target) schedule();
+    });
     schedule();
   }
 

@@ -344,19 +344,12 @@
     ].join(""); document.head.appendChild(style);
   }
 
-  function wrapHooks(){
-    const living=window.EpohiLivingCivilizations;
-    if(living&&typeof living.renderUI==="function"&&!living.coherenceRenderWrapped){living.coherenceRenderWrapped=true;const original=living.renderUI;living.renderUI=function(){const result=original.apply(this,arguments);window.setTimeout(schedule,0);return result;};}
-    const flow=window.EpohiDiplomacyEventFlow;
-    if(flow&&typeof flow.refresh==="function"&&!flow.coherenceRefreshWrapped){flow.coherenceRefreshWrapped=true;const original=flow.refresh;flow.refresh=function(){const result=original.apply(this,arguments);window.setTimeout(schedule,0);return result;};}
-  }
-
   function install(){
-    installStyles(); ensureProposalModal(); strengthenStackSelection(); wrapLivingResearch(); wrapHooks();
+    installStyles(); ensureProposalModal(); strengthenStackSelection(); wrapLivingResearch();
     window.addEventListener("click",interceptEnemyTap,true);
     document.addEventListener("click",function(event){if(event.target.closest&&event.target.closest("[data-dip-action],[data-proposal],[data-research]"))window.setTimeout(schedule,0);});
     document.addEventListener("epohi:ui-rendered",schedule);
-    ["strategyDiplomacyModal","livingProposals","stabilityDecisionModal"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{attributes:true,childList:true,subtree:true,attributeFilter:["class"]});});
+    ["strategyDiplomacyModal","livingProposals","stabilityDecisionModal"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{attributes:true,attributeFilter:["class"]});});
     schedule();
   }
 

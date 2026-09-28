@@ -476,7 +476,11 @@
   }
 
   function loadGame() { const raw = safeGet(SAVE_KEY); if (!raw) return null; try { return migrateState(JSON.parse(raw)); } catch (error) { return null; } }
-  function setSaveStatus(text) { saveStatus = text; renderTop(); }
+  function setSaveStatus(text) {
+    saveStatus = text;
+    const label = document.getElementById("saveStatusText");
+    if (label) label.textContent = text;
+  }
   function savingBlockedMessage() { return "Завершите текущее действие перед сохранением"; }
   let turnProcessing = false;
   function canSaveNow() { return !!state && !turnProcessing && !document.querySelector("#victoryModal.show"); }
@@ -693,6 +697,7 @@
     }
     renderContext();
     renderBadges();
+    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
   function renderMap() {
@@ -875,7 +880,6 @@
     prodIncome.textContent = "+" + (resourceView.type === "city" ? cityIncomeValue.production : income.production) + (resourceView.type === "city" && city && city.queue ? " в очередь" : " за ход");
     goldIncome.textContent = "+" + income.gold + " за ход";
     scienceIncome.textContent = "+" + income.science + " за ход";
-    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
   function actionButton(label, className, handler, disabled, actionKey) {
@@ -1320,6 +1324,7 @@
     window.EpohiStabilityRules.cancelInvalidProposals(state);
     const workforceChanges = window.EpohiPopulationWorkforce ? window.EpohiPopulationWorkforce.reconcileState(state).changed : [];
     const outcomeResult = window.EpohiHumansOutcomes ? window.EpohiHumansOutcomes.evaluateState(state) : null;
+    if (window.EpohiHumansJourney) window.EpohiHumansJourney.sync({ render:false });
     return { income:income, completedProject:completedProject, completedTech:completedTech,
       rivalActions:rivalActions, barbarianText:barbarianText, workforceChanges:workforceChanges, outcomeResult:outcomeResult };
   }
@@ -1504,7 +1509,6 @@
       '<div class="inline-note">Форпост пока не является полноценным вторым городом: у него нет собственного населения и очереди. Варвары — первая нейтральная угроза; дипломатии и дорог пока нет.</div>';
 
     openModal("wikiModal");
-    document.dispatchEvent(new Event("epohi:ui-rendered"));
   }
 
 
@@ -1520,6 +1524,7 @@
     const valid = validateSaveState(loadedState);
     if (!valid) { showToast("Не удалось загрузить сохранение. Данные не были удалены", 3600); return; }
     state = valid; activeCampaignId = campaignId || activeCampaignId; activeSaveId = saveId || activeSaveId; loadedSaveId = activeSaveId; loadedSaveTurn = state.turn;
+    if (window.EpohiHumansJourney) window.EpohiHumansJourney.sync({ render:false });
     if (activeCampaignId) safeSet(ACTIVE_CAMPAIGN_KEY, activeCampaignId); if (activeSaveId) safeSet(ACTIVE_SAVE_KEY, activeSaveId);
     selected = null; selectedUnitId = state.units.length ? state.units[0].id : null;
     camera = loadCamera() || { x: 0, y: 0, scale: CAMERA_DEFAULT_SCALE }; cameraInitialized = !!loadCamera();
@@ -1551,7 +1556,7 @@
       renderScreen('<div class="screen-head"><h2>Новая игра</h2><button id="backMain" class="menu-primary ghost">Назад</button></div><div class="screen-form"><label class="field-label">Название партии<input id="partyName" placeholder="'+defName+'"><small id="nameWarn" class="wiki-mini"></small></label><label class="field-label">Размер карты<select id="partySize"><option value="small">маленькая — 20×20</option><option value="normal" selected>обычная — 28×28</option><option value="large">большая — 36×36</option></select></label><label class="field-label">Активность варваров<select id="barbarianActivity"><option value="low">низкая</option><option value="normal" selected>обычная</option><option value="high">высокая</option><option value="off">отключены</option></select></label><label class="field-label">Цивилизации-соперники<select id="rivalCount"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select><small class="wiki-mini">На 20×20 максимум один соперник; старые сохранения не получают ИИ задним числом.</small></label><button id="createParty" class="menu-primary">Создать мир</button></div>');
       document.getElementById("backMain").onclick = openMainMenu;
       document.getElementById("partyName").oninput = function(){ const input=this, value=input.value.trim(); getCampaigns().then(function(cs){ const warn=document.getElementById('nameWarn'); if(!warn || document.getElementById('partyName')!==input)return; warn.textContent = value && cs.some(function(c){ return c.name === value; }) ? 'Название уже используется; партия всё равно будет отдельной.' : ''; }).catch(function(){}); };
-      document.getElementById("createParty").onclick = function(){ const size=MAP_SIZES[document.getElementById('partySize').value]||DEFAULT_MAP_SIZE; const rivals=Math.min(size<=20?1:2, Number(document.getElementById('rivalCount').value)); const ns=createNewGame(size, rivals, document.getElementById('barbarianActivity').value); state=ns; const name=document.getElementById('partyName').value.trim()||defName; createCampaignForNewGame(ns, name).then(function(c){ return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){ startPlaying(ns, c.campaignId, activeSaveId); }); }); };
+      document.getElementById("createParty").onclick = function(){ const size=MAP_SIZES[document.getElementById('partySize').value]||DEFAULT_MAP_SIZE; const rivals=Math.min(size<=20?1:2, Number(document.getElementById('rivalCount').value)); const ns=createNewGame(size, rivals, document.getElementById('barbarianActivity').value); state=ns; if(window.EpohiHumansJourney)window.EpohiHumansJourney.sync({render:false}); const name=document.getElementById('partyName').value.trim()||defName; createCampaignForNewGame(ns, name).then(function(c){ return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){ startPlaying(ns, c.campaignId, activeSaveId); }); }); };
     const nameInput = document.getElementById("partyName");
     nextDefaultCampaignName().then(function (name) {
       if (document.getElementById("partyName") !== nameInput) return;
@@ -1672,7 +1677,7 @@
     const history = state.history.length ? state.history.slice(0, 7).map(function (item) { return '<div class="chip" style="width:100%">' + item + '</div>'; }).join("") : '<div class="inline-note">Летопись пока пуста.</div>';
     const blocked = canSaveNow() ? '' : '<div class="inline-note">'+savingBlockedMessage()+'</div>';
     menuContent.innerHTML =
-      '<div class="section-title">Партия</div><div class="inline-note">' + escapeHtml(state.partyName || 'Новый мир') + ' · ход ' + state.turn + '<br>' + saveStatus + (loadedSaveTurn ? '<br>Последняя загрузка: ход '+loadedSaveTurn : '') + '</div>' + blocked +
+      '<div class="section-title">Партия</div><div class="inline-note">' + escapeHtml(state.partyName || 'Новый мир') + ' · ход ' + state.turn + '<br><span id="saveStatusText">' + escapeHtml(saveStatus) + '</span>' + (loadedSaveTurn ? '<br>Последняя загрузка: ход '+loadedSaveTurn : '') + '</div>' + blocked +
       '<div class="section-title">Последние события</div><div class="built-list">' + history + '</div>' +
       '<div class="section-title">☰ Меню</div><div class="menu-actions">' +
         '<button id="closeMenuWide" class="wide-btn">Продолжить</button>' +
@@ -1733,7 +1738,8 @@
     const size = MAP_SIZES[choice] || MAP_SIZES.normal;
     const ns = createNewGame(size);
     nextDefaultCampaignName().then(function(name){ return createCampaignForNewGame(ns, name).then(function(c){
-      state = ns; selected = null; selectedUnitId = state.units[0].id; camera = { x: 0, y: 0, scale: CAMERA_DEFAULT_SCALE }; cameraInitialized = false;
+      state = ns; if (window.EpohiHumansJourney) window.EpohiHumansJourney.sync({ render:false });
+      selected = null; selectedUnitId = state.units[0].id; camera = { x: 0, y: 0, scale: CAMERA_DEFAULT_SCALE }; cameraInitialized = false;
       return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){
         saveCamera(); closeModal("menuModal"); closeModal("wikiModal"); closeModal("victoryModal");
         showToast("Новый мир " + size + "×" + size + " создан. Начни с разведки."); startPlaying(ns, c.campaignId, activeSaveId);

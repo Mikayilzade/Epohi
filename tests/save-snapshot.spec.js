@@ -67,3 +67,36 @@ test('three autosave slots keep consecutive completed turns', async ({ page }) =
     { turn: 3, stateTurn: 3 }
   ]);
 });
+
+test('journey turn bonus is part of the new-turn autosave', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const beforeScience = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    state.barbarianActivity = 'off';
+    state.currentResearch = null;
+    state.city.population = 3;
+    window.EpohiHumansJourney.chooseSpecialization(state.city.id, 'science');
+    return state.resources.science;
+  });
+  await page.locator('#endTurnBtn').click();
+  await expect(page.locator('#turnValue')).toHaveText('2');
+  await expect.poll(async () => page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const latest = saves.find(item => item.saveId.endsWith('-autosave-1'));
+    return latest && latest.turn;
+  })).toBe(2);
+  const result = await page.evaluate(async () => {
+    const live = window.__epohiDebug().state;
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const saved = saves.find(item => item.saveId.endsWith('-autosave-1')).gameState;
+    return { liveScience:live.resources.science, savedScience:saved.resources.science,
+      savedTurn:saved.turn, journeyTurn:saved.humanJourney.lastBonusTurn };
+  });
+  expect(result.savedTurn).toBe(2);
+  expect(result.journeyTurn).toBe(2);
+  expect(result.savedScience).toBe(result.liveScience);
+  expect(result.savedScience).toBeGreaterThanOrEqual(beforeScience + 2);
+});
