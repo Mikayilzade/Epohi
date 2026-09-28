@@ -99,23 +99,13 @@
     if (!gs || !city || !count) return;
     const type = TYPES[focus];
     const text = city.name + ": новая община направлена в «" + type.people + "» — +" + count + " " + type.label + " за ход.";
-    gs.eventCounter = (gs.eventCounter || 0) + 1;
-    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
-    gs.eventLog.unshift({
-      eventId: "workforce-" + gs.eventCounter,
-      turn: gs.turn || 1,
-      phase: "player",
-      actorType: "player",
-      actorId: "player",
-      eventType: "population-workforce-assigned",
-      text: text,
-      coordinates: { x: city.x, y: city.y },
-      data: { cityId: city.id, focus: focus, count: count }
-    });
-    gs.eventLog = gs.eventLog.slice(0, 240);
-    if (!Array.isArray(gs.history)) gs.history = [];
-    gs.history.unshift("Ход " + (gs.turn || 1) + ": " + text);
-    gs.history = gs.history.slice(0, 100);
+    window.EpohiEventJournal.append(gs, function (counter) {
+      return { eventId:"workforce-" + counter, turn:gs.turn || 1,
+        phase:"player", actorType:"player", actorId:"player",
+        eventType:"population-workforce-assigned", text:text,
+        coordinates:{ x:city.x, y:city.y },
+        data:{ cityId:city.id, focus:focus, count:count } };
+    }, { eventLimit:240, historyLimit:100 });
   }
 
   function toast(text, duration) {

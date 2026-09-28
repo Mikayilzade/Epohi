@@ -900,3 +900,16 @@ listeners, so the completion criteria above remain open.
 - Remaining: migrate other domain event writers to the same journal while
   preserving their formats, then player/rival action and UI cleanup and the
   final integration gate.
+
+### Stage 50: common game-domain event writers
+
+- Autonomy, journey, pathing, outcomes and population/workforce writers now
+  delegate counter, event-log insertion and history retention to
+  `EpohiEventJournal`. Each still creates its existing event shape and uses
+  its prior 180/240 event and 60/100 history limits. Their command and
+  outcome logic is unchanged; no history scan was added to End Turn.
+- Local desktop Chrome autonomy, journey, outcome, pathing and workforce
+  coverage passed 34/34. Syntax and diff checks pass. This stage is event
+  plumbing; no measurable performance claim is made.
+- Remaining: capture, stability, diplomacy, living-world and feedback event
+  writers, then player/rival action and presentation cleanup and final gate.

@@ -64,24 +64,13 @@
     state.autonomyReports.unshift(entry);
     state.autonomyReports = state.autonomyReports.slice(0, 40);
 
-    state.eventCounter = (state.eventCounter || 0) + 1;
-    if (!Array.isArray(state.eventLog)) state.eventLog = [];
-    state.eventLog.unshift({
-      eventId: "ev" + state.eventCounter,
-      turn: state.turn || 1,
-      phase: "player",
-      actorType: "unit",
-      actorId: unit ? unit.id : null,
-      eventType: "autonomous-order",
-      text: text,
-      coordinates: unit ? { x: unit.x, y: unit.y } : null,
-      data: { orderType: unit && unit.order ? unit.order.type : null }
-    });
-    state.eventLog = state.eventLog.slice(0, 180);
-
-    if (!Array.isArray(state.history)) state.history = [];
-    state.history.unshift("Ход " + (state.turn || 1) + ": " + text);
-    state.history = state.history.slice(0, 60);
+    window.EpohiEventJournal.append(state, function (counter) {
+      return { eventId:"ev" + counter, turn:state.turn || 1, phase:"player",
+        actorType:"unit", actorId:unit ? unit.id : null,
+        eventType:"autonomous-order", text:text,
+        coordinates:unit ? { x:unit.x, y:unit.y } : null,
+        data:{ orderType:unit && unit.order ? unit.order.type : null } };
+    }, { eventLimit:180, historyLimit:60 });
     reportButtonMarked = true;
     updateReportButton();
     return entry;

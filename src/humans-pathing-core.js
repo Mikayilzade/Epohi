@@ -41,23 +41,11 @@
   }
 
   function log(gs, eventType, text, coordinates, actorId) {
-    gs.eventCounter = (gs.eventCounter || 0) + 1;
-    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
-    gs.eventLog.unshift({
-      eventId: "ev" + gs.eventCounter,
-      turn: gs.turn || 1,
-      phase: "player",
-      actorType: "unit",
-      actorId: actorId || null,
-      eventType: eventType,
-      text: text,
-      coordinates: coordinates || null,
-      data: {}
-    });
-    gs.eventLog = gs.eventLog.slice(0, 180);
-    if (!Array.isArray(gs.history)) gs.history = [];
-    gs.history.unshift("Ход " + (gs.turn || 1) + ": " + text);
-    gs.history = gs.history.slice(0, 60);
+    window.EpohiEventJournal.append(gs, function (counter) {
+      return { eventId:"ev" + counter, turn:gs.turn || 1, phase:"player",
+        actorType:"unit", actorId:actorId || null, eventType:eventType,
+        text:text, coordinates:coordinates || null, data:{} };
+    }, { eventLimit:180, historyLimit:60 });
   }
 
   function ensureState(gs) {

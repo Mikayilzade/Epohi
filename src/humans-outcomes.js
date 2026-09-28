@@ -97,24 +97,12 @@
     state.outcomeNotices.push(key);
     state.outcomeNotices = state.outcomeNotices.slice(-30);
 
-    if (!Array.isArray(state.eventLog)) state.eventLog = [];
-    state.eventCounter = (state.eventCounter || 0) + 1;
-    state.eventLog.unshift({
-      eventId: "ev" + state.eventCounter,
-      turn: state.turn || 1,
-      phase: "player",
-      actorType: "system",
-      actorId: null,
-      eventType: eventType || "outcome-status",
-      text: text,
-      coordinates: null,
-      data: {}
-    });
-    state.eventLog = state.eventLog.slice(0, 180);
-
-    if (!Array.isArray(state.history)) state.history = [];
-    state.history.unshift("Ход " + (state.turn || 1) + ": " + text);
-    state.history = state.history.slice(0, 60);
+    window.EpohiEventJournal.append(state, function (counter) {
+      return { eventId:"ev" + counter, turn:state.turn || 1, phase:"player",
+        actorType:"system", actorId:null,
+        eventType:eventType || "outcome-status", text:text,
+        coordinates:null, data:{} };
+    }, { eventLimit:180, historyLimit:60 });
     return true;
   }
 
