@@ -786,3 +786,17 @@ listeners, so the completion criteria above remain open.
   this small extraction.
 - Remaining: rival/player action rules and presentation invalidation, then
   the final integration gate.
+
+### Stage 43: player production queue commands
+
+- `src/player-production.js` now owns queue start, resource charge/refund,
+  cancellation and local production rush as well as turn completion. The
+  palace population gate is shared balance data in `PLAYER_CITY_RULES`; the
+  city card reads the same value. `app.js` keeps user feedback and rendering
+  after receiving a command result. Its old mutation bodies, payment helper
+  and unused completion adapter were removed.
+- Local desktop Chrome city, production and progression checks passed 8/8.
+  The added regression verifies upfront charge, busy rejection, cancellation
+  refund, rushed completion and event order. Syntax/diff checks pass.
+- Remaining: player founding/movement/combat, rival action execution,
+  presentation invalidation and the final integration gate.

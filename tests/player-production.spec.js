@@ -35,3 +35,36 @@ test('player city completion and growth are applied in one turn', async ({ page 
     events:['city-growth','city-production-completed']
   });
 });
+
+test('queue commands charge, refund and rush from structured state', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const result = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    const city = state.cities[0];
+    const production = window.EpohiPlayerProduction;
+    const events = [];
+    const options = {
+      logEvent:(_state,type) => events.push(type),
+      makePlayerUnit:() => { throw new Error('No unit expected'); },
+      revealAround:() => {}
+    };
+    state.researched.push('writing');
+    state.resources.gold = 8;
+    const started = production.startQueue(state,city,'building','library',options);
+    const charged = state.resources.gold;
+    const busy = production.startQueue(state,city,'building','monument',options);
+    const cancelled = production.cancelQueue(state,city);
+    const refunded = state.resources.gold;
+    production.startQueue(state,city,'building','monument',options);
+    city.production = city.queue.cost;
+    const rushed = production.rushQueue(state,city,options);
+    return { started, charged, busy, cancelled, refunded,
+      completed:rushed.completed.text, queue:city.queue, production:city.production,
+      built:city.buildings.includes('monument'), events };
+  });
+  expect(result).toMatchObject({ started:'started', charged:2, busy:'busy',
+    cancelled:true, refunded:8, queue:null, production:0, built:true,
+    events:['city-production-started','city-production-started','city-production-completed'] });
+  expect(result.completed).toContain('Монумент');
+});

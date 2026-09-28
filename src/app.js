@@ -78,6 +78,7 @@
     AI_NAMES,
     AI_COLORS,
     AI_LIMITS,
+    PLAYER_CITY_RULES,
     TECHS
   } = window.EpohiData;
 
@@ -642,13 +643,6 @@
   function canAfford(cost) {
     return canAffordInState(state, cost);
   }
-
-  function pay(cost) {
-    Object.keys(cost || {}).forEach(function (key) {
-      state.resources[key] -= cost[key];
-    });
-  }
-
 
   function currentEra() {
     return currentEraForState(state, hasTech);
@@ -2117,12 +2111,22 @@
   function canFoundCity(unit){ return !foundCityBlockReason(unit); }
   function foundCity(unitId){ const unit=getUnit(unitId); const reason=foundCityBlockReason(unit); if(reason){ showToast('Нельзя основать город: '+reason,3000); renderContext(); return false; } let name=prompt('Название нового города','Город '+(playerCities().length+1))||('Город '+(playerCities().length+1)); const city={id:'player-city'+Date.now(),name:name.trim(),x:unit.x,y:unit.y,population:1,food:0,production:0,buildings:[],queue:null,hp:150,maxHp:150,capital:false,youngUntil:state.turn+3}; state.cities.push(city); if(window.EpohiPopulationWorkforce) window.EpohiPopulationWorkforce.ensureCity(city); revealAround(state,city.x,city.y,1); neighborsOf(city.x,city.y,mapSizeCells()).concat([{x:city.x,y:city.y}]).forEach(p=>{ if(!state.map[p.y][p.x].owner) state.map[p.y][p.x].owner=city.id; }); state.units=state.units.filter(u=>u.id!==unit.id); selectedCityId=city.id; selectedUnitId=state.units[0]&&state.units[0].id; centerCameraOnTile(city.x,city.y,true); logEvent(state,'city-founded','Основан город '+city.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); showToast('🏛️ Основан город '+city.name+'.',3000); render(); return true; }
   function canFoundOutpost(unit){ return false; }
-  function queueProject(type,id){ const city=activeCity(); if(city.queue) return showToast('Очередь этого города занята.'); const def=projectDef(type,id); if(!def||def.tech&&!hasTech(def.tech)||type==='building'&&(city.buildings||[]).includes(id)) return; if((id==='palace'&&city.population<6)||(type==='unit'&&city.population<def.population)) return showToast('Недостаточно населения.'); const upfront=nonProductionCost(def.cost); if(!canAfford(upfront)) return showToast('Не хватает общих ресурсов.'); pay(upfront); city.queue={type,id,progress:0,cost:def.cost.production||0,upfront}; logEvent(state,'city-production-started',city.name+': начат проект '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); render(); openCity(); }
-  function cancelQueue(){ const city=activeCity(), q=city.queue; if(!q)return; Object.keys(q.upfront||{}).forEach(k=>state.resources[k]+=q.upfront[k]); city.queue=null; render(); openCity(); }
-  function rushQueue(){ const city=activeCity(), q=city.queue; if(!q||city.production<=0)return; const a=Math.min(city.production,q.cost-q.progress); city.production-=a; q.progress+=a; const done=finishCityQueue(city); showToast(done?done.text:'Вложено 🔨 '+a); render(); openCity(); }
+  function queueProject(type,id){
+    const result=window.EpohiPlayerProduction.startQueue(state,activeCity(),type,id,productionOptions());
+    if(result==='busy') return showToast('Очередь этого города занята.');
+    if(result==='population') return showToast('Недостаточно населения.');
+    if(result==='resources') return showToast('Не хватает общих ресурсов.');
+    if(result==='started'){ render(); openCity(); }
+  }
+  function cancelQueue(){ if(!window.EpohiPlayerProduction.cancelQueue(state,activeCity())) return; render(); openCity(); }
+  function rushQueue(){
+    const result=window.EpohiPlayerProduction.rushQueue(state,activeCity(),productionOptions());
+    if(!result) return;
+    showToast(result.completed?result.completed.text:'Вложено 🔨 '+result.spent);
+    render(); openCity();
+  }
   function addUnit(type, city){ city=city||activeCity(); const id='u'+state.nextUnitId++; state.units.push(makePlayerUnit(type, id, city.x, city.y)); return id; }
   function productionOptions(){ return { makePlayerUnit:makePlayerUnit, revealAround:revealAround, logEvent:logEvent }; }
-  function finishCityQueue(city){ return window.EpohiPlayerProduction.completeQueue(state, city, productionOptions()); }
   function processProduction(){ return window.EpohiPlayerProduction.processTurn(state, productionOptions()); }
   function processBarbarians(){
     return window.EpohiBarbarianActions.process(state,{
@@ -2198,7 +2202,7 @@
     const def = projectDef(type, id), isBuilding = type === 'building';
     const done = isBuilding && (city.buildings||[]).includes(id);
     const locked = def.tech && !hasTech(def.tech);
-    const populationLocked = (id === 'palace' && city.population < 6) || (!isBuilding && city.population < def.population);
+    const populationLocked = (id === 'palace' && city.population < PLAYER_CITY_RULES.palaceMinimumPopulation) || (!isBuilding && city.population < def.population);
     const busy = !!city.queue;
     const affordable = canAfford(nonProductionCost(def.cost));
     let button = done ? '<button class="card-button neutral" disabled>Построено</button>' : locked ? '<button class="card-button neutral" disabled>Нужно: '+TECHS[def.tech].name+'</button>' : populationLocked ? '<button class="card-button neutral" disabled>Население</button>' : busy ? '<button class="card-button neutral" disabled>Очередь занята</button>' : '<button class="card-button '+(affordable?'':'neutral')+'" data-queue-type="'+type+'" data-queue-id="'+id+'" '+(affordable?'':'disabled')+'>'+formatCost(def.cost)+'</button>';

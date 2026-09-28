@@ -1,18 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_42_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_43_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 41 published at `534728e`. Stage 42 locally validated
+- **STATUS:** Stage 42 published at `9687f14`. Stage 43 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Player technology prerequisites, choice and turn completion moved
-  from `app.js` into `progression.js` with state/data inputs.
-- **EVIDENCE:** Local desktop Chrome research, production, baseline and turn
-  checks passed 13/13. Syntax/diff checks pass. Stage 40 CI passed static and
-  soak but has browser shard failures to diagnose before the final gate.
-- **NEXT:** Publish Stage 42; extract remaining player/AI rules, consolidate
-  broad UI invalidation, then run the final integration gate.
+- **DONE:** City queue commands now charge, refund and rush through
+  `player-production.js`; the palace population gate is shared balance data.
+- **EVIDENCE:** Local desktop Chrome city/production/progression checks 8/8;
+  syntax/diff checks pass. The known Chromium CI failure concerns a mobile
+  camera assertion, with static and soak jobs green.
+- **NEXT:** Publish Stage 43; extract player founding/movement/combat and AI
+  rules, consolidate UI invalidation, then run the final integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

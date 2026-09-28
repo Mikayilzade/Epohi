@@ -4,6 +4,7 @@
   const data = window.EpohiData;
   const { BUILDINGS, UNIT_DEFS, PLAYER_CITY_RULES } = data;
   const { growthNeed } = window.EpohiUtils;
+  const { nonProductionCost } = window.EpohiUtils;
 
   function playerCities(state) {
     return Array.isArray(state.cities) && state.cities.length ? state.cities
@@ -36,6 +37,42 @@
       unitId:unitId };
   }
 
+  function startQueue(state, city, type, id, options) {
+    if (city.queue) return "busy";
+    const definition = type === "building" ? BUILDINGS[id] : UNIT_DEFS[id];
+    if (!definition || (definition.tech && !state.researched.includes(definition.tech))
+      || (type === "building" && (city.buildings || []).includes(id))) return "invalid";
+    if ((id === "palace" && city.population < PLAYER_CITY_RULES.palaceMinimumPopulation)
+      || (type === "unit" && city.population < definition.population)) return "population";
+    const upfront = nonProductionCost(definition.cost);
+    if (Object.keys(upfront).some(function (key) { return (state.resources[key] || 0) < upfront[key]; }))
+      return "resources";
+    Object.keys(upfront).forEach(function (key) { state.resources[key] -= upfront[key]; });
+    city.queue = { type, id, progress:0, cost:definition.cost.production || 0, upfront };
+    options.logEvent(state, "city-production-started", city.name + ": начат проект " + definition.name + ".",
+      { x:city.x, y:city.y }, { actorType:"player", actorId:"player" });
+    return "started";
+  }
+
+  function cancelQueue(state, city) {
+    const queue = city.queue;
+    if (!queue) return false;
+    Object.keys(queue.upfront || {}).forEach(function (key) {
+      state.resources[key] += queue.upfront[key];
+    });
+    city.queue = null;
+    return true;
+  }
+
+  function rushQueue(state, city, options) {
+    const queue = city.queue;
+    if (!queue || city.production <= 0) return null;
+    const spent = Math.min(city.production, queue.cost - queue.progress);
+    city.production -= spent;
+    queue.progress += spent;
+    return { spent, completed:completeQueue(state, city, options) };
+  }
+
   function processTurn(state, options) {
     let completed = null;
     playerCities(state).forEach(function (city) {
@@ -62,5 +99,5 @@
     return completed;
   }
 
-  window.EpohiPlayerProduction = { completeQueue, processTurn };
+  window.EpohiPlayerProduction = { startQueue, cancelQueue, rushQueue, completeQueue, processTurn };
 })();
