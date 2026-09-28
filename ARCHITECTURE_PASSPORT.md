@@ -1035,7 +1035,12 @@ listeners, so the completion criteria above remain open.
   The fixture now uses `EpohiEventJournal.append`, matching actual creation,
   and its focused rerun passed. Mobile Chrome emulation passed 13/13 after
   camera consolidation. Short autonomous soak passed 2 seeds × 30 turns after
-  the final split. The CI desktop gate for the exact package SHA is pending.
+  the final split. A first exact-SHA CI run found that the Treasury rebuilding
+  its content removed the administration card until a later timer; Treasury
+  now emits an explicit render signal consumed by the stability adapter.
+  A later desktop run exposed a random-camp collision in a POI test fixture;
+  the fixture now clears that target tile's camp. These repairs passed their
+  focused local checks.
 - Syntax passed for 119 JavaScript files, contract tests passed 35/35, and
   `git diff --check` passed. The local full run also included a temporary
   End Turn measurement spec that is not committed.
@@ -1049,6 +1054,12 @@ listeners, so the completion criteria above remain open.
   312/302/297/299/343 ms with one full render, invalidation flush and
   observer sync per turn; snapshot sizes were 47,931–49,686 bytes. This is
   still a short local sample and does not establish a wall-time speedup.
+- Final exact runtime/test SHA `82027753bed7431725d2013ab737bc9223319cde`
+  passed GitHub Actions run `36455024050`: static checks, three desktop
+  Chromium shards, three mobile Chromium shards, three WebKit shards, five
+  Chromium soak seeds and two WebKit soak seeds. The preceding focused PR
+  run `36454765556` also passed. A later documentation-only checkpoint
+  commit does not change this tested runtime revision.
 
 ### Known architecture debt after the cleanup
 

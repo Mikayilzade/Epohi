@@ -1,22 +1,22 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: FINAL_PACKAGE_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_CLEANUP_COMPLETE.
 
 ## Current checkpoint
-- **STATUS:** Stage 51 and architecture packages 1-3 published through
-  `f69228b`; final package locally validated, uncommitted. PR #103 remains
-  the only target.
+- **STATUS:** Stage 51 and all four architecture packages are published to
+  PR #103. Runtime/test head `8202775` has a green final gate; PR remains
+  Draft/Open and unmerged.
 - **DONE:** Domain rules and structured journal have explicit owners; End Turn,
   saga, camera, overlay and stability paths were consolidated. Duplicate
   observer safety and shadowed faction-defeat code were removed. The live
   architecture map and residual debt are in `ARCHITECTURE_PASSPORT.md`.
-- **EVIDENCE:** Latest desktop run 225/226; the one stale raw-event fixture
-  was corrected and passed focused. Final short soak 2 seeds x 30 turns,
-  static syntax 119 files and contracts 35/35 passed. Five End Turns emitted
-  one full render, invalidation flush and observer sync each; timings remain
-  within noise.
-- **NEXT:** Review, commit and push final package to #103; check exact-SHA CI,
-  fix real regressions, then record gate result and report completion.
+- **EVIDENCE:** Exact runtime/test SHA `8202775`, CI run `36455024050`:
+  desktop Chromium 3/3, mobile Chromium 3/3, WebKit 3/3, Chromium soak 5/5,
+  WebKit soak 2/2, static green. Local short soak 2 x 30 turns, syntax for
+  119 JS files and contracts 35/35 passed. Five End Turns emitted one full
+  render, invalidation flush and observer sync each; timing remains noisy.
+- **NEXT:** Only optional follow-up work and the user-controlled merge remain.
+  See `ARCHITECTURE_PASSPORT.md` for ownership and residual technical debt.
 - **BLOCKER:** None.
 
 ---
