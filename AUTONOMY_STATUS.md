@@ -1,18 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_48_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_49_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 47 published at `0762a24`. Stage 48 locally validated
+- **STATUS:** Stage 48 published at `3f0c797`. Stage 49 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Selected-city income reuses the aggregate income pass in
-  `renderTop()`, avoiding a repeated whole-map scan.
-- **EVIDENCE:** Same-snapshot large-map comparison matched resource texts;
-  scans per update fell 2 to 1. Timing difference is too small to claim.
-  Local desktop Chrome city/map/workforce checks 21/21; syntax/diff pass.
-- **NEXT:** Publish Stage 48; continue End Turn presentation audit,
-  player/rival action separation and event ownership before the final gate.
+- **DONE:** One event journal now owns insertion, counters and retention for
+  app and worker events; domain fields and prior policies are preserved.
+- **EVIDENCE:** Local desktop Chrome 46/46. Seeded two-turn full-state
+  comparison matched the old implementation; timings are noisy. Syntax/diff
+  checks pass.
+- **NEXT:** Publish Stage 49; move remaining domain event writers into the
+  journal, then continue player/rival action and UI cleanup.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

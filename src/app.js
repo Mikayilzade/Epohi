@@ -1290,12 +1290,14 @@
 
   function logEvent(targetState, eventType, text, coords, options) {
     const gs = targetState || state; if (!gs) return;
-    gs.eventCounter = (gs.eventCounter || 0) + 1;
-    const entry = { eventId: "ev" + gs.eventCounter, turn: gs.turn || 1, phase: (options && options.phase) || "player", actorType: (options && options.actorType) || "system", actorId: (options && options.actorId) || null, eventType: eventType, text: text, coordinates: coords || null, data: (options && options.data) || {} };
-    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
-    gs.eventLog.unshift(entry); gs.eventLog = gs.eventLog.slice(0, AI_LIMITS.logLimit);
-    if (!Array.isArray(gs.history)) gs.history = [];
-    gs.history.unshift("Ход " + entry.turn + ": " + text); gs.history = gs.history.slice(0, 60);
+    window.EpohiEventJournal.append(gs, function (counter) {
+      return { eventId: "ev" + counter, turn: gs.turn || 1,
+        phase: (options && options.phase) || "player",
+        actorType: (options && options.actorType) || "system",
+        actorId: (options && options.actorId) || null,
+        eventType: eventType, text: text, coordinates: coords || null,
+        data: (options && options.data) || {} };
+    }, { eventLimit:AI_LIMITS.logLimit, historyLimit:60 });
   }
 
   function tileKey(x,y){ return x + "," + y; }

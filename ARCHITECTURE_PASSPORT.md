@@ -884,3 +884,19 @@ listeners, so the completion criteria above remain open.
   and diff checks pass.
 - Remaining: wider End Turn presentation costs, player/rival action rules,
   event writer ownership and the final integration gate.
+
+### Stage 49: first event journal boundary
+
+- `src/event-journal.js` now owns counter increment, event insertion/limit and
+  history insertion/limit. The app and worker-project writers provide their
+  existing event fields and policies, so ID prefixes, actor/phase fields,
+  duplicate-history behavior and retention limits remain unchanged. The
+  journal does not read the DOM or rebuild gameplay from history.
+- Local desktop Chrome combat/world, coherence, production and turn controls
+  passed 46/46. A seeded same-snapshot comparison against `3f0c797` matched
+  full state after two turns containing production and worker events. End Turn
+  samples were 247/380 ms before and 193/193 ms after; too few and noisy to
+  claim a speed gain. Syntax and diff checks pass.
+- Remaining: migrate other domain event writers to the same journal while
+  preserving their formats, then player/rival action and UI cleanup and the
+  final integration gate.
