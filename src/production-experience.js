@@ -25,5 +25,36 @@
     holder.experience[field][id] = (Number(holder.experience[field][id]) || 0) + 1;
   }
 
-  window.EpohiProductionExperience = { ensurePlayerState: ensurePlayerState, recordCompletion: recordCompletion };
+  function buildingDiscount(holder, id) {
+    const rules = window.EpohiData.PRODUCTION_EXPERIENCE_RULES;
+    const experience = holder && holder.experience || {};
+    const own = Math.min(rules.ownBuildingMaximum,
+      Math.max(0, Number(experience.buildings && experience.buildings[id]) || 0)
+        * rules.ownBuildingStep);
+    const foreign = Array.isArray(experience.foreignBuildings && experience.foreignBuildings[id])
+      ? experience.foreignBuildings[id].length * rules.foreignBuildingStep : 0;
+    return own + foreign;
+  }
+
+  function unitDiscount(holder, id) {
+    const rules = window.EpohiData.PRODUCTION_EXPERIENCE_RULES;
+    const experience = holder && holder.experience || {};
+    const produced = Math.max(0, Number(experience.units && experience.units[id]) || 0);
+    return Math.min(rules.unitMaximum, Math.floor(produced / rules.unitsPerStep) * rules.unitStep);
+  }
+
+  function effectiveProductionCost(holder, type, id) {
+    const data = window.EpohiData;
+    const definition = type === "building" ? data.BUILDINGS[id] : data.UNIT_DEFS[id];
+    const base = Number(definition && definition.cost && definition.cost.production) || 0;
+    if (!base) return 0;
+    const rules = data.PRODUCTION_EXPERIENCE_RULES;
+    const discount = type === "building" ? buildingDiscount(holder, id) : unitDiscount(holder, id);
+    return Math.max(rules.minimumCost,
+      Math.ceil(base * Math.max(rules.minimumCostFactor, 1 - discount)));
+  }
+
+  window.EpohiProductionExperience = {
+    ensurePlayerState, recordCompletion, buildingDiscount, unitDiscount, effectiveProductionCost
+  };
 })();

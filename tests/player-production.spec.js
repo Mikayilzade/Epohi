@@ -68,3 +68,27 @@ test('queue commands charge, refund and rush from structured state', async ({ pa
     events:['city-production-started','city-production-started','city-production-completed'] });
   expect(result.completed).toContain('Монумент');
 });
+
+test('city card uses the same queue rule and experience discount', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const expected = await page.evaluate(() => {
+    const debug = window.__epohiDebug();
+    const state = debug.state;
+    state.researched.push('agriculture');
+    window.EpohiWorkerLearning.ensureState(state);
+    state.experience.buildings.granary = 2;
+    debug.render();
+    return window.EpohiProductionExperience.effectiveProductionCost(state, 'building', 'granary');
+  });
+  await page.evaluate(() => document.getElementById('cityBtn').click());
+  await page.locator('#cityContent [data-queue-id="granary"]').click();
+  const result = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    return { queue:state.cities[0].queue,
+      event:state.eventLog.find(item => item.eventType === 'city-production-started') };
+  });
+  expect(result.queue).toMatchObject({ type:'building', id:'granary',
+    cost:expected, baseCost:24, learningDiscount:0.2 });
+  expect(result.event.text).toContain('за ' + expected + ' производства');
+});

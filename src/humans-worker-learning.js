@@ -4,11 +4,6 @@
   const BUILDINGS = window.EpohiData && window.EpohiData.BUILDINGS || {};
   const UNIT_DEFS = window.EpohiData && window.EpohiData.UNIT_DEFS || {};
   const IMPROVEMENTS = window.EpohiData && window.EpohiData.IMPROVEMENTS || {};
-  const OWN_BUILDING_STEP = 0.10;
-  const OWN_BUILDING_MAX = 0.30;
-  const FOREIGN_BUILDING_STEP = 0.05;
-  const UNIT_STEP = 0.10;
-  const UNIT_MAX = 0.30;
 
   let originalDebugFactory = null;
   let lastTurn = null;
@@ -60,43 +55,22 @@
     toast.timer = window.setTimeout(function () { node.classList.remove("show"); }, duration || 2200);
   }
 
-  function readExperience(holder) {
-    return holder && holder.experience || {};
-  }
-
   function ensureState(gs) {
     if (!gs) return null;
     window.EpohiProductionExperience.ensurePlayerState(gs);
     return gs;
   }
 
-  function ownBuildingDiscount(holder, id) {
-    const exp = readExperience(holder);
-    return Math.min(OWN_BUILDING_MAX, Math.max(0, Number(exp.buildings && exp.buildings[id]) || 0) * OWN_BUILDING_STEP);
-  }
-
-  function foreignBuildingDiscount(holder, id) {
-    const exp = readExperience(holder);
-    const sources = Array.isArray(exp.foreignBuildings && exp.foreignBuildings[id]) ? exp.foreignBuildings[id] : [];
-    return sources.length * FOREIGN_BUILDING_STEP;
-  }
-
   function buildingDiscount(holder, id) {
-    return ownBuildingDiscount(holder, id) + foreignBuildingDiscount(holder, id);
+    return window.EpohiProductionExperience.buildingDiscount(holder, id);
   }
 
   function unitDiscount(holder, id) {
-    const exp = readExperience(holder);
-    const produced = Math.max(0, Number(exp.units && exp.units[id]) || 0);
-    return Math.min(UNIT_MAX, Math.floor(produced / 10) * UNIT_STEP);
+    return window.EpohiProductionExperience.unitDiscount(holder, id);
   }
 
   function effectiveProductionCost(holder, type, id) {
-    const def = type === "building" ? BUILDINGS[id] : UNIT_DEFS[id];
-    const base = Number(def && def.cost && def.cost.production) || 0;
-    if (!base) return 0;
-    const discount = type === "building" ? buildingDiscount(holder, id) : unitDiscount(holder, id);
-    return Math.max(1, Math.ceil(base * Math.max(0.05, 1 - discount)));
+    return window.EpohiProductionExperience.effectiveProductionCost(holder, type, id);
   }
 
   function hasTech(gs, id) {
@@ -110,53 +84,25 @@
     return playerCities(gs).find(function (city) { return String(city.id) === String(id); }) || playerCities(gs)[0] || null;
   }
 
-  function nonProductionCost(def) {
-    const result = {};
-    Object.keys(def && def.cost || {}).forEach(function (key) {
-      if (key !== "production") result[key] = Number(def.cost[key]) || 0;
-    });
-    return result;
-  }
-
-  function canAfford(gs, cost) {
-    return Object.keys(cost || {}).every(function (key) {
-      return Number(gs.resources && gs.resources[key] || 0) >= Number(cost[key] || 0);
-    });
-  }
-
-  function pay(gs, cost) {
-    Object.keys(cost || {}).forEach(function (key) {
-      gs.resources[key] = Number(gs.resources[key] || 0) - Number(cost[key] || 0);
-    });
-  }
-
   function queueProject(gs, city, type, id) {
-    const def = type === "building" ? BUILDINGS[id] : UNIT_DEFS[id];
-    if (!def || !city || city.queue) return false;
-    if (def.tech && !hasTech(gs, def.tech)) return false;
-    if (type === "building" && (city.buildings || []).indexOf(id) >= 0) return false;
-    const need = type === "unit" ? Number(def.population || 1) : (id === "palace" ? 6 : 0);
-    if (need && Number(city.population || 0) < need) {
+    if (!gs || !city) return false;
+    const result = window.EpohiPlayerProduction.startQueue(gs, city, type, id, {
+      logEvent:function (state, eventType, text, coordinates) {
+        addEvent(state, eventType, text, coordinates);
+      }
+    });
+    if (result === "population") {
+      const def = type === "building" ? BUILDINGS[id] : UNIT_DEFS[id];
+      const need = type === "unit" ? Number(def.population || 1)
+        : window.EpohiData.PLAYER_CITY_RULES.palaceMinimumPopulation;
       toast("Нужно население города " + need + "+.");
       return false;
     }
-    const upfront = nonProductionCost(def);
-    if (!canAfford(gs, upfront)) {
+    if (result === "resources") {
       toast("Не хватает общих ресурсов.");
       return false;
     }
-    pay(gs, upfront);
-    const cost = effectiveProductionCost(gs, type, id);
-    city.queue = {
-      type: type,
-      id: id,
-      progress: 0,
-      cost: cost,
-      baseCost: Number(def.cost && def.cost.production) || 0,
-      upfront: upfront,
-      learningDiscount: type === "building" ? buildingDiscount(gs, id) : unitDiscount(gs, id)
-    };
-    addEvent(gs, "city-production-started", city.name + ": начат проект «" + def.name + "» за " + cost + " производства.", { x:city.x, y:city.y });
+    if (result !== "started") return false;
     const value = debug();
     if (value && typeof value.render === "function") value.render();
     window.setTimeout(function () {

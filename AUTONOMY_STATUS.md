@@ -1,17 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_44_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_45_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 43 published at `7cb04d6`. Stage 44 locally validated
+- **STATUS:** Stage 44 published at `ec7d21f`. Stage 45 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** City-founding checks and state changes moved to
-  `player-settlements.js`; UI keeps prompt, camera and presentation.
-- **EVIDENCE:** Local desktop Chrome city/combat/production/progression checks
-  26/26, including full-capacity rejection; syntax/diff checks pass.
-- **NEXT:** Publish Stage 44; extract player movement/combat and rival rules,
-  consolidate UI invalidation, then run the final integration gate.
+- **DONE:** The real city-card click and app command now use one production
+  queue rule; experience discounts and balance moved to one game module.
+- **EVIDENCE:** Local desktop Chrome related checks: 28 passed, one mobile CSS
+  assertion failed in desktop viewport. The new real-click regression passed.
+  Stage 44 CI passed all Chromium shards, static and soak; WebKit mobile shard
+  1 failed. Syntax/diff checks pass.
+- **NEXT:** Publish Stage 45; remove worker-action legacy path, then continue
+  player/rival action separation and UI invalidation before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

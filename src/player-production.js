@@ -40,16 +40,27 @@
   function startQueue(state, city, type, id, options) {
     if (city.queue) return "busy";
     const definition = type === "building" ? BUILDINGS[id] : UNIT_DEFS[id];
-    if (!definition || (definition.tech && !state.researched.includes(definition.tech))
+    if (!definition || (definition.tech && !(state.researched || []).includes(definition.tech)
+      && !(state.technologies || []).includes(definition.tech))
       || (type === "building" && (city.buildings || []).includes(id))) return "invalid";
     if ((id === "palace" && city.population < PLAYER_CITY_RULES.palaceMinimumPopulation)
       || (type === "unit" && city.population < definition.population)) return "population";
     const upfront = nonProductionCost(definition.cost);
-    if (Object.keys(upfront).some(function (key) { return (state.resources[key] || 0) < upfront[key]; }))
+    if (Object.keys(upfront).some(function (key) { return Number(state.resources[key] || 0) < Number(upfront[key] || 0); }))
       return "resources";
-    Object.keys(upfront).forEach(function (key) { state.resources[key] -= upfront[key]; });
-    city.queue = { type, id, progress:0, cost:definition.cost.production || 0, upfront };
-    options.logEvent(state, "city-production-started", city.name + ": начат проект " + definition.name + ".",
+    window.EpohiProductionExperience.ensurePlayerState(state);
+    Object.keys(upfront).forEach(function (key) {
+      state.resources[key] = Number(state.resources[key] || 0) - Number(upfront[key] || 0);
+    });
+    const learning = window.EpohiProductionExperience;
+    const cost = learning.effectiveProductionCost(state, type, id);
+    city.queue = {
+      type, id, progress:0, cost, baseCost:Number(definition.cost.production) || 0, upfront,
+      learningDiscount:type === "building" ? learning.buildingDiscount(state, id)
+        : learning.unitDiscount(state, id)
+    };
+    options.logEvent(state, "city-production-started",
+      city.name + ": начат проект «" + definition.name + "» за " + cost + " производства.",
       { x:city.x, y:city.y }, { actorType:"player", actorId:"player" });
     return "started";
   }

@@ -816,3 +816,24 @@ listeners, so the completion criteria above remain open.
   diff checks pass. No turn-performance change is claimed from this action.
 - Remaining: player movement/combat and rival execution in `app.js`, broad
   presentation invalidation and the final integration gate.
+
+### Stage 45: unify the actual player production entry points
+
+- A later capture-phase click handler in `humans-worker-learning.js` still
+  created production queues directly, with experience discounts and its own
+  payment/event code. The Stage 43 module covered the app command and End Turn
+  but this normal city-card click bypassed it. Both entry points now call the
+  one `EpohiPlayerProduction.startQueue` state transition. The click handler
+  retains only UI feedback and its existing event writer; the app command
+  retains its UI adapter. Discount calculation lives once in
+  `production-experience.js`, with its values in `PRODUCTION_EXPERIENCE_RULES`.
+  `EpohiWorkerLearning` exports delegates for existing consumers.
+- A real city-card click regression verifies the discounted queue cost, base
+  cost, discount and event text. Local desktop Chrome neighboring coverage:
+  28 passed; one `resource-worker` assertion failed because it expects mobile
+  `flex-wrap:nowrap` while this run used the desktop viewport. That CSS
+  assertion did not reach the worker command. The new click test passed after
+  opening the city via the hidden PC toolbar button's DOM event. Syntax and
+  diff checks pass; no End Turn timing claim is made.
+- Remaining: worker action legacy path, player combat/movement, rival
+  execution, presentation invalidation and final integration gate.
