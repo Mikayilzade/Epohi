@@ -1312,25 +1312,6 @@
 
 
 
-  function finishQueueIfReady() {
-    const queue = state.city.queue;
-    if (!queue || queue.progress < queue.cost) return null;
-    const def = projectDef(queue.type, queue.id);
-    state.city.queue = null;
-
-    if (queue.type === "building") {
-      state.city.buildings.push(queue.id);
-      state.history.unshift("Ход " + state.turn + ": завершено здание «" + def.name + "».");
-      if (queue.id === "palace") state.victory = true;
-      return { text: def.icon + " " + def.name + " завершён.", victory: queue.id === "palace" };
-    }
-
-    const unitId = addUnit(queue.id);
-    state.history.unshift("Ход " + state.turn + ": подготовлен юнит «" + def.name + "».");
-    return { text: def.icon + " " + def.name + " готов в городе.", unitId: unitId, victory: false };
-  }
-
-
   function finishResearch() {
     if (!state.currentResearch) return null;
     const tech = TECHS[state.currentResearch];
@@ -2146,9 +2127,9 @@
   function cancelQueue(){ const city=activeCity(), q=city.queue; if(!q)return; Object.keys(q.upfront||{}).forEach(k=>state.resources[k]+=q.upfront[k]); city.queue=null; render(); openCity(); }
   function rushQueue(){ const city=activeCity(), q=city.queue; if(!q||city.production<=0)return; const a=Math.min(city.production,q.cost-q.progress); city.production-=a; q.progress+=a; const done=finishCityQueue(city); showToast(done?done.text:'Вложено 🔨 '+a); render(); openCity(); }
   function addUnit(type, city){ city=city||activeCity(); const id='u'+state.nextUnitId++; state.units.push(makePlayerUnit(type, id, city.x, city.y)); return id; }
-  function finishCityQueue(city){ const q=city.queue; if(!q||q.progress<q.cost)return null; const def=projectDef(q.type,q.id); city.queue=null; window.EpohiProductionExperience.ensurePlayerState(state); if(q.type==='building'){ city.buildings.push(q.id); window.EpohiProductionExperience.recordCompletion(state,'building',q.id); if(q.id==='palace') state.victory=true; logEvent(state,'city-production-completed',city.name+' завершил здание '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); return {text:def.icon+' '+def.name+' завершён.',victory:q.id==='palace'}; } const uid=addUnit(q.id,city); window.EpohiProductionExperience.recordCompletion(state,'unit',q.id); logEvent(state,'city-production-completed',city.name+' подготовил '+def.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); return {text:def.icon+' '+def.name+' готов в '+city.name+'.',unitId:uid}; }
-  function processProduction(){ let completed=null; playerCities().forEach(city=>{ const inc=cityIncome(city); city.food+=inc.food; state.resources.gold+=inc.gold; state.resources.science+=inc.science; if(city.queue){ city.queue.progress+=inc.production; completed=finishCityQueue(city)||completed; } else city.production+=inc.production; while(city.population<10&&city.food>=growthNeed(city.population)){ city.food-=growthNeed(city.population); city.population++; revealAround(state,city.x,city.y,cityRadius(city)); logEvent(state,'city-growth',city.name+' вырос до населения '+city.population+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); } }); return completed; }
-  function applyGrowth(){ return false; }
+  function productionOptions(){ return { makePlayerUnit:makePlayerUnit, revealAround:revealAround, logEvent:logEvent }; }
+  function finishCityQueue(city){ return window.EpohiPlayerProduction.completeQueue(state, city, productionOptions()); }
+  function processProduction(){ return window.EpohiPlayerProduction.processTurn(state, productionOptions()); }
   function processBarbarians(){
     return window.EpohiBarbarianActions.process(state,{
       mapSize:mapSizeCells, targetCampCount:targetActiveCampCount,

@@ -1,6 +1,6 @@
 # Epohi architecture passport
 
-Updated: 2026-09-27. Integration target: PR #103 / `codex-qgq4u5`.
+Updated: 2026-09-28. Integration target: PR #103 / `codex-qgq4u5`.
 
 ## Current audit and completion criteria
 
@@ -752,3 +752,21 @@ listeners, so the completion criteria above remain open.
 - Stage 39 CI was still running at this checkpoint.
 - Remaining: broad click and modal observers, presentation wrappers and
   remaining turn/gameplay separation, then final integration gate.
+
+### Stage 41: player city production and growth rule boundary
+
+- `src/player-production.js` now owns per-turn player city income application,
+  queue completion, unit creation, growth, reveal and their gameplay events.
+  It takes state and explicit callbacks, with no DOM, storage or animation work.
+  The population limit is in `PLAYER_CITY_RULES` in `src/data.js`.
+  `app.js` keeps thin UI-facing adapters; its old shadowed queue completion and
+  dead growth function have been removed.
+- A focused desktop Chrome regression covers simultaneous building completion
+  and population growth in an actual End Turn, including experience and event
+  order. The related local suite passed 18/18 after correcting event filtering.
+  A seeded three-turn comparison against `b0d09f6`, starting from the same
+  complete snapshot, matched the full game state after each turn. End Turn
+  samples were 223/362/168 ms before and 179/174/171 ms after; this short run
+  is too noisy to establish a speed change.
+- Remaining: research, rival and player action rules in `app.js`, broad UI
+  click/overlay invalidation, then final integration gate.

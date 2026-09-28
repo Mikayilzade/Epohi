@@ -17,6 +17,7 @@ const APP_FILES = [
   "./src/barbarian-targeting.js",
   "./src/barbarian-actions.js",
   "./src/stability-rules.js",
+  "./src/player-production.js",
   "./src/state-schema.js",
   "./src/humans-content.js",
   "./src/utils.js",

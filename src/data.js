@@ -143,6 +143,7 @@
     priority: ['civilian', 'unit', 'improvement', 'outpost', 'city']
   };
   const BARBARIAN_ACTION_RULES = { perCampLimit: 2, campTargetScale: 2 };
+  const PLAYER_CITY_RULES = { populationLimit: 10 };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
     direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
@@ -201,6 +202,7 @@
     AI_ACTION_RULES,
     BARBARIAN_TARGET_RULES,
     BARBARIAN_ACTION_RULES,
+    PLAYER_CITY_RULES,
     COMBAT_BALANCE,
     TECHS
   };

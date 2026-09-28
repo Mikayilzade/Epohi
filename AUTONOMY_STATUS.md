@@ -1,18 +1,19 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_40_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_41_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 39 published at `1ad51af`. Stage 40 locally validated
+- **STATUS:** Stage 40 published at `b0d09f6`. Stage 41 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Journey, pathing and overlay UI no longer observe the turn label;
-  the runtime now has zero `turnValue` MutationObservers.
-- **EVIDENCE:** Tier 3 local desktop Chrome 33/33 plus a seeded three-turn
-  comparison with matching event order. Turn-label observers fall 3 to 0;
-  timings are noisy. Stage 39 CI was still running at checkpoint.
-- **NEXT:** Publish Stage 40; continue broad click/overlay invalidation and
-  remaining gameplay separation before final integration gate.
+- **DONE:** Player city production, queue completion and growth moved to a
+  game-rule module; shadowed/dead app implementations removed.
+- **EVIDENCE:** Local desktop Chrome focused checks 18/18. A seeded three-turn
+  comparison from one starting snapshot matched full game state. End Turn
+  timings are noisy. Stage 40 CI passed static/soak; mobile camera shards and
+  one Chromium shard failed and require focused diagnosis.
+- **NEXT:** Publish Stage 41; extract remaining research and player/AI rules,
+  consolidate broad UI invalidation, then run final integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
