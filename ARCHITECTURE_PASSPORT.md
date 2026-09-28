@@ -800,3 +800,19 @@ listeners, so the completion criteria above remain open.
   refund, rushed completion and event order. Syntax/diff checks pass.
 - Remaining: player founding/movement/combat, rival action execution,
   presentation invalidation and the final integration gate.
+
+### Stage 44: player city founding rule and command
+
+- `src/player-settlements.js` owns the settler/site checks and the city-founding
+  state transition: city creation, initial ownership, settler removal, reveal
+  and event. It receives state and explicit clock/workforce/reveal/event
+  dependencies, and never uses the DOM. `app.js` retains the name prompt,
+  selection, camera, toast and render. The existing city distance rule remains
+  shared with rival founding; player capacity, founding yield, health and
+  young-city duration are grouped in `PLAYER_CITY_RULES`.
+- Local desktop Chrome city, combat/world, production and progression checks
+  passed 26/26. A new regression confirms full capacity rejects founding
+  before prompting and leaves cities, units and events unchanged. Syntax and
+  diff checks pass. No turn-performance change is claimed from this action.
+- Remaining: player movement/combat and rival execution in `app.js`, broad
+  presentation invalidation and the final integration gate.

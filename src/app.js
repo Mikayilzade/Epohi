@@ -2094,22 +2094,25 @@
   function calculateIncome(){ return calculateIncomeFromEconomy(state, playerCities(), cityIncome, window.EpohiData); }
   function cityAtAny(x,y){ const pc=playerCities().find(c=>c.x===x&&c.y===y&&c.hp>0); if(pc) return {owner:'player', city:pc}; const rc=rivalCityAt(x,y); if(rc) return rc; return null; }
   function foundCityBlockReason(unit){
-    if(!unit || unit.type !== 'settler') return 'выбран не поселенец';
-    if(unit.acted) return 'юнит уже действовал';
-    const capacity=Number(state.cityCapacity)||4;
-    if(playerCities().length >= capacity) return 'административная ёмкость исчерпана ('+playerCities().length+'/'+capacity+')';
-    const t = state.map[unit.y] && state.map[unit.y][unit.x];
-    if(!t || !t.revealed) return 'клетка не разведана';
-    if(!passableTile(t)) return 'неподходящая местность';
-    if(unitsAt(unit.x,unit.y).filter(u=>u.id!==unit.id).length || rivalUnitAt(unit.x,unit.y) || barbarianAt(unit.x,unit.y) || campAt(unit.x,unit.y) || rivalCityAt(unit.x,unit.y) || t.poi) return 'клетка занята';
-    if((state.rivals||[]).some(civ=>(civ.cities||[]).some(c=>chebyshev(unit.x,unit.y,c.x,c.y)<=cityRadius(c)))) return 'слишком близко к другому городу';
-    if(playerCities().concat([].concat(...(state.rivals||[]).map(c=>c.cities||[]))).some(c=>chebyshev(unit.x,unit.y,c.x,c.y)<CITY_MIN_DISTANCE)) return 'слишком близко к другому городу';
-    let potential=0; neighborsOf(unit.x,unit.y,mapSizeCells()).concat([{x:unit.x,y:unit.y}]).forEach(p=>{ const y=getTileYield(state.map[p.y][p.x]); potential+=y.food+y.production; });
-    if(potential < 2) return 'низкий потенциал клетки';
-    return '';
+    return window.EpohiPlayerSettlements.blockReason(state, unit);
   }
   function canFoundCity(unit){ return !foundCityBlockReason(unit); }
-  function foundCity(unitId){ const unit=getUnit(unitId); const reason=foundCityBlockReason(unit); if(reason){ showToast('Нельзя основать город: '+reason,3000); renderContext(); return false; } let name=prompt('Название нового города','Город '+(playerCities().length+1))||('Город '+(playerCities().length+1)); const city={id:'player-city'+Date.now(),name:name.trim(),x:unit.x,y:unit.y,population:1,food:0,production:0,buildings:[],queue:null,hp:150,maxHp:150,capital:false,youngUntil:state.turn+3}; state.cities.push(city); if(window.EpohiPopulationWorkforce) window.EpohiPopulationWorkforce.ensureCity(city); revealAround(state,city.x,city.y,1); neighborsOf(city.x,city.y,mapSizeCells()).concat([{x:city.x,y:city.y}]).forEach(p=>{ if(!state.map[p.y][p.x].owner) state.map[p.y][p.x].owner=city.id; }); state.units=state.units.filter(u=>u.id!==unit.id); selectedCityId=city.id; selectedUnitId=state.units[0]&&state.units[0].id; centerCameraOnTile(city.x,city.y,true); logEvent(state,'city-founded','Основан город '+city.name+'.',{x:city.x,y:city.y},{actorType:'player',actorId:'player'}); showToast('🏛️ Основан город '+city.name+'.',3000); render(); return true; }
+  function foundCity(unitId){
+    const unit=getUnit(unitId), reason=foundCityBlockReason(unit);
+    if(reason){ showToast('Нельзя основать город: '+reason,3000); renderContext(); return false; }
+    const fallbackName='Город '+(playerCities().length+1);
+    const name=prompt('Название нового города',fallbackName)||fallbackName;
+    const result=window.EpohiPlayerSettlements.foundCity(state,unitId,name,{
+      now:Date.now,
+      ensureCity:window.EpohiPopulationWorkforce && window.EpohiPopulationWorkforce.ensureCity,
+      revealAround:revealAround, logEvent:logEvent
+    });
+    if(result.reason){ showToast('Нельзя основать город: '+result.reason,3000); renderContext(); return false; }
+    const city=result.city;
+    selectedCityId=city.id; selectedUnitId=state.units[0]&&state.units[0].id;
+    centerCameraOnTile(city.x,city.y,true);
+    showToast('🏛️ Основан город '+city.name+'.',3000); render(); return true;
+  }
   function canFoundOutpost(unit){ return false; }
   function queueProject(type,id){
     const result=window.EpohiPlayerProduction.startQueue(state,activeCity(),type,id,productionOptions());
