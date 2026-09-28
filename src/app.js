@@ -867,11 +867,16 @@
   }
 
   function renderTop() {
-    const income = calculateIncome();
     const viewCity = resourceView.type === "city" ? resourceViewCity() : null;
     if (resourceView.type === "city" && !viewCity) resourceView = { type: "empire", cityId: null };
     const city = viewCity || activeCity();
-    const cityIncomeValue = city ? cityIncome(city) : income;
+    let cityIncomeValue = null;
+    const income = calculateIncomeFromEconomy(state, playerCities(), function (candidate) {
+      const value = cityIncome(candidate);
+      if (candidate === city) cityIncomeValue = value;
+      return value;
+    }, window.EpohiData);
+    if (!cityIncomeValue) cityIncomeValue = city ? cityIncome(city) : income;
     turnValue.textContent = String(state.turn);
     eraLabel.textContent = currentEra();
     subtitle.textContent = state.city.name + " · население " + playerCities().reduce(function (sum, c) { return sum + c.population; }, 0) + " · юнитов " + state.units.length;

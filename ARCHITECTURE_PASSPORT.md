@@ -869,3 +869,18 @@ listeners, so the completion criteria above remain open.
   checks pass.
 - Remaining: player movement/combat and rival execution in `app.js`, event
   writer ownership, presentation invalidation and the final integration gate.
+
+### Stage 48: selected-city income reuse in the render path
+
+- `renderTop()` now captures the selected city's income while the shared
+  economy module aggregates all cities, so it does not run `cityIncome()` a
+  second time for that city. The calculation remains fresh after End Turn,
+  including new population and buildings; no cached gameplay truth was added.
+- A same-snapshot large-map comparison against `0762a24` matched all five
+  resource texts on five selected-city updates. Map-wide `forEach` scans in
+  each update fell from two to one. Five call timings were 0.2/0/0/0.1/0 ms
+  before and 0.1/0.1/0/0.1/0 ms after, too small for a sustained speed claim.
+  Local desktop Chrome city, map and workforce coverage passed 21/21; syntax
+  and diff checks pass.
+- Remaining: wider End Turn presentation costs, player/rival action rules,
+  event writer ownership and the final integration gate.

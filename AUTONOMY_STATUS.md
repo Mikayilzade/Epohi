@@ -1,18 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_47_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_48_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 46 published at `fc70b97`. Stage 47 locally validated
+- **STATUS:** Stage 47 published at `0762a24`. Stage 48 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Worker project rules now own validity, duration, start and turn
-  completion without DOM operations; UI keeps click/status/toast work.
-- **EVIDENCE:** Local desktop Chrome 28/28; mobile Chromium worker 2/2;
-  seeded two-turn full-state comparison matched old worker logic. End Turn
-  timing samples are noisy. Syntax/diff checks pass.
-- **NEXT:** Publish Stage 47; continue player/rival action separation, event
-  ownership and UI invalidation before the final gate.
+- **DONE:** Selected-city income reuses the aggregate income pass in
+  `renderTop()`, avoiding a repeated whole-map scan.
+- **EVIDENCE:** Same-snapshot large-map comparison matched resource texts;
+  scans per update fell 2 to 1. Timing difference is too small to claim.
+  Local desktop Chrome city/map/workforce checks 21/21; syntax/diff pass.
+- **NEXT:** Publish Stage 48; continue End Turn presentation audit,
+  player/rival action separation and event ownership before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
