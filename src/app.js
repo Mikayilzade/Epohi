@@ -1221,52 +1221,14 @@
     });
   }
 
-  function payLocal(city, cost) {
-    Object.keys(cost || {}).forEach(function (key) {
-      if (key === "food" || key === "production") city[key] -= cost[key];
-      else state.resources[key] -= cost[key];
-    });
-  }
-
-  function workerBuildReason(unit, id, x, y) {
-    const tile = state.map[y][x], def = IMPROVEMENTS[id], payer = payerCityForTile(x, y);
-    if (!payer) return "нет города-плательщика";
-    if (!canPayLocal(payer, tile.pillaged ? { production: 5 } : def.cost)) return "не хватает локальных ресурсов";
-    return "";
-  }
-
   function buildImprovementWithWorker(unitId, id, targetX, targetY) {
-    const unit = getUnit(unitId);
-    if (!unit || unit.type !== "worker" || unit.acted) return;
-    const x = targetX == null ? unit.x : targetX;
-    const y = targetY == null ? unit.y : targetY;
-    const tile = state.map[y][x];
-    const def = IMPROVEMENTS[id];
-    const coastalBuild = id === "harbor" && tile.terrain === "water" && isAdjacent(unit.x, unit.y, x, y);
-    const standingBuild = unit.x === x && unit.y === y;
-    if (!def || (!standingBuild && !coastalBuild) || !tile.revealed || tile.improvement && !tile.pillaged || !inTerritory(x, y) ||
-        def.terrain.indexOf(tile.terrain) === -1 || (def.tech && !hasTech(def.tech)) ||
-        (state.city.x === x && state.city.y === y) || settlementAt(x, y)) return;
-    const payerCity = payerCityForTile(x, y);
-    const cost = tile.pillaged ? { production: 5 } : def.cost;
-    if (!canPayLocal(payerCity, cost)) return;
-    payLocal(payerCity, cost);
-    tile.owner = payerCity.id;
-    tile.improvement = id;
-    tile.pillaged = false;
-    unit.acted = true;
-    unit.moves = 0;
-    state.history.unshift("Ход " + state.turn + ": рабочий построил «" + def.name + "».");
-    showToast(def.icon + " " + def.name + " построена. " + def.description + ".");
-    render();
+    return window.EpohiWorkerLearning.startWorkerProject(unitId, id, targetX, targetY, false);
   }
 
 
   function repairImprovement(unitId) {
-    const unit = getUnit(unitId); if (!unit || unit.type !== "worker") return;
-    const tile = state.map[unit.y][unit.x]; const payerCity = payerCityForTile(unit.x, unit.y); if (!tile.pillaged || !canPayLocal(payerCity, { production: 5 })) return;
-    payLocal(payerCity, { production: 5 }); tile.owner = payerCity.id; tile.pillaged = false; unit.acted = true; unit.moves = 0;
-    showToast("Улучшение восстановлено за 5 производства."); render();
+    const unit = getUnit(unitId);
+    return unit && window.EpohiWorkerLearning.startWorkerProject(unitId, null, unit.x, unit.y, true);
   }
 
 

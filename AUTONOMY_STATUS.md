@@ -1,19 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_45_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_46_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 44 published at `ec7d21f`. Stage 45 locally validated
+- **STATUS:** Stage 45 published at `0c52698`. Stage 46 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** The real city-card click and app command now use one production
-  queue rule; experience discounts and balance moved to one game module.
-- **EVIDENCE:** Local desktop Chrome related checks: 28 passed, one mobile CSS
-  assertion failed in desktop viewport. The new real-click regression passed.
-  Stage 44 CI passed all Chromium shards, static and soak; WebKit mobile shard
-  1 failed. Syntax/diff checks pass.
-- **NEXT:** Publish Stage 45; remove worker-action legacy path, then continue
-  player/rival action separation and UI invalidation before the final gate.
+- **DONE:** Removed old instant worker build/repair implementation and debug
+  monkey patch; all commands use the accepted worker-project path.
+- **EVIDENCE:** Local desktop Chrome checks 28/28; mobile Chromium worker
+  checks 2/2; syntax/diff checks pass.
+- **NEXT:** Publish Stage 46; split worker project state changes from its UI,
+  then continue player/rival action separation and invalidation.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

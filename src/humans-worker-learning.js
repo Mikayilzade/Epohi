@@ -5,7 +5,6 @@
   const UNIT_DEFS = window.EpohiData && window.EpohiData.UNIT_DEFS || {};
   const IMPROVEMENTS = window.EpohiData && window.EpohiData.IMPROVEMENTS || {};
 
-  let originalDebugFactory = null;
   let lastTurn = null;
   let queued = false;
 
@@ -217,22 +216,6 @@
     return changed;
   }
 
-  function patchDebug() {
-    if (originalDebugFactory || typeof window.__epohiDebug !== "function") return;
-    originalDebugFactory = window.__epohiDebug;
-    window.__epohiDebug = function () {
-      const value = originalDebugFactory();
-      if (!value) return value;
-      value.buildImprovementWithWorker = function (unitId, id, x, y) { return startWorkerProject(unitId, id, x, y, false); };
-      value.repairImprovement = function (unitId) {
-        const gs = value.state;
-        const unit = gs && (gs.units || []).find(function (item) { return String(item.id) === String(unitId); });
-        return unit ? startWorkerProject(unitId, null, unit.x, unit.y, true) : false;
-      };
-      return value;
-    };
-  }
-
   function patchCityUi(gs) {
     const modal = document.getElementById("cityModal");
     const content = document.getElementById("cityContent");
@@ -395,7 +378,7 @@
   }
 
   function install(){
-    installStyles(); patchDebug(); suppressIncomeToast();
+    installStyles(); suppressIncomeToast();
     window.addEventListener("click",handleClick,true);
     document.addEventListener("epohi:own-unit-context-ready", function () {
       const gs = state();

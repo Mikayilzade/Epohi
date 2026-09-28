@@ -837,3 +837,19 @@ listeners, so the completion criteria above remain open.
   diff checks pass; no End Turn timing claim is made.
 - Remaining: worker action legacy path, player combat/movement, rival
   execution, presentation invalidation and final integration gate.
+
+### Stage 46: remove the obsolete instant worker action path
+
+- `app.js` no longer contains the old instant improvement/repair algorithm or
+  its unused local payment and blocker helpers. Its context buttons and debug
+  API call the accepted worker-project path in `EpohiWorkerLearning` directly.
+  The later debug-factory monkey patch in `humans-worker-learning.js` was
+  removed. One worker-time rule path now serves context buttons, debug and
+  automated worker orders.
+- Local desktop Chrome coherence, autonomy and production checks passed 28/28.
+  The two `resource-worker` checks passed in their intended mobile Chromium
+  viewport, including a real worker project and its UI. Syntax/diff checks
+  pass. This stage removes dead behavior and does not change End Turn timing.
+- Remaining: separate the worker-project state transition from that module's
+  DOM/toast operations, then player combat/movement, rival execution,
+  presentation invalidation and final integration gate.
