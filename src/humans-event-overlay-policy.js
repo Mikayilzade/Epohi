@@ -327,10 +327,8 @@
     const modal = document.getElementById("stabilityMajorModal");
     if (modal) new MutationObserver(normalize).observe(modal, { attributes: true, attributeFilter: ["class"] });
     const turn = document.getElementById("turnValue");
-    if (turn) {
-      lastTurn = turn.textContent.trim();
-      new MutationObserver(handleTurnChange).observe(turn, { childList: true, characterData: true, subtree: true });
-    }
+    if (turn) lastTurn = turn.textContent.trim();
+    document.addEventListener("epohi:ui-rendered", handleTurnChange);
     document.addEventListener("click", protectMandatoryDecision, true);
     document.addEventListener("click", function (event) {
       const target = event.target && event.target.closest ? event.target : null;

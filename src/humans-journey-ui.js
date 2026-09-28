@@ -289,13 +289,12 @@
     newGamePresets();
 
     const map = document.getElementById("map");
-    const turn = document.getElementById("turnValue");
     const menu = document.getElementById("menuModal");
     const menuContent = document.getElementById("menuContent");
     const screen = document.getElementById("screenRoot");
 
     if (map) new MutationObserver(decorateLater).observe(map, { childList: true });
-    if (turn) new MutationObserver(schedule).observe(turn, { childList: true, characterData: true, subtree: true });
+    document.addEventListener("epohi:ui-rendered", schedule);
     if (menu) new MutationObserver(menuButton).observe(menu, { attributes: true, attributeFilter: ["class"] });
     if (menuContent) new MutationObserver(menuButton).observe(menuContent, { childList: true });
     if (screen) new MutationObserver(schedule).observe(screen, { childList: true, subtree: true });

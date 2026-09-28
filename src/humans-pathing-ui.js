@@ -367,11 +367,9 @@
 
     const context = document.getElementById("contextPanel");
     const map = document.getElementById("map");
-    const turn = document.getElementById("turnValue");
 
     if (context) new MutationObserver(scheduleUi).observe(context, { childList: true, subtree: true });
     if (map) new MutationObserver(scheduleUi).observe(map, { childList: true });
-    if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, characterData: true, subtree: true });
 
     document.addEventListener("pointerdown", handleTargetPointerDown, true);
     document.addEventListener("click", handleTargetClick, true);

@@ -1,20 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_39_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_40_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 38 published at `e947e9e`. Stage 39 locally validated
+- **STATUS:** Stage 39 published at `1ad51af`. Stage 40 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Two diplomacy panels follow explicit UI render signals, removing
-  two turn-text observers and early End Turn click refreshes.
-- **EVIDENCE:** Tier 3 local desktop Chrome 13/13 plus 3/3 comparison/rule
-  checks. Seeded three-turn event sequence matches Stage 38; turn-text
-  observers fall from five to three. Timings are noisy. Stage 38 CI exposed
-  a WebKit mobile test actionability race, corrected in the test here, and
-  a separate recurring camera failure. Stage 31 is latest full green CI.
-- **NEXT:** Publish Stage 39; continue remaining UI observer and event
-  ownership cleanup, then final integration gate.
+- **DONE:** Journey, pathing and overlay UI no longer observe the turn label;
+  the runtime now has zero `turnValue` MutationObservers.
+- **EVIDENCE:** Tier 3 local desktop Chrome 33/33 plus a seeded three-turn
+  comparison with matching event order. Turn-label observers fall 3 to 0;
+  timings are noisy. Stage 39 CI was still running at checkpoint.
+- **NEXT:** Publish Stage 40; continue broad click/overlay invalidation and
+  remaining gameplay separation before final integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

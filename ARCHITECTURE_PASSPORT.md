@@ -736,3 +736,19 @@ listeners, so the completion criteria above remain open.
   failed. The game rule and other button coverage were not changed.
 - Remaining: three other turn-text observers, broad click invalidation and
   UI wrappers, then the final architecture gate.
+
+### Stage 40: remove the remaining turn-text observers
+
+- Journey UI and overlay priority now react to the explicit
+  `epohi:ui-rendered` signal. Pathing UI follows its existing map and
+  context changes plus the own-unit context-ready signal, so its separate
+  turn-text observer was removed. No module now registers a MutationObserver
+  on `turnValue`.
+- Tier 3 local desktop Chrome journey, outcome, combat and pathing checks
+  passed 33/33. A seeded one-rival three-turn comparison against `1ad51af`
+  preserved turns and event order; registered `turnValue` observers fell
+  from three to zero. End Turn samples were 688/173/205 ms before and
+  250/192/324 ms after. These are too noisy for a performance claim.
+- Stage 39 CI was still running at this checkpoint.
+- Remaining: broad click and modal observers, presentation wrappers and
+  remaining turn/gameplay separation, then final integration gate.
