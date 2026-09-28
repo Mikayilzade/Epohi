@@ -717,3 +717,22 @@ listeners, so the completion criteria above remain open.
 - Stage 37 CI was still in progress at this checkpoint.
 - Remaining: clarify persisted presentation receipts versus gameplay state,
   consolidate further observer/render paths and complete the final gate.
+
+### Stage 39: diplomacy panels follow completed UI render
+
+- `humans-diplomacy-coherence-v2.js` and `humans-diplomacy-event-flow.js`
+  listen to `epohi:ui-rendered` instead of observing `turnValue` mutations.
+  Their End Turn click hooks no longer schedule a refresh before turn
+  simulation. Other proposal, modal and diplomacy action signals remain.
+- Local desktop Chrome diplomacy/runtime/mobile stability checks passed
+  13/13. A seeded one-rival three-turn comparison against `e947e9e` found
+  identical turn and event sequences. Registered observers of `turnValue`
+  fell from five to three. End Turn samples were 299/224/282 ms before and
+  231/180/222 ms after; these short timings do not prove a sustained gain.
+- Stage 38 CI exposed a WebKit mobile test harness issue: a proposal modal
+  could cover the End Turn button in the new stability rule test. That test
+  now invokes the same turn pipeline directly, avoiding its unrelated button
+  actionability race. The recurring WebKit mobile camera assertion also
+  failed. The game rule and other button coverage were not changed.
+- Remaining: three other turn-text observers, broad click invalidation and
+  UI wrappers, then the final architecture gate.

@@ -367,8 +367,8 @@
   function install(){
     installStyles(); ensureProposalModal(); strengthenStackSelection(); wrapLivingResearch(); wrapHooks();
     window.addEventListener("click",interceptEnemyTap,true);
-    document.addEventListener("click",function(event){if(event.target.closest&&event.target.closest("[data-dip-action],[data-proposal],[data-research],#endTurnBtn"))window.setTimeout(schedule,0);});
-    const turn=document.getElementById("turnValue"); if(turn)new MutationObserver(schedule).observe(turn,{childList:true,characterData:true,subtree:true});
+    document.addEventListener("click",function(event){if(event.target.closest&&event.target.closest("[data-dip-action],[data-proposal],[data-research]"))window.setTimeout(schedule,0);});
+    document.addEventListener("epohi:ui-rendered",schedule);
     ["strategyDiplomacyModal","livingProposals","stabilityDecisionModal"].forEach(function(id){const node=document.getElementById(id);if(node)new MutationObserver(schedule).observe(node,{attributes:true,childList:true,subtree:true,attributeFilter:["class"]});});
     schedule();
   }

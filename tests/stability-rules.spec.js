@@ -17,7 +17,7 @@ test('invalid diplomacy is cancelled by turn rules, not panel rendering', async 
   });
   expect(before).toBe('pending');
   const turn = await page.evaluate(() => window.__epohiDebug().state.turn);
-  await page.locator('#endTurnBtn').click();
+  await page.evaluate(() => window.__epohiDebug().endTurn());
   await page.waitForFunction(previous => window.__epohiDebug().state.turn > previous
     && !window.__epohiDebug().isTurnProcessing(), turn);
   expect(await page.evaluate(() => window.__epohiDebug().state.diplomaticProposals[0].status))

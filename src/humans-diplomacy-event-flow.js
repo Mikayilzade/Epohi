@@ -467,7 +467,7 @@
       openChronicle();
       return;
     }
-    if (event.target && event.target.closest && event.target.closest("[data-dip-action], [data-proposal], #endTurnBtn")) {
+    if (event.target && event.target.closest && event.target.closest("[data-dip-action], [data-proposal]")) {
       window.setTimeout(scheduleUi, 0);
     }
   }
@@ -515,9 +515,11 @@
     ensureToast();
     installHooks();
     window.addEventListener("click", interceptClicks, true);
-    document.addEventListener("click", function () { window.setTimeout(scheduleUi, 0); });
-    const turn = document.getElementById("turnValue");
-    if (turn) new MutationObserver(scheduleUi).observe(turn, { childList: true, characterData: true, subtree: true });
+    document.addEventListener("click", function (event) {
+      if (event.target && event.target.closest && event.target.closest("#endTurnBtn")) return;
+      window.setTimeout(scheduleUi, 0);
+    });
+    document.addEventListener("epohi:ui-rendered", scheduleUi);
     ["victoryModal", "stabilityMajorModal", "stabilityDecisionModal", "strategyDiplomacyModal", "livingProposals"].forEach(function (id) {
       const node = document.getElementById(id);
       if (node) new MutationObserver(scheduleUi).observe(node, { attributes: true, childList: true, subtree: true, attributeFilter: ["class"] });
