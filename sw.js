@@ -19,6 +19,7 @@ const APP_FILES = [
   "./src/stability-rules.js",
   "./src/player-production.js",
   "./src/player-settlements.js",
+  "./src/worker-projects.js",
   "./src/state-schema.js",
   "./src/humans-content.js",
   "./src/utils.js",

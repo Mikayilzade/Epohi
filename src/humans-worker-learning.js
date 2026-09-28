@@ -112,86 +112,16 @@
   }
 
   function workerTurns(id, repair) {
-    if (repair) return 1;
-    const production = Number(IMPROVEMENTS[id] && IMPROVEMENTS[id].cost && IMPROVEMENTS[id].cost.production) || 6;
-    return Math.max(1, Math.min(4, Math.ceil(production / 6)));
-  }
-
-  function inTerritory(gs, x, y) {
-    return !window.EpohiTerritory || typeof window.EpohiTerritory.inTerritory !== "function" || window.EpohiTerritory.inTerritory(gs, x, y);
-  }
-
-  function validWorkerTarget(gs, unit, id, x, y) {
-    const tile = gs && gs.map && gs.map[y] && gs.map[y][x];
-    const def = IMPROVEMENTS[id];
-    if (!unit || unit.type !== "worker" || !tile || !def || !tile.revealed || !inTerritory(gs, x, y)) return false;
-    const standing = Number(unit.x) === Number(x) && Number(unit.y) === Number(y);
-    const coastal = id === "harbor" && window.EpohiUtils && window.EpohiUtils.isAdjacent(unit.x, unit.y, x, y);
-    if (!standing && !coastal) return false;
-    if (def.terrain.indexOf(tile.terrain) < 0 || (def.tech && !hasTech(gs, def.tech))) return false;
-    return !(tile.improvement && !tile.pillaged);
-  }
-
-  function completeWorkerProject(gs, unit) {
-    const project = unit && unit.workerProject;
-    if (!project) return false;
-    const tile = gs.map[project.y] && gs.map[project.y][project.x];
-    if (!tile) { unit.workerProject = null; return false; }
-    if (project.type === "repair") {
-      tile.pillaged = false;
-      addEvent(gs, "worker-repair", (unit.name || "Рабочий") + " завершил ремонт.", {x:project.x,y:project.y});
-    } else {
-      tile.improvement = project.improvementId;
-      tile.pillaged = false;
-      const nearest = playerCities(gs).slice().sort(function (a, b) {
-        return window.EpohiUtils.chebyshev(a.x, a.y, project.x, project.y) - window.EpohiUtils.chebyshev(b.x, b.y, project.x, project.y);
-      })[0];
-      if (nearest) tile.owner = nearest.id;
-      addEvent(gs, "worker-build", (unit.name || "Рабочий") + " построил «" + IMPROVEMENTS[project.improvementId].name + "».", {x:project.x,y:project.y});
-    }
-    unit.workerProject = null;
-    if (unit.order && unit.order.type === "develop") {
-      unit.order.status = "active";
-      unit.order.reason = null;
-      unit.order.target = null;
-    }
-    unit.moves = 0;
-    unit.acted = true;
-    return true;
+    return window.EpohiWorkerProjects.workerTurns(id, repair);
   }
 
   function startWorkerProject(unitId, id, x, y, repair) {
     const gs = ensureState(state());
-    const unit = gs && (gs.units || []).find(function (item) { return String(item.id) === String(unitId); });
-    if (!unit || unit.type !== "worker" || unit.acted || unit.workerProject) return false;
-    const tx = x == null ? Number(unit.x) : Number(x);
-    const ty = y == null ? Number(unit.y) : Number(y);
-    const tile = gs.map[ty] && gs.map[ty][tx];
-    const repairing = !!repair;
-    const improvementId = repairing ? (tile && tile.improvement) : id;
-    if (repairing) {
-      if (!tile || !tile.improvement || !tile.pillaged || Number(unit.x) !== tx || Number(unit.y) !== ty) return false;
-    } else if (!validWorkerTarget(gs, unit, improvementId, tx, ty)) return false;
-    const total = workerTurns(improvementId, repairing);
-    unit.workerProject = {
-      type: repairing ? "repair" : "improvement",
-      improvementId: improvementId,
-      x: tx,
-      y: ty,
-      totalTurns: total,
-      remainingTurns: Math.max(0, total - 1),
-      startedTurn: Number(gs.turn) || 1
-    };
-    unit.moves = 0;
-    unit.acted = true;
-    if (unit.order && unit.order.type === "develop") {
-      unit.order.status = "active";
-      unit.order.reason = "строит улучшение";
-    }
-    if (unit.workerProject.remainingTurns <= 0) completeWorkerProject(gs, unit);
-    else {
-      addEvent(gs, "worker-project-started", (unit.name || "Рабочий") + " начал работу: " + total + " действий рабочего.", {x:tx,y:ty});
-      toast("Работа начата: осталось " + unit.workerProject.remainingTurns + " действий рабочего по одному в ход партии.");
+    const result = gs && window.EpohiWorkerProjects.start(gs, unitId, id, x, y, repair, addEvent);
+    if (!result) return false;
+    if (result.remaining > 0) {
+      toast("Работа начата: осталось " + result.remaining +
+        " действий рабочего по одному в ход партии.");
     }
     const value = debug();
     if (value && typeof value.render === "function") value.render();
@@ -200,20 +130,7 @@
   }
 
   function processWorkerProjects(gs) {
-    let changed = false;
-    (gs.units || []).forEach(function (unit) {
-      const project = unit.workerProject;
-      if (!project) return;
-      if (Number(project.startedTurn) < Number(gs.turn)) project.remainingTurns = Math.max(0, Number(project.remainingTurns || 0) - 1);
-      unit.moves = 0;
-      unit.acted = true;
-      if (project.remainingTurns <= 0) changed = completeWorkerProject(gs, unit) || changed;
-      else if (unit.order && unit.order.type === "develop") {
-        unit.order.status = "active";
-        unit.order.reason = "строит: осталось " + project.remainingTurns + " ход.";
-      }
-    });
-    return changed;
+    return window.EpohiWorkerProjects.processTurn(gs, addEvent);
   }
 
   function patchCityUi(gs) {

@@ -1,17 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_46_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_47_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 45 published at `0c52698`. Stage 46 locally validated
+- **STATUS:** Stage 46 published at `fc70b97`. Stage 47 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Removed old instant worker build/repair implementation and debug
-  monkey patch; all commands use the accepted worker-project path.
-- **EVIDENCE:** Local desktop Chrome checks 28/28; mobile Chromium worker
-  checks 2/2; syntax/diff checks pass.
-- **NEXT:** Publish Stage 46; split worker project state changes from its UI,
-  then continue player/rival action separation and invalidation.
+- **DONE:** Worker project rules now own validity, duration, start and turn
+  completion without DOM operations; UI keeps click/status/toast work.
+- **EVIDENCE:** Local desktop Chrome 28/28; mobile Chromium worker 2/2;
+  seeded two-turn full-state comparison matched old worker logic. End Turn
+  timing samples are noisy. Syntax/diff checks pass.
+- **NEXT:** Publish Stage 47; continue player/rival action separation, event
+  ownership and UI invalidation before the final gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

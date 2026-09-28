@@ -853,3 +853,19 @@ listeners, so the completion criteria above remain open.
 - Remaining: separate the worker-project state transition from that module's
   DOM/toast operations, then player combat/movement, rival execution,
   presentation invalidation and final integration gate.
+
+### Stage 47: worker projects as a game rule module
+
+- `src/worker-projects.js` owns target validity, worker-action duration,
+  project start, completion and per-turn progress. It accepts state and an
+  event writer, and has no DOM, timer, toast or render dependency. Durations
+  live in `WORKER_PROJECT_RULES` in `src/data.js`. The worker-learning module
+  delegates these mutations and keeps click handling, status and toast UI.
+- Local desktop Chrome coherence, autonomous orders and production coverage
+  passed 28/28; mobile Chromium worker checks passed 2/2. A seeded comparison
+  from the same full starting state matched all gameplay state after two
+  worker-project turns against `fc70b97`. End Turn samples were 264/169 ms
+  before and 167/177 ms after; too few to claim a speed gain. Syntax and diff
+  checks pass.
+- Remaining: player movement/combat and rival execution in `app.js`, event
+  writer ownership, presentation invalidation and the final integration gate.

@@ -152,6 +152,10 @@
     foreignBuildingStep: 0.05, unitStep: 0.10, unitMaximum: 0.30,
     unitsPerStep: 10, minimumCost: 1, minimumCostFactor: 0.05
   };
+  const WORKER_PROJECT_RULES = {
+    repairActions: 1, minimumActions: 1,
+    defaultProduction: 6, productionPerAction: 6, maximumActions: 4
+  };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
     direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
@@ -212,6 +216,7 @@
     BARBARIAN_ACTION_RULES,
     PLAYER_CITY_RULES,
     PRODUCTION_EXPERIENCE_RULES,
+    WORKER_PROJECT_RULES,
     COMBAT_BALANCE,
     TECHS
   };
