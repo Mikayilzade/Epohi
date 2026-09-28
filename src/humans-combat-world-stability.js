@@ -30,11 +30,10 @@
   }
 
   function addEvent(gs, type, text, coordinates) {
-    gs.eventCounter = (gs.eventCounter || 0) + 1;
-    const item = { eventId:"stability-" + gs.eventCounter, turn:gs.turn || 1, eventType:type, text:text, coordinates:coordinates || null, phase:"world" };
-    gs.eventLog = [item].concat(gs.eventLog || []).slice(0, 240);
-    gs.history = ["Ход " + (gs.turn || 1) + ": " + text].concat(gs.history || []).slice(0, 120);
-    return item;
+    return window.EpohiEventJournal.append(gs,function(counter){
+      return {eventId:"stability-"+counter,turn:gs.turn||1,eventType:type,
+        text:text,coordinates:coordinates||null,phase:"world"};
+    },{eventLimit:240,historyLimit:120});
   }
 
   function resolveFactionDefeat(gs, defeated, captor) {

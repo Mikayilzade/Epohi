@@ -1,16 +1,16 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_50_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: STAGE_51_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 49 published at `f2d697b`. Stage 50 locally validated
-  on Lead; PR #103 remains the only target.
+- **STATUS:** Stage 51 validated on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Autonomy, journey, pathing, outcomes and workforce events now use
-  the shared journal with their existing fields and retention rules.
-- **EVIDENCE:** Local desktop Chrome domain checks 34/34; syntax/diff pass.
-- **NEXT:** Publish Stage 50; migrate capture, stability, diplomacy and other
-  event writers, then continue player/rival actions and UI cleanup.
+- **DONE:** Stage 51 routes capture, stability, feedback, diplomacy and
+  living-world event writers through the shared journal.
+- **EVIDENCE:** Local desktop Chrome focused checks 70/70; syntax and diff
+  checks pass. Existing uncommitted source was preserved and reviewed.
+- **NEXT:** Publish Stage 51, then work in four larger packages: event journal,
+  gameplay actions, presentation cleanup, final audit and integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---

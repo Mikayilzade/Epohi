@@ -53,26 +53,15 @@
 
   function addEvent(gs, type, text, civId, position) {
     ensureState(gs);
-    gs.eventCounter = (Number(gs.eventCounter) || 0) + 1;
-    const item = {
-      eventId: "flow-" + gs.eventCounter + "-" + (gs.turn || 1),
-      turn: gs.turn || 1,
-      phase: "diplomacy-event-flow",
-      actorType: civId ? "civilization" : "player",
-      actorId: civId || "player",
-      eventType: type,
-      text: text,
-      position: position || null,
-      coordinates: position || null
-    };
-    gs.eventLog.unshift(item);
-    gs.eventLog = gs.eventLog.slice(0, 240);
+    const item = window.EpohiEventJournal.append(gs,function(counter){
+      return {eventId:"flow-"+counter+"-"+(gs.turn||1),turn:gs.turn||1,
+        phase:"diplomacy-event-flow",actorType:civId?"civilization":"player",
+        actorId:civId||"player",eventType:type,text:text,
+        position:position||null,coordinates:position||null};
+    },{numericCounter:true,eventLimit:240,historyLimit:240,dedupeHistory:true});
     const id = eventId(item);
     if (gs.chronicleEventIds.indexOf(id) < 0) gs.chronicleEventIds.push(id);
     gs.chronicleEventIds = gs.chronicleEventIds.slice(-500);
-    const line = "Ход " + (item.turn || 1) + ": " + text;
-    if (gs.history.indexOf(line) < 0) gs.history.unshift(line);
-    gs.history = gs.history.slice(0, 240);
     return item;
   }
 

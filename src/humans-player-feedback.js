@@ -89,26 +89,13 @@
 
   function addEvent(gs, type, text, position, actorId) {
     ensureState(gs);
-    gs.eventCounter = (gs.eventCounter || 0) + 1;
-    const item = {
-      eventId: "feedback-" + gs.eventCounter + "-" + (gs.nextTreasuryEventId++),
-      turn: gs.turn || 1,
-      phase: "player-feedback",
-      actorType: actorId ? "civilization" : "player",
-      actorId: actorId || "player",
-      eventType: type,
-      text: text,
-      coordinates: position || null,
-      position: position || null,
-      data: {}
-    };
-    if (!Array.isArray(gs.eventLog)) gs.eventLog = [];
-    gs.eventLog.unshift(item);
-    gs.eventLog = gs.eventLog.slice(0, 240);
-    if (!Array.isArray(gs.history)) gs.history = [];
-    gs.history.unshift("Ход " + (gs.turn || 1) + ": " + text);
-    gs.history = gs.history.slice(0, 80);
-    return item;
+    return window.EpohiEventJournal.append(gs,function(counter){
+      return {eventId:"feedback-"+counter+"-"+(gs.nextTreasuryEventId++),
+        turn:gs.turn||1,phase:"player-feedback",
+        actorType:actorId?"civilization":"player",actorId:actorId||"player",
+        eventType:type,text:text,coordinates:position||null,
+        position:position||null,data:{}};
+    },{eventLimit:240,historyLimit:80});
   }
 
   function activeTradeRoute(gs, civId) {

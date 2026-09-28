@@ -4,8 +4,10 @@
   function append(state, makeEntry, policy) {
     if (!state) return null;
     const rules = policy || {};
-    state.eventCounter = (rules.numericCounter
-      ? (Number(state.eventCounter) || 0) : (state.eventCounter || 0)) + 1;
+    if (rules.incrementCounter !== false) {
+      state.eventCounter = (rules.numericCounter
+        ? (Number(state.eventCounter) || 0) : (state.eventCounter || 0)) + 1;
+    }
     const entry = makeEntry(state.eventCounter);
     if (!Array.isArray(state.eventLog)) state.eventLog = [];
     state.eventLog.unshift(entry);

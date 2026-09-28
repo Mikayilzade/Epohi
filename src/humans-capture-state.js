@@ -19,13 +19,12 @@
   function hasTech(gs,id){ return [gs.researched,gs.technologies].some(function(list){return Array.isArray(list)&&list.indexOf(id)>=0;}); }
 
   function addEvent(gs,type,text,actorId,position){
-    gs.eventCounter=(Number(gs.eventCounter)||0)+1;
-    if(!Array.isArray(gs.eventLog))gs.eventLog=[];
-    if(!Array.isArray(gs.history))gs.history=[];
-    const item={eventId:"capture-state-"+gs.eventCounter,turn:Number(gs.turn)||1,phase:"capture-state",actorType:actorId?"civilization":"player",actorId:actorId||"player",eventType:type,text:text,coordinates:position||null,position:position||null};
-    gs.eventLog.unshift(item); gs.eventLog=gs.eventLog.slice(0,300);
-    const line="Ход "+(Number(gs.turn)||1)+": "+text; if(gs.history.indexOf(line)<0)gs.history.unshift(line); gs.history=gs.history.slice(0,300);
-    return item;
+    return window.EpohiEventJournal.append(gs,function(counter){
+      return {eventId:"capture-state-"+counter,turn:Number(gs.turn)||1,
+        phase:"capture-state",actorType:actorId?"civilization":"player",
+        actorId:actorId||"player",eventType:type,text:text,
+        coordinates:position||null,position:position||null};
+    },{numericCounter:true,eventLimit:300,historyLimit:300,dedupeHistory:true});
   }
 
   function ensureExperience(holder){

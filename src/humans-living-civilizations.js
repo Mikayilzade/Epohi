@@ -38,13 +38,12 @@
   }
 
   function addWorldEvent(gs, type, text, civ, position) {
-    const item = { id: "living-" + gs.turn + "-" + (gs.nextLivingEventId++), turn: gs.turn, eventType: type, text: text, position: position || null, actorType: "civilization", actorId: civ && civ.civilizationId, phase: "diplomacy" };
-    gs.eventLog.unshift(item);
-    gs.eventLog = gs.eventLog.slice(0, 240);
-    if (!Array.isArray(gs.history)) gs.history = [];
-    const line = "Ход " + (gs.turn || 1) + ": " + text;
-    if (gs.history.indexOf(line) < 0) gs.history.unshift(line);
-    gs.history = gs.history.slice(0, 240);
+    const item = window.EpohiEventJournal.append(gs,function(){
+      return {id:"living-"+gs.turn+"-"+(gs.nextLivingEventId++),turn:gs.turn,
+        eventType:type,text:text,position:position||null,
+        actorType:"civilization",actorId:civ&&civ.civilizationId,phase:"diplomacy"};
+    },{incrementCounter:false,eventLimit:240,historyLimit:240,
+      dedupeHistory:true,historyLine:function(){return "Ход "+(gs.turn||1)+": "+text;}});
     gs.livingWorldEvents.unshift(item);
     gs.livingWorldEvents = gs.livingWorldEvents.slice(0, 60);
   }
