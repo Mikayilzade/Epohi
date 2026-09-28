@@ -9,7 +9,34 @@
     return "Племя";
   }
 
+  function techUnlocked(state, id, techs) {
+    return techs[id].prereq.every(function (prerequisite) {
+      return state.researched.includes(prerequisite);
+    });
+  }
+
+  function chooseResearch(state, id, techs) {
+    if (state.researched.includes(id) || !techUnlocked(state, id, techs)) return false;
+    state.currentResearch = id;
+    return true;
+  }
+
+  function finishResearch(state, techs) {
+    if (!state.currentResearch) return null;
+    const tech = techs[state.currentResearch];
+    if (state.resources.science < tech.cost) return null;
+    state.resources.science -= tech.cost;
+    const completed = state.currentResearch;
+    state.researched.push(completed);
+    state.currentResearch = null;
+    state.history.unshift("Ход " + state.turn + ": исследована технология «" + tech.name + "».");
+    return tech;
+  }
+
   window.EpohiProgression = {
-    currentEra
+    currentEra,
+    techUnlocked,
+    chooseResearch,
+    finishResearch
   };
 })();

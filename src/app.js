@@ -158,7 +158,10 @@
   } = window.EpohiEconomy;
 
   const {
-    currentEra: currentEraForState
+    currentEra: currentEraForState,
+    techUnlocked: techUnlockedForState,
+    chooseResearch: chooseResearchForState,
+    finishResearch: finishResearchForState
   } = window.EpohiProgression;
 
   const {
@@ -1287,12 +1290,11 @@
   }
 
   function techUnlocked(id) {
-    return TECHS[id].prereq.every(hasTech);
+    return techUnlockedForState(state, id, TECHS);
   }
 
   function chooseResearch(id) {
-    if (hasTech(id) || !techUnlocked(id)) return;
-    state.currentResearch = id;
+    if (!chooseResearchForState(state, id, TECHS)) return;
     showToast("Исследование: " + TECHS[id].name + ".");
     render();
     openScience();
@@ -1313,15 +1315,7 @@
 
 
   function finishResearch() {
-    if (!state.currentResearch) return null;
-    const tech = TECHS[state.currentResearch];
-    if (state.resources.science < tech.cost) return null;
-    state.resources.science -= tech.cost;
-    const completed = state.currentResearch;
-    state.researched.push(completed);
-    state.currentResearch = null;
-    state.history.unshift("Ход " + state.turn + ": исследована технология «" + tech.name + "».");
-    return tech;
+    return finishResearchForState(state, TECHS);
   }
 
 

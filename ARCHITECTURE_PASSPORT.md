@@ -770,3 +770,19 @@ listeners, so the completion criteria above remain open.
   is too noisy to establish a speed change.
 - Remaining: research, rival and player action rules in `app.js`, broad UI
   click/overlay invalidation, then final integration gate.
+
+### Stage 42: player research rules in progression
+
+- `src/progression.js` now owns technology prerequisite checks, selection and
+  End Turn completion, alongside era calculation. It takes state and tech data;
+  `app.js` retains UI feedback and delegates gameplay mutations to this module.
+  The prior research bodies were removed from `app.js`.
+- Local desktop Chrome research, production, baseline and turn-unlock checks
+  passed 13/13. The new regression checks a rejected locked technology,
+  successful selection and completion through an actual End Turn, including
+  the existing history text. Syntax and diff checks pass. The local Playwright
+  package initially lacked its matching bundled browser; rerunning against
+  the installed system Chrome succeeded. No performance claim is made for
+  this small extraction.
+- Remaining: rival/player action rules and presentation invalidation, then
+  the final integration gate.

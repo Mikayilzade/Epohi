@@ -1,19 +1,18 @@
 # AUTONOMY STATUS — CURRENT
 
-Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_41_LOCAL_VALIDATED.
+Updated: 2026-09-28 UTC. State: ARCHITECTURE_STAGE_42_LOCAL_VALIDATED.
 
 ## Current checkpoint
-- **STATUS:** Stage 40 published at `b0d09f6`. Stage 41 locally validated
+- **STATUS:** Stage 41 published at `534728e`. Stage 42 locally validated
   on Lead; PR #103 remains the only target.
 - **GOAL:** Complete the architecture criteria in `ARCHITECTURE_PASSPORT.md`.
-- **DONE:** Player city production, queue completion and growth moved to a
-  game-rule module; shadowed/dead app implementations removed.
-- **EVIDENCE:** Local desktop Chrome focused checks 18/18. A seeded three-turn
-  comparison from one starting snapshot matched full game state. End Turn
-  timings are noisy. Stage 40 CI passed static/soak; mobile camera shards and
-  one Chromium shard failed and require focused diagnosis.
-- **NEXT:** Publish Stage 41; extract remaining research and player/AI rules,
-  consolidate broad UI invalidation, then run final integration gate.
+- **DONE:** Player technology prerequisites, choice and turn completion moved
+  from `app.js` into `progression.js` with state/data inputs.
+- **EVIDENCE:** Local desktop Chrome research, production, baseline and turn
+  checks passed 13/13. Syntax/diff checks pass. Stage 40 CI passed static and
+  soak but has browser shard failures to diagnose before the final gate.
+- **NEXT:** Publish Stage 42; extract remaining player/AI rules, consolidate
+  broad UI invalidation, then run the final integration gate.
 - **BLOCKER:** None. No user decision needed for these technical stages.
 
 ---
