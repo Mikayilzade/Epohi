@@ -105,6 +105,17 @@
   }
 
   function tileCenter(mapEl, mapSizeCellsFn, x, y) {
+    const renderedTile = mapEl.querySelector('.tile[data-x="' + x + '"][data-y="' + y + '"]');
+    if (renderedTile) {
+      // Grid tracks can be fractional. WebKit distributes their rounding across
+      // the row, so multiplying the first tile width drifts several pixels by
+      // the time a tile near the middle of the map is reached. Offset geometry
+      // is the browser's authoritative laid-out position in map coordinates.
+      return {
+        x: renderedTile.offsetLeft + renderedTile.offsetWidth / 2,
+        y: renderedTile.offsetTop + renderedTile.offsetHeight / 2
+      };
+    }
     const tile = tileMetrics(mapEl, mapSizeCellsFn);
     return {
       x: x * (tile.width + tile.gap) + tile.width / 2,

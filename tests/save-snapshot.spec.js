@@ -1,0 +1,102 @@
+const { test, expect } = require('@playwright/test');
+const { clearStorage, createGame } = require('./helpers');
+
+test('queued autosave keeps the state from its request time', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+
+  const saved = await page.evaluate(async () => {
+    const debug = window.__epohiDebug();
+    const game = debug.state;
+    const turn = game.turn;
+    const gold = game.resources.gold;
+    const pending = debug.saveGame();
+    game.turn = 99;
+    game.resources.gold = 777;
+    await pending;
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const records = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const record = records.find((item) => item.saveId.endsWith('-autosave-1'));
+    const legacy = JSON.parse(localStorage.getItem(window.EpohiConfig.SAVE_KEY));
+    const restored = debug.migrateState(JSON.parse(JSON.stringify(record.gameState)));
+    return { turn, gold, record, legacyTurn: legacy.turn,
+      capitalCityId: record.gameState.capitalCityId,
+      duplicateCity: Object.prototype.hasOwnProperty.call(record.gameState, 'city'),
+      restoredCapitalAlias: restored.city === restored.cities.find(city => city.id === restored.capitalCityId),
+      schemaVersion: window.EpohiConfig.SAVE_SCHEMA_VERSION,
+      gameVersion: window.EpohiConfig.GAME_VERSION };
+  });
+
+  expect(saved.record.turn).toBe(saved.turn);
+  expect(saved.record.gameState.turn).toBe(saved.turn);
+  expect(saved.record.gameState.resources.gold).toBe(saved.gold);
+  expect(saved.duplicateCity).toBe(false);
+  expect(saved.capitalCityId).toBe('player-cap');
+  expect(saved.restoredCapitalAlias).toBe(true);
+  expect(saved.legacyTurn).toBe(saved.turn);
+  expect(saved.record.schemaVersion).toBe(saved.schemaVersion);
+  expect(saved.record.gameVersion).toBe(saved.gameVersion);
+});
+
+test('three autosave slots keep consecutive completed turns', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+
+  for (let turn = 2; turn <= 5; turn += 1) {
+    await page.locator('#endTurnBtn').click();
+    await expect(page.locator('#turnValue')).toHaveText(String(turn));
+    await expect.poll(async () => page.evaluate(async () => {
+      const campaigns = await window.EpohiStorage.getCampaigns(true);
+      const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+      const latest = saves.find((save) => save.saveId.endsWith('-autosave-1'));
+      return latest && latest.turn;
+    })).toBe(turn);
+  }
+
+  const slots = await page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    return [1, 2, 3].map((slot) => {
+      const save = saves.find((item) => item.saveId.endsWith('-autosave-' + slot));
+      return save && { turn: save.turn, stateTurn: save.gameState.turn };
+    });
+  });
+  expect(slots).toEqual([
+    { turn: 5, stateTurn: 5 },
+    { turn: 4, stateTurn: 4 },
+    { turn: 3, stateTurn: 3 }
+  ]);
+});
+
+test('journey turn bonus is part of the new-turn autosave', async ({ page }) => {
+  await clearStorage(page);
+  await createGame(page, 0, 'small');
+  const beforeScience = await page.evaluate(() => {
+    const state = window.__epohiDebug().state;
+    state.barbarianActivity = 'off';
+    state.currentResearch = null;
+    state.city.population = 3;
+    window.EpohiHumansJourney.chooseSpecialization(state.city.id, 'science');
+    return state.resources.science;
+  });
+  await page.locator('#endTurnBtn').click();
+  await expect(page.locator('#turnValue')).toHaveText('2');
+  await expect.poll(async () => page.evaluate(async () => {
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const latest = saves.find(item => item.saveId.endsWith('-autosave-1'));
+    return latest && latest.turn;
+  })).toBe(2);
+  const result = await page.evaluate(async () => {
+    const live = window.__epohiDebug().state;
+    const campaigns = await window.EpohiStorage.getCampaigns(true);
+    const saves = await window.EpohiStorage.getCampaignSaves(campaigns[0].campaignId, true);
+    const saved = saves.find(item => item.saveId.endsWith('-autosave-1')).gameState;
+    return { liveScience:live.resources.science, savedScience:saved.resources.science,
+      savedTurn:saved.turn, journeyTurn:saved.humanJourney.lastBonusTurn };
+  });
+  expect(result.savedTurn).toBe(2);
+  expect(result.journeyTurn).toBe(2);
+  expect(result.savedScience).toBe(result.liveScience);
+  expect(result.savedScience).toBeGreaterThanOrEqual(beforeScience + 2);
+});

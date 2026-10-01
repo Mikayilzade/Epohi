@@ -38,14 +38,20 @@ test.describe('v1.4.1 living world checks', () => {
       s.turn = 12;
       const civ = s.rivals[0];
       const u = civ.units.find(x => x.type === 'warrior') || civ.units[0];
+      const resetAiTurn = () => civ.units.forEach(unit => {
+        unit.moves = window.EpohiData.UNIT_DEFS[unit.type].maxMoves;
+        unit.acted = false;
+      });
       s.barbarians = [{ id:'bt', x:u.x+1, y:u.y, hp:40, maxHp:75, homeX:u.x+2, homeY:u.y, last:null }];
       d.processBarbarians();
       const attacked = s.eventLog.some(e => e.eventType === 'barbarian-attacked-rival');
       s.barbarians = [{ id:'bt2', x:u.x+1, y:u.y, hp:8, maxHp:75, homeX:u.x+2, homeY:u.y, last:null }];
+      resetAiTurn();
       d.processRivals();
       const killed = s.eventLog.some(e => e.eventType === 'rival-destroyed-barbarian');
       const cx = u.x+1, cy = u.y;
       s.map[cy][cx].camp = { hp: 1, maxHp: 140, nextSpawn: 9 };
+      resetAiTurn();
       d.processRivals();
       const camp = s.eventLog.some(e => e.eventType === 'rival-destroyed-camp');
       return { attacked, killed, camp };

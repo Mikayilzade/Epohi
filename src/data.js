@@ -2,13 +2,13 @@
   "use strict";
 
   const TERRAIN = {
-    plains: { name: "Равнина", icon: "🌿", base: { food: 1, production: 0, gold: 0, science: 0 } },
-    forest: { name: "Лес", icon: "🌲", base: { food: 0, production: 1, gold: 0, science: 0 } },
-    hill: { name: "Холмы", icon: "⛰️", base: { food: 0, production: 1, gold: 0, science: 0 } },
-    water: { name: "Побережье", icon: "🌊", base: { food: 1, production: 0, gold: 1, science: 0 } },
-    desert: { name: "Пустошь", icon: "🏜️", base: { food: 0, production: 0, gold: 1, science: 0 } },
-    swamp: { name: "Болото", icon: "♒", base: { food: 1, production: 0, gold: 0, science: 1 } },
-    dead: { name: "Мёртвые земли", icon: "☠", base: { food: 0, production: 0, gold: 0, science: 1 } }
+    plains: { name: "Равнина", icon: "🌿", movementCost: 1, passable: true, defenseModifier: 0, base: { food: 1, production: 0, gold: 0, science: 0 } },
+    forest: { name: "Лес", icon: "🌲", movementCost: 2, passable: true, defenseModifier: 20, base: { food: 0, production: 1, gold: 0, science: 0 } },
+    hill: { name: "Холмы", icon: "⛰️", movementCost: 2, passable: true, defenseModifier: 25, base: { food: 0, production: 1, gold: 0, science: 0 } },
+    water: { name: "Побережье", icon: "🌊", movementCost: null, passable: false, defenseModifier: 0, impassableReason: "сухопутные отряды не могут входить в воду", base: { food: 1, production: 0, gold: 1, science: 0 } },
+    desert: { name: "Пустошь", icon: "🏜️", movementCost: 1, passable: true, defenseModifier: 0, base: { food: 0, production: 0, gold: 1, science: 0 } },
+    swamp: { name: "Болото", icon: "♒", movementCost: 3, passable: true, defenseModifier: 10, base: { food: 1, production: 0, gold: 0, science: 1 } },
+    dead: { name: "Мёртвые земли", icon: "☠", movementCost: 2, passable: true, defenseModifier: -10, base: { food: 0, production: 0, gold: 0, science: 1 } }
   };
 
   const FEATURES = {
@@ -106,6 +106,11 @@
   const BARBARIAN = { campHealth: 140, raiderHealth: 75, raiderAttack: 20, raiderDefense: 10, maxRaiders: 9, graceTurns: 12, spawnMin: 8, spawnMax: 12 };
   const BARBARIAN_ACTIVITY = { low:{label:"низкая", camps:.65, grace:16, min:11, max:15, limit:6}, normal:{label:"обычная", camps:1, grace:12, min:8, max:12, limit:9}, high:{label:"высокая", camps:1.35, grace:8, min:6, max:9, limit:14}, off:{label:"отключены", camps:0, grace:999, min:99, max:99, limit:0} };
   const CITY_MIN_DISTANCE = 4;
+  const CITY_ECONOMY = {
+    baseFood: 2, foodPerTwoPopulation: 1, baseProduction: 2,
+    youngProductionPenalty: 1, baseGold: 1, baseScience: 2,
+    minimumProduction: 1, settlementYield: { food:1, production:1, gold:1 }
+  };
   const INTEREST_TYPES = {
     ruins: { name: "Древние руины", icon: "⌁" }, depot: { name: "Заброшенный склад", icon: "▣" }, grove: { name: "Священная роща", icon: "♧" },
     mine: { name: "Старая шахта", icon: "◇" }, caravan: { name: "Потерянный караван", icon: "⊙" }, cave: { name: "Пещера", icon: "△" },
@@ -119,6 +124,75 @@
   const AI_COLORS = ["#d75a5a", "#6f8fe8", "#d99a35", "#ba65d9"];
   const AI_LIMITS = { maxCities: 3, maxScouts: 2, maxWorkers: 3, maxUnits: 10, maxActionsPerTurn: 18, minWarTurn: 20, logLimit: 180 };
   const AI_WEIGHTS = { defenseThreat: 90, exploreUnknown: 42, improveNeed: 36, settleRoom: 48, campExpedition: 38, prepareWar: 30, attackAdvantage: 58 };
+  const AI_GOAL_RULES = {
+    unknownMapFraction: 0.28, attackPowerRatio: 1.35,
+    minimumSettlementGold: 10, decisionHistoryLimit: 12,
+    knownMapExplore: 5, capitalDevelopment: 24, noWorkerImprovement: 16,
+    peacefulDefense: 12, noRoomSettlement: 8
+  };
+  const AI_PRODUCTION_RULES = {
+    emergencyHealHealthFraction: 0.55, emergencyHealGold: 12, emergencyHealAmount: 35,
+    queueThreatDistance: 5, rushThreatDistance: 4,
+    minimumWarriors: 2, minimumWorkers: 1,
+    rushGold: 16, rushProgress: 8, rushMinimumRemaining: 4
+  };
+  const AI_COMBAT_RULES = { defaultAttack: 8, cityDefense: 18, campDefense: 12 };
+  const AI_ACTION_RULES = { homeDistance: 1, lastDefenderCount: 1, adjacentWarDistance: 1 };
+  const BARBARIAN_TARGET_RULES = {
+    sightDistance: 6, homeSightDistance: 5, wanderChoices: 3,
+    priority: ['civilian', 'unit', 'improvement', 'outpost', 'city']
+  };
+  const BARBARIAN_ACTION_RULES = { perCampLimit: 2, campTargetScale: 2 };
+  const PLAYER_CITY_RULES = {
+    populationLimit: 10, palaceMinimumPopulation: 6,
+    defaultCapacity: 4, minimumFoundingYield: 2, foundingHealth: 150, youngTurns: 3
+  };
+  const PRODUCTION_EXPERIENCE_RULES = {
+    ownBuildingStep: 0.10, ownBuildingMaximum: 0.30,
+    foreignBuildingStep: 0.05, unitStep: 0.10, unitMaximum: 0.30,
+    unitsPerStep: 10, minimumCost: 1, minimumCostFactor: 0.05
+  };
+  const WORKER_PROJECT_RULES = {
+    repairActions: 1, minimumActions: 1,
+    defaultProduction: 6, productionPerAction: 6, maximumActions: 4
+  };
+  const COMBAT_BALANCE = {
+    minimumDamage: 4,
+    direct: { defenseWeight: 0.35, varianceBase: 0.85, varianceRange: 0.3 },
+    guard: { defenseWeight: 0.35, varianceBase: 0.9, varianceRange: 0.2 },
+    route: { defenseWeight: 0.32, varianceBase: 1, varianceRange: 0 },
+    settlementDefense: 5,
+    improvementDefense: 2
+  };
+  const PLAYER_COMBAT_RULES = {
+    fallbackAttack: 8, cityDefense: 18, campProductionReward: 6,
+    rivalCounterattackFactor: 0.45, barbarianCounterattackFactor: 0.55
+  };
+  const PLAYER_EXPLORATION_RULES = {
+    artifactChance: 0.18, caveAmbushChance: 0.35, workerFindChance: 0.08,
+    ruinsScience: 14, ruinsGold: 18, groveProduction: 24,
+    randomRewards: [
+      {k:"gold",a:14,t:"+14 золота."},{k:"science",a:10,t:"+10 науки."},
+      {k:"food",a:12,t:"+12 еды."},{k:"production",a:12,t:"+12 производства."},
+      {k:"reveal",a:2,t:"открыты земли вокруг."},{k:"heal",a:25,t:"юнит вылечен."},
+      {k:"worker",a:1,t:"найден рабочий."},{k:"artifact",a:1,t:"найден артефакт."},
+      {k:"ambush",a:1,t:"засада варваров!"}
+    ],
+    ancientRuins: [
+      { key:"science", amount:8, text:"В руинах найдены древние записи: +8 🔬" },
+      { key:"gold", amount:10, text:"В руинах найден клад: +10 🪙" },
+      { key:"production", amount:8, text:"Найдены старые инструменты: +8 🔨" },
+      { key:"food", amount:10, text:"Найдены запасы зерна: +10 🍞" }
+    ]
+  };
+  const RIVAL_TURN_RULES = {
+    poiScienceThreshold: 12, poiGoldThreshold: 10,
+    poiProductionReward: 12, poiResourceReward: 14,
+    campGoldReward: 25, campScienceReward: 6, campHeal: 20
+  };
+  const WORLD_STABILITY_RULES = {
+    administrationBaseCost: 60, administrationCostStep: 40
+  };
 
   const TECHS = {
     agriculture: {
@@ -156,12 +230,27 @@
     BARBARIAN,
     BARBARIAN_ACTIVITY,
     CITY_MIN_DISTANCE,
+    CITY_ECONOMY,
     INTEREST_TYPES,
     ARTIFACT_BONUSES,
     AI_NAMES,
     AI_COLORS,
     AI_LIMITS,
     AI_WEIGHTS,
+    AI_GOAL_RULES,
+    AI_PRODUCTION_RULES,
+    AI_COMBAT_RULES,
+    AI_ACTION_RULES,
+    BARBARIAN_TARGET_RULES,
+    BARBARIAN_ACTION_RULES,
+    PLAYER_CITY_RULES,
+    PRODUCTION_EXPERIENCE_RULES,
+    WORKER_PROJECT_RULES,
+    COMBAT_BALANCE,
+    PLAYER_COMBAT_RULES,
+    PLAYER_EXPLORATION_RULES,
+    RIVAL_TURN_RULES,
+    WORLD_STABILITY_RULES,
     TECHS
   };
 })();

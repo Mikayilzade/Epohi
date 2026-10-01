@@ -1,0 +1,16 @@
+/* Short-screen and camera-safe visual overrides for the Humans prototype. */
+.map-shell {
+  border: 0;
+  outline: 1px solid rgba(238,210,142,.16);
+  outline-offset: -1px;
+}
+
+@media (max-height: 500px) {
+  .journey-bar {
+    display: none;
+  }
+
+  .app {
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto auto;
+  }
+}

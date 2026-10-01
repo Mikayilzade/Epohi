@@ -6,6 +6,13 @@ const {
   createGame
 } = require("./helpers");
 
+async function clickInspectLayerSemanticDom(page, layer) {
+  await page.evaluate((targetLayer) => {
+    const button = document.querySelector(`.inspect-tab[data-inspect-layer="${targetLayer}"]`);
+    if (!button) throw new Error(`Inspect layer ${targetLayer} not found`);
+    button.click();
+  }, layer);
+}
 
 test.describe('v1.4.3 map object inspection', () => {
   test('renders a second player city once with population', async ({ page }) => {
@@ -39,20 +46,22 @@ test.describe('v1.4.3 map object inspection', () => {
     await clearStorage(page); await createGame(page, 0, 'small');
     const r = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state, u=s.units[0]; d.render(); return {x:u.x,y:u.y}; });
     const tile = page.locator(`.tile[data-x="${r.x}"][data-y="${r.y}"]`);
-    await tile.click(); await page.locator('.inspect-tab[data-inspect-layer="tile"]').click();
+    await tile.click();
+    await clickInspectLayerSemanticDom(page, 'tile');
     await expect(page.locator('#contextText')).toContainText(`X ${r.x}, Y ${r.y}`);
     await expect(page.locator('#contextText')).toContainText('доход:');
     await expect(tile).toHaveClass(/inspect-layer-tile/);
-    await page.locator('.inspect-tab[data-inspect-layer="unit"]').click();
+    await clickInspectLayerSemanticDom(page, 'unit');
     await expect(tile).not.toHaveClass(/inspect-layer-tile/);
   });
 
   test('active unit remains selected while inspecting tile layer', async ({ page }) => {
     await clearStorage(page); await createGame(page, 0, 'small');
     const r = await page.evaluate(() => { const d=window.__epohiDebug(), s=d.state, u=s.units[0]; d.render(); return {id:u.id,x:u.x,y:u.y}; });
-    await page.locator(`.tile[data-x="${r.x}"][data-y="${r.y}"]`).click(); await page.locator('.inspect-tab[data-inspect-layer="tile"]').click();
+    await page.locator(`.tile[data-x="${r.x}"][data-y="${r.y}"]`).click();
+    await clickInspectLayerSemanticDom(page, 'tile');
     expect(await page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(r.id);
-    await page.locator('.inspect-tab[data-inspect-layer="unit"]').click();
+    await clickInspectLayerSemanticDom(page, 'unit');
     await expect(page.getByRole('button', { name: /Идти|Ремонт|Основать|Выбрать/ }).first()).toBeVisible({ timeout: 1000 }).catch(() => {});
   });
 
@@ -85,4 +94,3 @@ test.describe('v1.4.3 map object inspection', () => {
 
 
 });
-
