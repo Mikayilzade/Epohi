@@ -376,6 +376,121 @@ Production/Training remains outside this MVP. Its future interface is the
 versioned `BattleRoster` input and `BattleResult` output already described
 above.
 
+
+## 16. Godot bootstrap, validation and build workflow
+
+This section is an **implementation plan**, not gameplay code. It closes the
+remaining engine/bootstrap questions while preserving the pure-domain boundary.
+
+### Project bootstrap and entry points
+
+**Design choice:** use one Godot 4 GDScript project with these explicit entry
+paths:
+
+- normal launch: `Main.tscn` -> Setup -> Battle -> Result;
+- domain tests: scripts under `tests/` that instantiate no Battle/UI scene;
+- batch balance: `tools/batch_simulator.gd`, invoked headlessly and given a
+  preset, seed range and output path;
+- replay/debug: `tools/replay_battle.gd`, consuming a versioned battle record.
+
+`Main.tscn` owns screen transitions only. Battle truth remains in domain
+objects. Autoloads are limited to genuinely application-wide services such as
+settings/version metadata; **BattleState, RNG and active-match controllers are
+not Autoload singletons**. This prevents tests and rematches from inheriting
+hidden mutable state.
+
+### Resource/file naming contract
+
+Keep authored definitions under `res://data/` and runtime logic under
+`res://domain/`. Starting names:
+
+`unit_types/*.tres` -> `UnitTypeDef`; `terrain/*.tres` -> `TerrainDef`;
+`maps/*.tres` -> `BattleMapDef`; `balance/default.tres` ->
+`BattleBalanceDef`; `forces/*.tres` -> `ForcePresetDef`.
+
+Every definition has a stable string ID independent of filename/display text.
+Runtime records store IDs and scalar state, not Node/resource object identity.
+Renaming art or scenes therefore does not invalidate deterministic records.
+
+### Validation gates
+
+Startup/dev validation must fail clearly for duplicate IDs, unknown referenced
+IDs, invalid map dimensions/spawns, overlapping blocked/spawn cells, negative
+movement/range/HP, malformed formations, or tuning bounds where
+`min > default > max`. A battle setup is validated again before
+`create_battle`; invalid data never enters canonical state.
+
+### Headless and deterministic workflow
+
+The batch runner constructs the same immutable definitions and pure rules used
+by the UI but never loads `Battle.tscn`. Inputs are explicit:
+`balance_version + map_id + rosters + controller policies + seed(s)`.
+Output includes aggregate CSV/JSON plus enough failing-case metadata to replay a
+specific seed. No simulation result may depend on frame rate, wall-clock time,
+animation completion, node order, OS locale, or global random calls.
+
+**Starting performance hypothesis:** 10,000 tiny 9x7 MVP battles should be a
+routine offline balance job, but no wall-clock threshold is a gameplay
+requirement until measured on the development machine. First optimize only if
+profiling identifies a real bottleneck. Keep batch execution single-process
+initially; parallel workers are an extension, not an MVP dependency.
+
+### Test pyramid and implementation gates
+
+1. **Domain gate:** table tests for action economy, movement/path costs,
+   targeting/front replacement, damage/armor/guard/cover, death, activation
+   scheduling and end conditions.
+2. **Determinism gate:** identical setup/seed/commands produces byte-equivalent
+   normalized final state and outcome; restart reproduces it.
+3. **Invariant/fuzz gate:** seeded AI-vs-AI battles never produce negative
+   actions, illegal occupancy, dead activations or non-termination beyond the
+   round cap.
+4. **AI gate:** policy always chooses from `legal_commands`; deterministic
+   tie-breaks reproduce the same command sequence.
+5. **Scene smoke gate:** Setup can create a valid battle, Battle can consume
+   domain events, Result can restart/rematch, and animation-disabled mode
+   completes without changing results.
+6. **Balance evidence gate:** run the documented >=10,000 mirror matrix and
+   save distributions; do not convert statistical symmetry into a hard
+   assertion that forces balance hacks.
+
+A change to UI/art should not require rerunning balance logic beyond smoke
+coverage; a rules/balance change reruns domain, determinism, invariants and the
+relevant batch matrix.
+
+### Export/build workflow
+
+**First target hypothesis:** desktop development build, Windows first. Keep the
+project exportable to other Godot-supported desktop targets by avoiding
+platform-specific gameplay dependencies. Configure export presets in source
+control once implementation begins; produce a debug/playtest export before any
+release-oriented packaging. Web export is optional evidence later, not an MVP
+acceptance condition and not an Epohi integration strategy.
+
+The build checklist is: validate definitions -> run domain/determinism tests ->
+run focused AI/invariant batch -> launch scene smoke -> export playtest build ->
+record build/version plus balance version. Large balance batches may run
+separately because they are tuning evidence rather than a prerequisite for
+every UI iteration.
+
+### Orca implementation order / acceptance gates
+
+When implementation is authorized, Orca should work in dependency order rather
+than inventing design while coding:
+
+1. bootstrap project + definition/state schemas; gate = validation fixtures;
+2. pure command legality/state transitions; gate = domain tests green;
+3. deterministic scheduler/RNG/replay; gate = replay/invariants green;
+4. baseline AI + headless runner; gate = reproducible AI-vs-AI batch;
+5. minimal Setup/Battle/Result UI adapters; gate = complete animation-off match;
+6. tuning resources/presets and balance report; gate = mirror matrix produced;
+7. presentation polish/export; gate = Windows playtest build and restart/rematch
+   smoke.
+
+Do not add battalion/army, production/training, persistence, procedural maps,
+networking, Epohi integration, or a second combat formula while satisfying
+these gates. Those are explicit extension points after human playtesting.
+
 ## 16. Design checkpoint
 
 Current provisional numbers remain centralized and reversible: 9x7 maps; two
@@ -383,14 +498,16 @@ squads x three members per side; Guard 12/3/4 HP/armor/power, Striker 9/1/6,
 Archer 8/0/5; commander +2 HP/+1 power; rear ranged attack -2 power; movement
 2/3/2; Plain cost 1, Rough cost 2/+1 cover; 20-round cap.
 
-Remaining design work before implementation should be limited to:
-1. Godot bootstrap/export/headless/test workflow and exact asset/resource naming;
-2. final contradiction/implementation-order audit;
-3. a compact Orca work breakdown with acceptance gates.
+Final audit: the Godot bootstrap/export/headless/test workflow, exact
+resource naming, implementation order and Orca acceptance gates are now
+specified above. No unresolved contradiction was found with the accepted pure
+domain/state, deterministic RNG, hybrid activation, data-driven tuning or
+future hierarchy boundaries.
 
-Do not expand the design merely for completeness after those packages. Human
-playtesting, not more paper design, should drive subsequent combat/balance
-changes.
+**Implementation readiness:** the first experiment is design-complete enough to
+start once the user explicitly authorizes implementation. Further autonomous
+paper-design passes should stop here. Human playtesting, not additional design
+polish, should drive subsequent combat/balance changes.
 
 ## USER DECISIONS NEEDED
 
