@@ -238,15 +238,164 @@ XP formula, persistent campaign or arrival schedule is specified here.
 - Implementation is blocked by the two decisions below; all other parameters
   are deliberately cheap to change through data or adapters.
 
+## 10. Accepted first-experiment decisions (2026-09-30)
+
+The user resolved the two former blockers:
+
+- **Engine:** Godot 4 with GDScript.
+- **Action grain:** hybrid. A squad activates once; its action pool at activation
+  start equals its living-member count. Each member may attack at most once in
+  that activation; the squad may move at most once. MOVE, ATTACK, GUARD and
+  SET_FRONT each cost one action; PASS ends the activation and discards the
+  remainder. Casualties before the next activation reduce its next pool. A
+  casualty during an already-started activation does not retroactively remove
+  an action already granted.
+
+These are fixed for the first experiment, unlike the balance values below.
+
+## 11. Godot implementation contract — data, state and boundaries
+
+**Hypothesis, intended to be cheap to revise:** keep authored definitions and
+mutable battle state separate.
+
+Authored definitions are data assets: `UnitTypeDef`, `TerrainDef`,
+`BattleMapDef`, `BattleBalanceDef` and `ForcePresetDef`. They contain
+IDs and tunables, not battle progress. Shipped defaults are immutable during a
+battle; a future tuning screen creates a runtime override/preset instead of
+editing canonical defaults.
+
+Mutable canonical state is plain domain data:
+`BattleState -> SideState -> SquadState -> CombatantState`. It contains round,
+initiative/activation cursor, grid positions, living/dead members, current HP,
+front member, action pool/spent flags, guard status, seed/RNG state and outcome.
+It must not hold Node, SceneTree, Control, animation, timer or viewport
+references.
+
+The first rules API exposes five player/AI commands: `MOVE`, `ATTACK`,
+`GUARD`, `SET_FRONT`, `PASS`. Invalid commands return an error without
+partial state mutation. UI and AI both obtain legal commands from the same
+domain service.
+
+State invariants checked in tests/debug validation:
+
+- stable IDs are unique and occupied grid cells never overlap;
+- current HP is within 0..max HP and dead members cannot act;
+- every living squad has a living front member; manual front persists until a
+  new SET_FRONT or that member dies;
+- action pool never becomes negative and dead squads cannot activate;
+- every scheduled living squad activates exactly once per round;
+- MOVE is used at most once per activation and each member ATTACK at most once;
+- battle terminates on elimination or the round cap.
+
+A reproducible battle record carries `schema_version`, `balance_version`,
+map/rosters, seed and command log. Restart replays the exact setup/seed;
+Rematch preserves setup and swaps spawn sides.
+
+## 12. Godot scene/input/map boundary
+
+Proposed presentation tree: `Main -> Setup / Battle / Result`. Battle owns
+`BoardView`, `BattleHUD` and `AnimationLayer`. No mutable battle truth is
+stored in an Autoload. A small app/session service may hold navigation and the
+last setup, but the domain owns battle truth.
+
+The MVP grid uses integer coordinates, orthogonal movement, no shared
+occupancy. Plain terrain costs 1, Rough costs 2 and gives 1 defensive cover;
+blocked cells are impassable. Guard/Striker/Archer movement budgets remain
+2/3/2 as provisional balance. A bounded flood/Dijkstra calculation determines
+reachable cells. A Godot pathfinding adapter may produce candidate paths, but
+the domain revalidates every path and its cost before applying MOVE.
+
+Input is intent-based: select active squad -> show legal cells/targets ->
+preview route or deterministic damage -> submit command. Presentation then
+animates the already-resolved result. Animation can be skipped or disabled
+without changing state or waiting on animation completion.
+
+## 13. Baseline AI contract and deterministic tie-breaks
+
+The first AI is intentionally explainable, not clever. It requests the same
+legal commands as a human controller and scores them using balance-data weights.
+Priority categories, in descending starting order:
+
+1. legal ATTACK that kills a member;
+2. ATTACK expected damage, with a small bonus for commander damage;
+3. MOVE that enables a legal attack this activation;
+4. MOVE reducing distance to a vulnerable enemy without entering an obviously
+   worse reachable square;
+5. GUARD when threatened and no useful attack remains;
+6. SET_FRONT only when it increases current defensive survivability enough to
+   justify an action;
+7. PASS.
+
+Exact weights are tunables, not rules. Equal scores use a stable tuple
+(command type, target squad/member ID, destination y/x) and seeded RNG only
+where a deliberately variable policy is being tested. Given the same state,
+balance version, policy and seed, the AI must choose identically.
+
+The AI must never inspect hidden UI state, call presentation helpers or receive
+extra movement/attack privileges.
+
+## 14. Headless balance matrix
+
+The first batch gate is at least **10,000 deterministic headless battles**.
+This is an engineering/balance diagnostic, not a requirement that every matchup
+reach 50/50.
+
+Run both maps, mirrored spawn sides, both starting-side orders and representative
+two-squad compositions including homogeneous and mixed Guard/Striker/Archer
+pairs. For each setup, pair seeds when sides are swapped so map/initiative
+effects can be separated from policy variance.
+
+Collect: wins/draws, first-side advantage, rounds and activations to finish,
+remaining HP/members, damage by type, kills by type, commander survival,
+movement/attack/guard/reorder/pass counts, wasted actions, timeout rate and
+invalid-command/invariant failures.
+
+Hard engineering gates: zero crashes, zero illegal state transitions, zero
+negative action pools/HP, deterministic replay equality and termination by the
+round cap. Balance findings produce tuning candidates for human playtests; they
+do not silently rewrite rules.
+
+## 15. Godot-oriented project shape for future Orca
+
+Keep the first repository small and dependency direction obvious:
+
+`domain/` — state, commands, rules, validation, deterministic RNG adapter  
+`data/` — unit/terrain/map/balance/preset definitions and shipped assets  
+`ai/` — policies/scoring using domain legal commands  
+`ui/` — Setup/Battle/Result scenes, board/HUD/input adapters  
+`tools/` — headless batch runner, reports and tuning helpers  
+`tests/` — domain tables, replay/invariants, AI and minimal scene smoke tests
+
+Do not introduce battalion/army gameplay yet. Preserve extension seams:
+`Combatant` belongs to a squad/formation; a future battalion can own squad IDs,
+and an army can own battalion IDs. Higher levels must define their own
+activation budget explicitly rather than multiplying lower-level actions
+implicitly.
+
+Production/Training remains outside this MVP. Its future interface is the
+versioned `BattleRoster` input and `BattleResult` output already described
+above.
+
+## 16. Design checkpoint
+
+Current provisional numbers remain centralized and reversible: 9x7 maps; two
+squads x three members per side; Guard 12/3/4 HP/armor/power, Striker 9/1/6,
+Archer 8/0/5; commander +2 HP/+1 power; rear ranged attack -2 power; movement
+2/3/2; Plain cost 1, Rough cost 2/+1 cover; 20-round cap.
+
+Remaining design work before implementation should be limited to:
+1. Godot bootstrap/export/headless/test workflow and exact asset/resource naming;
+2. final contradiction/implementation-order audit;
+3. a compact Orca work breakdown with acceptance gates.
+
+Do not expand the design merely for completeness after those packages. Human
+playtesting, not more paper design, should drive subsequent combat/balance
+changes.
+
 ## USER DECISIONS NEEDED
 
-1. **Action grain:** choose **hybrid** (recommended: squad activation with one
-   action per living member), **individual**, **squad**, or describe your own.
-   In particular, does «five squads → five actions» mean five *total orders*
-   or five *squad activations*?
-2. **Purpose/stack of the first experiment:** choose **web/JS** (recommended
-   for the fastest Epohi-relevant playable test) or **Godot/GDScript** (if
-   evaluating Godot itself matters more). This affects future port cost.
-
-After these two answers, the stated hypotheses are sufficient to start the
-first MVP implementation. Later playtesting may change balance and scope.
+**None before the first MVP.** Godot 4/GDScript and hybrid squad activation are
+accepted. All remaining numeric values and baseline AI weights are explicitly
+reversible tuning hypotheses. A new user decision is needed only if later work
+would materially change the intended combat feel or make an expensive
+architectural commitment.
