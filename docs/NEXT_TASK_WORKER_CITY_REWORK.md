@@ -78,14 +78,6 @@ not use it to charge production.
 
 
 
-Resolve the responsible city deterministically:
-
-1. explicit tile owner city when valid;
-2. otherwise eligible territorial city according to canonical territory rule;
-3. no silent nearest-city fallback if that would assign a tile outside legal ownership.
-
-Expose payer/responsible city in project state.
-
 ### 4. Project state
 
 A worker project should contain enough explicit state for save/replay/UI:
