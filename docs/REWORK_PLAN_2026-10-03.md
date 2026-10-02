@@ -16,8 +16,9 @@ patch/decorator layers and now feel harder to understand than they should.
 The rework goal is not to replace Epohi with a new game. It is to keep the current
 visual/game identity while making the core loop more coherent, especially:
 
-- workers and local city development;
-- city-local food/production;
+- workers and territorial development through worker actions, not city-production spending;
+- movement-point terrain costs and pathing clarity;
+- city-local food/production for city growth/build queues;
 - clear unit/city/tile/camp inspection;
 - autonomous orders that reduce repetitive clicks;
 - living civilizations and barbarians;
@@ -52,11 +53,11 @@ This is the first implementation package.
 - base worker actions and patched worker actions can disagree;
 - current worker UI says projects do not spend city production;
 - ownership/payer logic exists in multiple places;
-- worker project duration, city economy and improvement ownership are not expressed as one coherent rule;
+- worker project duration is still indirectly derived from improvement production cost, even though the intended rule is that workers spend their own actions/turns rather than city production;
+- improvement ownership/territory and worker project state are not expressed as one coherent rule;
 - the worker card is dense and does not clearly answer:
   - what can I build here?
-  - which city pays?
-  - how much?
+  - how many worker actions will it take?
   - how long?
   - what happens next turn?
   - why is this action disabled?
@@ -64,48 +65,49 @@ This is the first implementation package.
 
 ### Working target
 
-A worker operates for one specific city context at a time.
+A worker develops territory by spending **worker actions / turns**, not city production.
 
 For a manual improvement project:
 
-- target tile must belong to / be assigned to a player city;
-- the responsible city is explicit and deterministic;
-- improvement cost is paid from that city's **local production**, never from a global
-  production pool;
-- project duration is still expressed in worker actions/turns;
-- cost and duration are separate concepts;
-- exact payment timing (all at start vs reserved/paid in stages) is a reversible tuning
-  decision and should be centralized;
+- target tile must be a legal known tile under the player's territorial rules;
+- starting or progressing an improvement does **not** deduct local or global production;
+- every improvement has an explicit, data-driven `workerActions` cost;
+- a worker contributes at most one project action per game turn;
+- the project occupies the worker while in progress;
 - a worker cannot gain free extra actions by switching manual/autonomous mode;
-- repair uses the same project framework;
+- repair uses the same project framework with its own explicit worker-action cost;
 - harbor/coastal special targeting uses the same validation path as other improvements.
 
-### First reversible hypothesis for payment
+### First reversible hypothesis for action costs
 
-Use **pay/reserve at project start** for the first experiment:
+Do **not** keep deriving build time from mutable production cost.
 
-- project can start only when the city can afford it;
-- local city production is deducted once when the project starts;
-- canceling a project does not automatically refund in the first experiment;
-- this rule is centralized so later partial refund/reservation can replace it.
+For the first experiment:
 
-Reason: it is easy to understand, easy to test, and prevents double spending.
+- snapshot the current effective worker-project durations into explicit
+  `workerActions` values in data so the rework changes the rule cleanly without
+  unnecessarily changing pacing at the same time;
+- repair keeps its current explicit action duration unless tests/design reveal a reason
+  to change it;
+- later balance passes may tune these action counts independently from city-production
+  prices used by other systems.
 
-This is a tuning/UX hypothesis, not permanent canon.
+The important rule is fixed for this rework: **worker improvements cost worker actions,
+not city production**.
 
 ### Worker card / context UI
 
 When a worker is selected, the context panel should show a coherent card:
 
-- worker name and current city assignment;
+- worker name;
 - current tile / target tile;
 - movement/action status;
 - current project, if any;
 - total worker actions and remaining actions;
-- responsible city;
-- city local production before/after project cost;
 - available build/repair actions;
 - exact disabled reason.
+
+Do not show or check a city-production payment for worker improvements.
 
 Do not append a second contradictory worker UI through mutation/decorator patches.
 
@@ -130,15 +132,38 @@ Worker then:
 
 - looks only at known/eligible city territory;
 - chooses a valid improvement through the same project API;
-- considers local city production;
-- should not spend production if doing so would block an important current city project;
+- spends only its own worker action for project progress;
+- does not consume the city's production stock;
 - stops on danger or when no sensible target exists;
 - explains why it stopped;
 - never uses hidden/fogged information.
 
-The exact "important city project reserve" threshold should be centralized and reversible.
+## Stage 2 — Movement-point and pathing rework
 
-## Stage 2 — City economy coherence
+The previously agreed movement direction is:
+
+- plains / field-like open ground: **0.5 movement points**;
+- forest: **1 movement point**;
+- hills: **1 movement point**.
+
+This is intended to make open terrain meaningfully faster and allow units with a
+multi-point movement budget to cross several open tiles in one turn.
+
+Requirements for the movement package:
+
+- movement budgets and terrain costs support fractional values safely;
+- path preview and actual movement use the same cost calculation;
+- UI shows remaining movement clearly enough that `0.5` steps are understandable;
+- manual movement and autonomous/path orders use the same path-cost service;
+- no free movement from route cancellation/reselection;
+- save/load handles fractional remaining movement;
+- tests cover mixed paths such as plains -> plains -> hill/forest.
+
+Other terrain costs (desert, swamp, dead land, roads, water/embarkation) are **not yet
+user-fixed**. Audit current rules and choose reversible hypotheses in that later package
+rather than silently treating them as settled.
+
+## Stage 3 — City economy coherence
 
 After workers:
 
@@ -149,7 +174,7 @@ After workers:
 - ensure settlement ownership and improvement yields clearly feed the correct city;
 - preserve save compatibility through explicit migration.
 
-## Stage 3 — Map generation / terrain geography
+## Stage 4 — Map generation / terrain geography
 
 Current map generation creates terrain by:
 
@@ -172,7 +197,7 @@ Target qualities:
 
 Do not couple visual terrain art to map-generation rules.
 
-## Stage 4 — Living world
+## Stage 5 — Living world
 
 Keep and strengthen the existing direction:
 
@@ -183,7 +208,7 @@ Keep and strengthen the existing direction:
 - different strategic tendencies become visible;
 - AI should be capable of progressing toward its own goals, not merely obstructing the player.
 
-## Stage 5 — Inspection and information UX
+## Stage 6 — Inspection and information UX
 
 Keep the useful layer model:
 
@@ -209,7 +234,7 @@ Tile inspection should be able to show:
 City inspection should show local economy and queue.
 Camp inspection should show threat/reward information the player is allowed to know.
 
-## Stage 6 — Turn report / autonomy clarity
+## Stage 7 — Turn report / autonomy clarity
 
 Turn report should prioritize meaningful changes:
 
