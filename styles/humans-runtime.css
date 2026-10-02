@@ -99,10 +99,6 @@ body.route-targeting .context::after {
   font-weight: 900;
 }
 
-[data-autonomy-action="develop"] {
-  display: none !important;
-}
-
 .worker-priority-picker {
   display: grid;
   grid-template-columns: repeat(4, minmax(74px, 1fr));
@@ -115,6 +111,22 @@ body.route-targeting .context::after {
   min-width: 74px;
   padding-inline: 8px;
   font-size: 10px;
+}
+
+.worker-city-choice {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.worker-city-choice select {
+  min-width: 0;
+  flex: 1;
+  padding: 5px;
+  border-radius: 6px;
 }
 
 .combat-focus {

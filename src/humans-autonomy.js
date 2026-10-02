@@ -388,17 +388,6 @@
     return false;
   }
 
-  function hasTech(state, techId) {
-    return !techId || (state.researched || []).includes(techId);
-  }
-
-  function improvementForTile(state, tile) {
-    return Object.keys(IMPROVEMENTS).find(function (id) {
-      const improvement = IMPROVEMENTS[id];
-      return id !== "harbor" && improvement.terrain.includes(tile.terrain) && hasTech(state, improvement.tech);
-    }) || null;
-  }
-
   function improvementScore(improvement, priority) {
     const yieldValue = improvement.yield || {};
     if (priority === "food") return (yieldValue.food || 0) * 12 + (yieldValue.production || 0) * 3 + (yieldValue.gold || 0);
@@ -408,9 +397,8 @@
   }
 
   function tileBelongsToCity(state, city, x, y) {
-    const tile = state.map[y][x];
-    if (tile.owner === city.id || tile.owner === city.name) return true;
-    return chebyshev(city.x, city.y, x, y) <= cityRadius(city);
+    const territory = window.EpohiWorkerProjects.territoryCity(state, x, y);
+    return territory.legal && territory.city && String(territory.city.id) === String(city.id);
   }
 
   function chooseWorkerTarget(state, unit, order) {
@@ -421,17 +409,18 @@
     state.map.forEach(function (row, y) {
       row.forEach(function (tile, x) {
         if (!tile.revealed || !passableTile(tile) || tile.improvement || tile.poi || tile.camp) return;
-        if (!inTerritory(state, x, y) || !tileBelongsToCity(state, city, x, y)) return;
+        if (!tileBelongsToCity(state, city, x, y)) return;
         if (ownCityAt(state, x, y) || barbarianAt(state, x, y) || rivalUnitAt(state, x, y)) return;
-        const improvementId = improvementForTile(state, tile);
-        if (!improvementId) return;
-        const improvement = IMPROVEMENTS[improvementId];
-        const distance = chebyshev(unit.x, unit.y, x, y);
-        candidates.push({
-          x: x,
-          y: y,
-          improvementId: improvementId,
-          score: improvementScore(improvement, order.priority) - distance * 2
+        Object.keys(IMPROVEMENTS).forEach(function (improvementId) {
+          if (improvementId === "harbor") return;
+          const probe = Object.assign({}, unit, { x:x, y:y, acted:false, workerProject:null });
+          if (!window.EpohiWorkerProjects.validate(state, probe, improvementId, x, y, false, city.id).ok) return;
+          const improvement = IMPROVEMENTS[improvementId];
+          const distance = chebyshev(unit.x, unit.y, x, y);
+          candidates.push({
+            x: x, y: y, improvementId: improvementId,
+            score: improvementScore(improvement, order.priority) - distance * 2
+          });
         });
       });
     });
@@ -442,10 +431,16 @@
 
   function processDevelop(state, unit) {
     const order = unit.order;
+    if (unit.workerProject) {
+      order.reason = "строит: осталось " + unit.workerProject.remainingWorkerActions + " ход.";
+      return false;
+    }
     let target = order.target;
-    const currentTile = state.map[unit.y][unit.x];
 
-    if (target && (state.map[target.y][target.x].improvement || !improvementForTile(state, state.map[target.y][target.x]))) {
+    if (target && (!state.map[target.y] || !state.map[target.y][target.x] ||
+        !window.EpohiWorkerProjects.validate(state,
+          Object.assign({}, unit, { x:target.x, y:target.y }), target.improvementId,
+          target.x, target.y, false, order.cityId).ok)) {
       order.target = null;
       target = null;
     }
@@ -462,17 +457,16 @@
 
     if (unit.x === target.x && unit.y === target.y) {
       const debug = getDebug();
-      const before = currentTile.improvement;
-      if (debug && typeof debug.buildImprovementWithWorker === "function") {
-        debug.buildImprovementWithWorker(unit.id, target.improvementId);
-      }
-      const after = state.map[unit.y][unit.x].improvement;
-      if (after && after !== before) {
-        report(state, unit, unitDisplayName(unit) + " построил улучшение «" + IMPROVEMENTS[after].name + "».", "worker-build");
-        order.target = null;
+      if (debug && typeof debug.buildImprovementWithWorker === "function" &&
+          debug.buildImprovementWithWorker(unit.id, target.improvementId)) {
+        order.reason = unit.workerProject
+          ? "строит: осталось " + unit.workerProject.remainingWorkerActions + " ход."
+          : "улучшение завершено";
         return true;
       }
-      pauseOrder(state, unit, "городу не хватает локального производства");
+      const check = window.EpohiWorkerProjects.validate(state, unit, target.improvementId,
+        target.x, target.y, false, order.cityId);
+      pauseOrder(state, unit, check.reason || "не удалось начать проект");
       return false;
     }
 
@@ -660,14 +654,7 @@
       actions.appendChild(makeActionButton("🧭<br>Авторазведка", "explore", function () {
         assignOrder(unit.id, "explore");
       }, "alt"));
-    } else if (unit.type === "worker") {
-      actions.appendChild(makeActionButton("🔨<br>Развивать город", "develop", function () {
-        const entered = window.prompt("Приоритет: balanced, food, production или gold", "balanced");
-        if (!entered) return;
-        const priority = ["balanced", "food", "production", "gold"].includes(entered.trim()) ? entered.trim() : "balanced";
-        assignOrder(unit.id, "develop", { priority: priority });
-      }, "alt"));
-    } else if (!["settler"].includes(unit.type)) {
+    } else if (unit.type !== "worker" && unit.type !== "settler") {
       actions.appendChild(makeActionButton("🛡️<br>Охранять здесь", "guard", function () {
         assignOrder(unit.id, "guard", { x: unit.x, y: unit.y, radius: 3 });
       }, "alt"));

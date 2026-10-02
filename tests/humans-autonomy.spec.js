@@ -207,6 +207,7 @@ test.describe('Автономные приказы людей', () => {
       return {
         assigned,
         started,
+        visibleTarget: point,
         improvement: tile.improvement,
         productionBefore,
         productionAfter: city.production,
@@ -219,6 +220,10 @@ test.describe('Автономные приказы людей', () => {
     expect(result.assigned).toBe(true);
     expect(result.started.project).not.toBeNull();
     expect(result.started.project.improvementId).toBe('farm');
+    expect(result.started.project).toEqual(expect.objectContaining({
+      x:result.visibleTarget.x, y:result.visibleTarget.y,
+      totalWorkerActions:2, remainingWorkerActions:1
+    }));
     expect(result.started.improvement).toBeNull();
     expect(result.started.production).toBe(result.productionBefore);
     expect(result.started.acted).toBe(true);

@@ -204,6 +204,7 @@
   const goldIncome = document.getElementById("goldIncome");
   const scienceIncome = document.getElementById("scienceIncome");
   const contextTitle = document.getElementById("contextTitle");
+  const contextPanel = document.getElementById("contextPanel");
   const contextText = document.getElementById("contextText");
   const contextTabs = document.getElementById("contextTabs");
   const contextActions = document.getElementById("contextActions");
@@ -444,6 +445,7 @@
         if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(gameState);
       }
     });
+    if (migrated) window.EpohiWorkerProjects.migrate(migrated);
     return initializeGameSystems(migrated);
   }
 
@@ -900,11 +902,81 @@
     return button;
   }
 
-  function availableImprovement(tile) {
-    return Object.keys(IMPROVEMENTS).find(function (id) {
-      const def = IMPROVEMENTS[id];
-      return def.terrain.indexOf(tile.terrain) !== -1 && (!def.tech || hasTech(def.tech));
-    }) || null;
+  function workerAction(unit, id, x, y, repair, key) {
+    const check = window.EpohiWorkerProjects.validate(state, unit, id, x, y, repair);
+    const definition = IMPROVEMENTS[id];
+    const label = repair ? "Ремонт" : definition.name;
+    const actions = window.EpohiWorkerProjects.workerTurns(id, repair);
+    const button = appendContextActionOnce(key, (repair ? "🔧 " : definition.icon + " ") + label +
+      "<br>" + actions + " действ. рабочего", "alt", function () {
+        if (repair) repairImprovement(unit.id);
+        else buildImprovementWithWorker(unit.id, id, x, y);
+      }, !check.ok);
+    if (button && !check.ok) button.title = check.reason;
+    return check;
+  }
+
+  function renderWorkerCard(unit, x, y) {
+    const project = unit.workerProject;
+    const territory = window.EpohiWorkerProjects.territoryCity(state, x, y);
+    const cityId = project && project.cityId || unit.order && unit.order.cityId ||
+      territory.city && territory.city.id;
+    const city = playerCities().find(function (item) { return String(item.id) === String(cityId); });
+    contextTitle.textContent = UNIT_DEFS.worker.icon + " " + (unit.name || UNIT_DEFS.worker.name);
+    contextText.textContent = "";
+    contextText.classList.add("worker-context");
+    contextPanel.classList.add("worker-context-panel");
+    const card = document.createElement("div");
+    card.className = "worker-card";
+    card.dataset.workerTimeStatus = "1";
+    const lines = [
+      "Город: " + (city ? city.name : "не назначен"),
+      "Клетка: X " + unit.x + ", Y " + unit.y +
+        (project ? " · цель: X " + project.x + ", Y " + project.y : ""),
+      "Движение: " + unit.moves + " · действие: " + (unit.acted ? "потрачено" : "доступно")
+    ];
+    if (project) {
+      const name = project.type === "repair" ? "Ремонт" :
+        (IMPROVEMENTS[project.improvementId] || {}).name || "Улучшение";
+      lines.push("Проект: " + name + " · Выполнено: " +
+        (project.totalWorkerActions - project.remainingWorkerActions) + "/" +
+        project.totalWorkerActions + " действий рабочего");
+      lines.push("Осталось: " + project.remainingWorkerActions +
+        " · следующий шаг в начале следующего хода партии");
+    } else {
+      lines.push(unit.acted ? "Следующее действие — в новом ходу." :
+        "Выберите улучшение или ремонт. Производство города не расходуется.");
+    }
+    lines.forEach(function (line) {
+      const row = document.createElement("div");
+      row.textContent = line;
+      card.appendChild(row);
+    });
+    contextText.appendChild(card);
+    const tile = state.map[y][x];
+    const choices = tile.pillaged && tile.improvement ? [tile.improvement] :
+      Object.keys(IMPROVEMENTS).filter(function (id) {
+        return id !== "harbor" && IMPROVEMENTS[id].terrain.includes(tile.terrain);
+      });
+    if (tile.pillaged && tile.improvement) {
+      const check = workerAction(unit, tile.improvement, x, y, true, "repair");
+      if (!check.ok) card.appendChild(document.createTextNode("Недоступно: " + check.reason));
+    } else {
+      choices.forEach(function (id) {
+        const check = workerAction(unit, id, x, y, false, "build-" + id);
+        if (!check.ok) {
+          const reason = document.createElement("div");
+          reason.className = "worker-disabled-reason";
+          reason.textContent = IMPROVEMENTS[id].name + ": " + check.reason;
+          card.appendChild(reason);
+        }
+      });
+    }
+    if (!choices.length) {
+      const reason = document.createElement("div");
+      reason.textContent = "На этой клетке нет доступных проектов.";
+      card.appendChild(reason);
+    }
   }
 
   function cycleUnitAt(x, y, direction) {
@@ -998,6 +1070,8 @@
   function renderContext() {
     contextTabs.innerHTML = "";
     contextActions.innerHTML = "";
+    contextText.classList.remove("worker-context");
+    contextPanel.classList.remove("worker-context-panel");
     delete contextActions.dataset.unitOwner;
     const activeUnit = getUnit(selectedUnitId);
 
@@ -1039,18 +1113,7 @@
       }
 
       if (activeUnit.type === "worker") {
-        const improvementId = availableImprovement(tile);
-        const blocked = !tile.revealed || !inTerritory(x, y) || (!!tile.improvement && !tile.pillaged) ||
-          (state.city.x === x && state.city.y === y) || !!outpost || activeUnit.acted;
-        if (tile.pillaged && tile.improvement && !activeUnit.acted && inTerritory(x,y)) {
-          appendContextActionOnce("repair", "Ремонт<br>🔨 5", "alt", function () { repairImprovement(activeUnit.id); }, !canPayLocal(payerCityForTile(x, y), { production: 5 }));
-        }
-        if (improvementId && !blocked) {
-          const imp = IMPROVEMENTS[improvementId];
-          appendContextActionOnce("build-improvement", imp.icon + "<br>" + formatCost(imp.cost), "alt", function () {
-            buildImprovementWithWorker(activeUnit.id, improvementId);
-          }, !canPayLocal(payerCityForTile(x, y), imp.cost));
-        }
+        renderWorkerCard(activeUnit, x, y);
       }
 
       if (activeUnit.type === "settler") {
@@ -1088,13 +1151,10 @@
       }, false);
     }
 
-    if (activeUnit && activeUnit.type === "worker" && !activeUnit.acted &&
-        isAdjacent(activeUnit.x, activeUnit.y, x, y) && tile.revealed && tile.terrain === "water" &&
-        inTerritory(x, y) && !tile.improvement && availableImprovement(tile) === "harbor") {
-      const harbor = IMPROVEMENTS.harbor;
-      appendContextActionOnce("build-harbor", harbor.icon + "<br>" + formatCost(harbor.cost), "alt", function () {
-        buildImprovementWithWorker(activeUnit.id, "harbor", x, y);
-      }, !canPayLocal(payerCityForTile(x, y), harbor.cost));
+    if (activeUnit && activeUnit.type === "worker" &&
+        isAdjacent(activeUnit.x, activeUnit.y, x, y) && tile.revealed && tile.terrain === "water") {
+      const check = workerAction(activeUnit, "harbor", x, y, false, "build-harbor");
+      if (!check.ok) contextText.textContent += " · Гавань недоступна: " + check.reason;
     }
 
     if (hereUnits.length) {
@@ -1159,34 +1219,18 @@
     render();
   }
 
-  function cityTerritoryOwner(x, y) {
-    return playerCities().find(function (city) { return chebyshev(x, y, city.x, city.y) <= cityRadius(city); }) || null;
-  }
-
-  function payerCityForTile(x, y) {
-    const tile = state.map[y] && state.map[y][x];
-    if (tile && tile.owner) {
-      const byOwner = playerCities().find(function (city) { return city.id === tile.owner; });
-      if (byOwner) return byOwner;
-    }
-    return cityTerritoryOwner(x, y) || activeCity();
-  }
-
-  function canPayLocal(city, cost) {
-    return Object.keys(cost || {}).every(function (key) {
-      if (key === "food" || key === "production") return (city && (city[key] || 0) >= cost[key]);
-      return (state.resources[key] || 0) >= cost[key];
-    });
-  }
-
   function buildImprovementWithWorker(unitId, id, targetX, targetY) {
-    return window.EpohiWorkerLearning.startWorkerProject(unitId, id, targetX, targetY, false);
+    const result = window.EpohiWorkerProjects.start(state, unitId, id, targetX, targetY, false, logEvent);
+    if (result) render();
+    return !!result;
   }
 
 
   function repairImprovement(unitId) {
     const unit = getUnit(unitId);
-    return unit && window.EpohiWorkerLearning.startWorkerProject(unitId, null, unit.x, unit.y, true);
+    const result = unit && window.EpohiWorkerProjects.start(state, unitId, null, unit.x, unit.y, true, logEvent);
+    if (result) render();
+    return !!result;
   }
 
 
@@ -1317,9 +1361,9 @@
     state.lastAiActionBudget = { used:aiBudget.used, remaining:aiBudget.remaining, limit:AI_LIMITS.maxActionsPerTurn };
     maintainBarbarianCamps(state, Math.random);
     state.units.forEach(function (unit) { unit.moves = UNIT_DEFS[unit.type].maxMoves; unit.acted = false; });
+    if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiHumansPathing) window.EpohiHumansPathing.processOrders(state, { render:false });
     if (window.EpohiWorldStabilityActions) window.EpohiWorldStabilityActions.expireUrgentDecisions(state);
-    if (window.EpohiWorkerLearning) window.EpohiWorkerLearning.processTurn(state);
     if (window.EpohiCaptureState) window.EpohiCaptureState.processTurn(state);
     if (window.EpohiCoherenceFinalize) window.EpohiCoherenceFinalize.processTurn(state);
     window.EpohiStabilityRules.cancelInvalidProposals(state);
@@ -1462,7 +1506,8 @@
       const def = IMPROVEMENTS[id];
       return '<article class="game-card"><div><h3>' + def.icon + ' ' + def.name + '</h3><p>' +
         def.description + '<br>Клетки: ' + terrainNames(def.terrain) + '<br>Условие: ' + techRequirement(def.tech) +
-        (id === "harbor" ? '<br>Рабочий должен стоять на соседнем берегу.' : '<br>Нужен рабочий на этой клетке.') + '</p></div><strong>' + formatCost(def.cost) + '</strong></article>';
+        (id === "harbor" ? '<br>Рабочий должен стоять на соседнем берегу.' : '<br>Нужен рабочий на этой клетке.') +
+        '<br>Не расходует производство города.</p></div><strong>' + def.workerActions + ' действ. рабочего</strong></article>';
     }).join("");
 
     const buildings = Object.keys(BUILDINGS).map(function (id) {

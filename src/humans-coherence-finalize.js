@@ -120,20 +120,6 @@
     return changed;
   }
 
-  function repairWorkerAutonomy(gs) {
-    if (!gs) return;
-    (gs.units || []).forEach(function (unit) {
-      if (!unit || unit.type !== "worker" || !unit.workerProject || !unit.order || unit.order.type !== "develop") return;
-      unit.order.status = "active";
-      unit.order.reason = "строит: осталось " + Math.max(0, Number(unit.workerProject.remainingTurns || 0)) + " ход.";
-      if (Array.isArray(gs.autonomyReports)) {
-        gs.autonomyReports = gs.autonomyReports.filter(function (entry) {
-          return !(entry && String(entry.unitId) === String(unit.id) && String(entry.text || "").indexOf("не хватает локального производства") >= 0);
-        });
-      }
-    });
-  }
-
   function patchPopulationRequirement(gs) {
     const modal = document.getElementById("cityModal");
     const content = document.getElementById("cityContent");
@@ -251,7 +237,6 @@
     if (!gs) return;
     syncForeignBuildingKnowledge(gs);
     invalidateImpossibleTrades(gs);
-    repairWorkerAutonomy(gs);
   }
 
   function handleClick(event) {
@@ -332,7 +317,6 @@
     unitProductionCost: unitProductionCost,
     syncForeignBuildingKnowledge: syncForeignBuildingKnowledge,
     invalidateImpossibleTrades: invalidateImpossibleTrades,
-    repairWorkerAutonomy: repairWorkerAutonomy,
     patchPopulationRequirement: patchPopulationRequirement,
     patchUrgentDecision: patchUrgentDecision,
     patchCaptureCapacity: patchCaptureCapacity,

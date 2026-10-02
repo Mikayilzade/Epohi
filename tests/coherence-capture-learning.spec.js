@@ -188,7 +188,7 @@ test.describe('Рабочие, опыт производства, диплома
       worker.acted = false;
       const started = window.EpohiWorkerLearning.startWorkerProject(worker.id, 'farm', target.x, target.y, false);
       const afterStart = city.production;
-      const total = worker.workerProject && worker.workerProject.totalTurns;
+      const total = worker.workerProject && worker.workerProject.totalWorkerActions;
       state.turn += 1;
       window.EpohiWorkerLearning.processWorkerProjects(state);
       return { started, afterStart, total, improvement: tile.improvement };
@@ -200,21 +200,24 @@ test.describe('Рабочие, опыт производства, диплома
     await expectNoConsoleProblems(problems);
   });
 
-  test('автоприказ рабочего не остаётся на паузе из-за старого требования производства', async ({ page }) => {
+  test('старый проект рабочего переходит на действия без повторного расхода в том же ходу', async ({ page }) => {
     const problems = await openGame(page, 0);
     const workerId = await ensureWorker(page);
     const result = await page.evaluate((workerId) => {
       const state = window.__epohiDebug().state;
       const worker = state.units.find(unit => String(unit.id) === workerId);
-      worker.order = { type:'develop', status:'paused', reason:'городу не хватает локального производства', cityId:state.cities[0].id, priority:'food', target:null };
+      worker.order = { type:'develop', status:'active', cityId:state.cities[0].id, priority:'food', target:null };
       worker.workerProject = { type:'improvement', improvementId:'farm', x:worker.x, y:worker.y, totalTurns:2, remainingTurns:1, startedTurn:state.turn };
-      state.autonomyReports = [{ unitId:worker.id, text:'Рабочий остановил приказ: городу не хватает локального производства.' }];
-      window.EpohiCoherenceFinalize.repairWorkerAutonomy(state);
-      return { status:worker.order.status, reason:worker.order.reason, reports:state.autonomyReports.length };
+      window.EpohiWorkerProjects.migrate(state);
+      window.EpohiWorkerProjects.processTurn(state);
+      return { project:worker.workerProject, acted:worker.acted };
     }, workerId);
-    expect(result.status).toBe('active');
-    expect(result.reason).toContain('строит');
-    expect(result.reports).toBe(0);
+    expect(result.project).toEqual(expect.objectContaining({
+      totalWorkerActions:2, remainingWorkerActions:1,
+      cityId:expect.any(String), actionCostVersion:2
+    }));
+    expect(result.project).not.toHaveProperty('totalTurns');
+    expect(result.acted).toBe(true);
     await expectNoConsoleProblems(problems);
   });
 

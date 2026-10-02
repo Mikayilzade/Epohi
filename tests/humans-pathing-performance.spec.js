@@ -370,7 +370,7 @@ test.describe('Маршруты, desktop-карта и производител�
 
     await page.locator(`.tile[data-x="${workerPoint.x}"][data-y="${workerPoint.y}"]`).click();
     await expect(page.locator('.worker-priority-picker [data-path-action^="worker-"]')).toHaveCount(4);
-    await expect(page.locator('[data-autonomy-action="develop"]')).toBeHidden();
+    await expect(page.locator('[data-autonomy-action="develop"]')).toHaveCount(0);
     await page.locator('[data-path-action="worker-food"]').click();
     const order = await page.evaluate(({ id }) => {
       const worker = window.__epohiDebug().state.units.find(item => item.id === id);

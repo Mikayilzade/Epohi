@@ -224,8 +224,29 @@
 
   function injectWorkerPicker(unit, actions) {
     if (unit.type !== "worker" || actions.querySelector(".worker-priority-picker")) return;
+    const gs = state();
+    const cities = Array.isArray(gs.cities) && gs.cities.length ? gs.cities : (gs.city ? [gs.city] : []);
+    const territory = window.EpohiWorkerProjects.territoryCity(gs, unit.x, unit.y);
+    const defaultCityId = unit.order && unit.order.cityId ||
+      territory.city && territory.city.id || cities[0] && cities[0].id;
     const picker = document.createElement("div");
     picker.className = "worker-priority-picker";
+    if (cities.length > 1) {
+      const label = document.createElement("label");
+      label.className = "worker-city-choice";
+      label.textContent = "Развивать город: ";
+      const select = document.createElement("select");
+      select.dataset.workerCity = "1";
+      cities.forEach(function (city) {
+        const option = document.createElement("option");
+        option.value = city.id;
+        option.textContent = city.name;
+        select.appendChild(option);
+      });
+      select.value = defaultCityId;
+      label.appendChild(select);
+      picker.appendChild(label);
+    }
     [
       ["balanced", "⚖️<br>Баланс"],
       ["food", "🌾<br>Еда"],
@@ -235,7 +256,11 @@
       picker.appendChild(makeButton(entry[1], "worker-" + entry[0], function () {
         if (!window.EpohiHumansAutonomy) return;
         unit.travelOrder = null;
-        window.EpohiHumansAutonomy.assignOrder(unit.id, "develop", { priority: entry[0] });
+        const selectedCity = picker.querySelector("[data-worker-city]");
+        window.EpohiHumansAutonomy.assignOrder(unit.id, "develop", {
+          cityId:selectedCity ? selectedCity.value : defaultCityId,
+          priority:entry[0]
+        });
         scheduleUi();
       }, "alt"));
     });

@@ -32,7 +32,7 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     await expect(workerPiece).toBeVisible();
     await workerPiece.click();
     await expect.poll(() => page.evaluate(() => window.__epohiDebug().getSelectedUnitId())).toBe(result.workerId);
-    const build = page.locator('#contextActions [data-context-action="build-improvement"]');
+    const build = page.locator('#contextActions [data-context-action="build-lumber"]');
     await expect(build).toBeVisible();
     await expect(build).toContainText('2 действ. рабочего');
     const mobileActions = await page.locator('#contextActions').evaluate(node => {
@@ -43,11 +43,11 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
     expect(mobileActions).toEqual({ overflowX: 'auto', flexWrap: narrowViewport ? 'nowrap' : 'wrap', touchAction: 'pan-x' });
     await build.click();
     await expect(page.locator('[data-worker-time-status]')).toContainText('Выполнено: 1/2 действий рабочего');
-    await expect(page.locator('[data-worker-time-status]')).toContainText('осталось: 1');
+    await expect(page.locator('[data-worker-time-status]')).toContainText('Осталось: 1');
     await expect(page.locator('[data-worker-time-status]')).toContainText('следующего хода партии');
     await expect(build).toBeDisabled();
     await expect(build).toContainText('2 действ. рабочего');
-    await expect(build).toHaveAttribute('title', 'Сначала завершите текущий проект');
+    await expect(build).toHaveAttribute('title', 'Сначала завершите текущий проект.');
     const started = await page.evaluate((id) => {
       const d = window.__epohiDebug();
       const worker = d.state.units.find(unit => unit.id === id);
@@ -67,7 +67,7 @@ test.describe('v1.4.2 resource, worker, and inspection checks', () => {
       const worker = window.__epohiDebug().state.units.find(unit => unit.id === id);
       return worker.workerProject;
     }, result.workerId)).toEqual(expect.objectContaining({
-      improvementId: 'lumber', totalTurns: 2, remainingTurns: 1
+      improvementId: 'lumber', totalWorkerActions: 2, remainingWorkerActions: 1
     }));
     await page.locator('#endTurnBtn').click();
     await page.waitForFunction(() => !window.__epohiDebug().isTurnProcessing());

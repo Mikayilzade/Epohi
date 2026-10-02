@@ -431,6 +431,28 @@
       scrollbar-width: thin;
     }
 
+    .context-text.worker-context {
+      max-height: 168px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .context.worker-context-panel {
+      max-height: min(280px, 36dvh) !important;
+    }
+
+    .worker-card {
+      display: grid;
+      gap: 4px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      background: rgba(91, 119, 78, .12);
+    }
+
+    .worker-disabled-reason {
+      color: #77513f;
+    }
+
     .inspect-tabs,
     .context-actions {
       display: flex;

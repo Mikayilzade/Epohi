@@ -22,27 +22,27 @@
   const IMPROVEMENTS = {
     lumber: {
       name: "Лесозаготовка", icon: "🪵", terrain: ["forest"], tech: null,
-      cost: { production: 10 }, yield: { production: 3 },
+      cost: { production: 10 }, workerActions: 2, yield: { production: 3 },
       description: "+3 производства за ход"
     },
     farm: {
       name: "Ферма", icon: "🌾", terrain: ["plains"], tech: "agriculture",
-      cost: { production: 11 }, yield: { food: 3 },
+      cost: { production: 11 }, workerActions: 2, yield: { food: 3 },
       description: "+3 еды за ход"
     },
     mine: {
       name: "Шахта", icon: "⛏️", terrain: ["hill"], tech: "mining",
-      cost: { production: 14 }, yield: { production: 3, gold: 1 },
+      cost: { production: 14 }, workerActions: 3, yield: { production: 3, gold: 1 },
       description: "+3 производства и +1 золото"
     },
     tradingpost: {
       name: "Торговый пост", icon: "⚖️", terrain: ["plains", "desert"], tech: "trade",
-      cost: { production: 8, gold: 12 }, yield: { gold: 3 },
+      cost: { production: 8, gold: 12 }, workerActions: 2, yield: { gold: 3 },
       description: "+3 золота за ход"
     },
     harbor: {
       name: "Гавань", icon: "⚓", terrain: ["water"], tech: "trade",
-      cost: { production: 17, gold: 8 }, yield: { food: 2, gold: 2 },
+      cost: { production: 17, gold: 8 }, workerActions: 3, yield: { food: 2, gold: 2 },
       description: "+2 еды и +2 золота"
     }
   };
@@ -153,8 +153,7 @@
     unitsPerStep: 10, minimumCost: 1, minimumCostFactor: 0.05
   };
   const WORKER_PROJECT_RULES = {
-    repairActions: 1, minimumActions: 1,
-    defaultProduction: 6, productionPerAction: 6, maximumActions: 4
+    repairActions: 1, version: 2
   };
   const COMBAT_BALANCE = {
     minimumDamage: 4,
