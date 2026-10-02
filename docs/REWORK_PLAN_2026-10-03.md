@@ -43,7 +43,7 @@ Target player loop:
 
 The player should not have to micromanage every unit every turn.
 
-## Stage 1 — Worker + city-local development rework
+## Stage 1 — Worker action-based development rework
 
 This is the first implementation package.
 
