@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-architecture-2026-09-28";
+  "epohi-playable-2026-10-03";
 const APP_FILES = [
   "./",
   "./index.html",
