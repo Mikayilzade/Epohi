@@ -2,7 +2,7 @@
 
 Branch: `rework/epohi-next`. Baseline: `stable` at `f27fb61aa791a22d2b12420c8e2ed42c234b9b96`.
 
-Paused at the user's request. Resume from the WIP commit on this branch. Next: review the final diff, run final focused mobile UI/static checks after the last picker cleanup, then decide whether any follow-up is needed. Do not promote to `stable` without the user's visual/playtest approval.
+Stage 1 implementation is ready for the user's visual/playtest review on this branch. Do not promote to `stable` without that approval.
 
 ## Implemented
 
@@ -19,7 +19,8 @@ Paused at the user's request. Resume from the WIP commit on this branch. Next: r
 - Mobile context: 7 passed at 390×844; worker selection and harbor action: 1 passed at 390×844.
 - Browser smoke: 9 passed.
 - Broader desktop Playwright regression: 231 passed. The city-choice UI was added during that run; its desktop priority/city scenarios passed afterward (2/2), as did its mobile city-choice scenario (1/1).
+- Final static syntax and diff checks passed. After the last picker cleanup, focused Chromium mobile UI/layout scenarios passed (4/4) and desktop UI scenarios passed (3/3). Risk tier: 3, because this package changes shared worker state, turn flow, save migration and several runtime files.
 
 ## Known UX follow-up
 
-- The worker context panel is scrollable on small screens. A focused visual playtest of its layout remains useful before any promotion to `stable`.
+- The worker context panel is scrollable on small screens. User visual playtesting of its layout remains useful before any promotion to `stable`.
