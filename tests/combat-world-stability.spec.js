@@ -45,7 +45,7 @@ test.describe('Combat, AI and world stability', () => {
   test('terrain rules expose exact movement, defense and impassability', async ({ page }) => {
     await ready(page, 0);
     const rules = await page.evaluate(() => window.EpohiData.TERRAIN);
-    expect(rules.plains.movementCost).toBe(1);
+    expect(rules.plains.movementCost).toBe(0.5);
     expect(rules.swamp.movementCost).toBe(3);
     expect(rules.hill.defenseModifier).toBe(25);
     expect(rules.water.passable).toBe(false);
@@ -183,7 +183,7 @@ test.describe('Combat, AI and world stability', () => {
     expect(result.gold).toBe(500 - before.cost);
   });
 
-  test('manual hill movement uses the routed terrain cost and waits for the second turn', async ({ page }) => {
+  test('manual hill movement spends the one available movement point', async ({ page }) => {
     await ready(page,0);
     await page.evaluate(()=>{const gs=window.__epohiDebug().state,u=gs.units[0];u.x=5;u.y=5;u.moves=1;u.acted=false;gs.map[5][5].terrain='plains';Object.assign(gs.map[5][6],{terrain:'hill',camp:null,revealed:true});gs.map[5][5].revealed=true;gs.barbarians=[];window.__epohiDebug().render();});
     // Use the same direct DOM interaction as the adjacent map-selection tests.
@@ -191,9 +191,7 @@ test.describe('Combat, AI and world stability', () => {
     // gesture handler rebuilds the tile tree, leaving no selected destination.
     await clickMapTileDom(page,6,5);
     await page.locator('[data-context-action="move"]').click();
-    expect(await page.evaluate(()=>{const u=window.__epohiDebug().state.units[0];return{x:u.x,bank:u.travelOrder.movementBank};})).toEqual({x:5,bank:1});
-    await page.getByRole('button',{name:/Завершить ход/i}).click(); await page.waitForFunction(()=>!window.__epohiDebug().isTurnProcessing());
-    expect(await page.evaluate(()=>window.__epohiDebug().state.units[0].x)).toBe(6);
+    expect(await page.evaluate(()=>{const u=window.__epohiDebug().state.units[0];return{x:u.x,moves:u.moves,order:u.travelOrder};})).toEqual({x:6,moves:0,order:null});
   });
 
   test('a blocked route does not accumulate movement credit', async ({ page }) => {

@@ -125,6 +125,12 @@ test.describe('Маршруты, desktop-карта и производител�
   test('кнопка Идти назначает маршрут, показывает шаги и переносит приказ между ходами', async ({ page }) => {
     const problems = await openGame(page);
     const unit = await prepareOpenPlains(page);
+    await page.evaluate(id => {
+      const actor = window.__epohiDebug().state.units.find(item => item.id === id);
+      actor.type = 'warrior';
+      actor.moves = window.EpohiData.UNIT_DEFS.warrior.maxMoves;
+      window.__epohiDebug().render();
+    }, unit.id);
     await page.evaluate(() => {
       window.__epohiPathingPointerBoundary = null;
       document.addEventListener('pointerup', event => {

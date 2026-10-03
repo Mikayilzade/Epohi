@@ -1,25 +1,29 @@
 (function () {
   "use strict";
 
-  const { TERRAIN, INTEREST_TYPES, ARTIFACT_BONUSES, BARBARIAN,
+  const { INTEREST_TYPES, ARTIFACT_BONUSES, BARBARIAN,
     PLAYER_EXPLORATION_RULES: BALANCE } = window.EpohiData;
   const { isAdjacent, neighborsOf } = window.EpohiUtils;
+  const MOVEMENT = window.EpohiMovement;
 
   function create(state, rules) {
     function canMove(unit, x, y) {
       const tile = state.map[y] && state.map[y][x];
-      return !!(unit && unit.moves > 0 && isAdjacent(unit.x, unit.y, x, y)
-        && tile && rules.passableTile(tile)
-        && !rules.barbarianAt(x, y) && !rules.campAt(x, y)
-        && !rules.rivalUnitAt(x, y) && !rules.rivalCityAt(x, y));
+      const hidden = tile && !tile.revealed && !state.openMapMode;
+      return !!(unit && unit.moves > 0 && !unit.acted && isAdjacent(unit.x, unit.y, x, y)
+        && tile && (hidden || rules.passableTile(tile))
+        && (hidden || (!rules.barbarianAt(x, y) && !rules.campAt(x, y)
+          && !rules.rivalUnitAt(x, y) && !rules.rivalCityAt(x, y))));
     }
 
     function move(unit, x, y) {
       if (!canMove(unit, x, y)) return null;
       const tile = state.map[y][x];
-      const terrainCost = Number((TERRAIN[tile.terrain] || {}).movementCost) || 1;
+      if (!tile.revealed && !state.openMapMode && rules.allowTravelOrder) return { kind:"travel-order" };
+      const terrainCost = MOVEMENT.cost(state, { x:x, y:y }, true);
       if (unit.moves < terrainCost && rules.allowTravelOrder) return { kind:"travel-order" };
-      unit.x = x; unit.y = y; unit.moves -= terrainCost;
+      if (!MOVEMENT.spend(unit, terrainCost)) return null;
+      unit.x = x; unit.y = y;
       const radius = unit.type === "scout" ? rules.scoutSight()
         : (unit.type === "warrior" ? 1 : 0);
       tile.revealed = true;

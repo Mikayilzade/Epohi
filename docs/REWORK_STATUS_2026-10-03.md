@@ -1,8 +1,17 @@
-# Worker development rework checkpoint — 2026-10-03
+# Epohi rework checkpoint — 2026-10-03
 
 Branch: `rework/epohi-next`. Baseline: `stable` at `f27fb61aa791a22d2b12420c8e2ed42c234b9b96`.
 
-Stage 1 implementation is ready for the user's visual/playtest review on this branch. Do not promote to `stable` without that approval.
+Stages 1 and 2 are implemented on this branch for the user's visual/playtest review. Do not promote to `stable` without that approval.
+
+## Stage 2 — fractional movement
+
+- Terrain movement costs: plains 0.5, forest 1, hill 1. Desert 1, swamp 3 and dead land 2 are unchanged; water remains impassable to land units. Unit `maxMoves` are unchanged: worker/warrior/settler 1, scout 2.
+- `EpohiMovement` owns terrain cost, neutral unknown-tile planning cost (1), fractional MP spending and number formatting. Manual movement, weighted route finding/preview/execution and autonomous movement use it. Known autonomous guard/develop paths also use weighted costs.
+- Manual movement keeps the exact remainder. Travel orders retain a paid movement bank for tiles costing more than one turn; completion/cancellation returns unspent MP, and reassignment carries the bank without granting extra MP. Revealing a higher-cost or blocked unknown tile waits and replans before any overspend. Attacks and point-of-interest actions still end movement.
+- Unit inspection shows remaining/max MP such as `0.5 / 1`; tile inspection and route badges/ETA reflect fractional costs. Existing numeric `moves` saves preserve fractions, and legacy route banks normalize to zero when missing or invalid. No save schema version change was needed.
+- Verification: syntax and diff checks passed; focused desktop movement/autonomy/worker scenarios 13/13 and 11/11; focused mobile movement/UI scenarios 9/9; mobile context scenarios 7/7; full desktop Chromium regression 242/242, including soak. Two legacy iPhone scenarios did not pass locally: one intermittent resource connection refusal and one map tile outside the mobile viewport. Neither occurred in the focused movement suite or desktop regression.
+- Playtest question: does Scout movement of up to four plains tiles per turn feel too fast, or does the open-versus-rough contrast work well? Also inspect route ETA and the worker card after moving 0.5 MP.
 
 ## Implemented
 

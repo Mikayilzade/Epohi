@@ -5,7 +5,8 @@
     throw new Error("EpohiData and EpohiUtils are required before humans-pathing-core.js");
   }
 
-  const { UNIT_DEFS, BARBARIAN, TERRAIN } = window.EpohiData;
+  const { UNIT_DEFS, BARBARIAN } = window.EpohiData;
+  const MOVEMENT = window.EpohiMovement;
   const { neighborsOf, passableTile, chebyshev, isAdjacent } = window.EpohiUtils;
   const VERSION = 2;
   let toastTimer = 0;
@@ -52,6 +53,7 @@
     if (!gs) return null;
     (gs.units || []).forEach(function (unit) {
       if (unit.travelOrder === undefined) unit.travelOrder = null;
+      if (unit.travelOrder && !Number.isFinite(unit.travelOrder.movementBank)) unit.travelOrder.movementBank = 0;
     });
     return gs;
   }
@@ -119,10 +121,7 @@
   }
 
   function movementCost(gs, unit, point) {
-    const tile = gs.map[point.y] && gs.map[point.y][point.x];
-    if (tile && !tile.revealed && !gs.openMapMode) return 1;
-    const rule = tile && TERRAIN[tile.terrain];
-    return rule && rule.passable !== false && Number.isFinite(rule.movementCost) ? rule.movementCost : Infinity;
+    return MOVEMENT.cost(gs, point);
   }
 
   function pathCost(gs, unit, path) {
@@ -271,20 +270,18 @@
   }
 
   function moveOne(gs, unit, point, available) {
-    if (!point || available < movementCost(gs, unit, point)) return false;
+    if (!point || available + 1e-9 < movementCost(gs, unit, point)) return null;
     const destination = gs.map[point.y] && gs.map[point.y][point.x];
     if (destination && !destination.revealed && !gs.openMapMode) destination.revealed = true;
-    if (available < movementCost(gs, unit, point)) return false;
-    if (isBlocked(gs, unit, point.x, point.y)) return false;
+    const actualCost = MOVEMENT.cost(gs, point, true);
+    if (available + 1e-9 < actualCost || isBlocked(gs, unit, point.x, point.y)) return null;
     unit.x = point.x;
     unit.y = point.y;
-    unit.moves = 0;
-    unit.acted = true;
     const sight = unit.type === "scout"
       ? 1 + ((gs.permanentBonuses || {}).scoutSight || 0)
       : 1;
     revealAround(gs, unit.x, unit.y, sight);
-    return true;
+    return actualCost;
   }
 
   function estimateTurns(unit, steps) {
@@ -296,9 +293,20 @@
 
   function estimatePathTurns(gs, unit, path) {
     const cost = pathCost(gs, unit, path);
-    const bank = Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0) + Math.max(0, unit.moves || 0);
+    const bank = Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0);
     const perTurn = Math.max(1, (UNIT_DEFS[unit.type] && UNIT_DEFS[unit.type].maxMoves) || 1);
-    return cost <= bank ? 0 : Math.ceil((cost - bank) / perTurn);
+    if (cost === 0) return 0;
+    if (unit.acted) return Math.max(1, Math.ceil((cost - bank - 1e-9) / perTurn));
+    const available = bank + Math.max(0, unit.moves || 0);
+    return cost <= available + 1e-9 ? 0 : Math.ceil((cost - available - 1e-9) / perTurn);
+  }
+
+  function releaseMovementBank(unit) {
+    const bank = Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0);
+    if (bank > 0) {
+      unit.moves = Math.round((Math.max(0, Number(unit.moves) || 0) + bank) * 2) / 2;
+      unit.acted = false;
+    }
   }
 
   function centerCombat(x, y) {
@@ -406,6 +414,7 @@
   }
 
   function completeOrder(gs, unit, text) {
+    releaseMovementBank(unit);
     unit.travelOrder = null;
     if (text) log(gs, "route-completed", text, { x: unit.x, y: unit.y }, unit.id);
   }
@@ -438,12 +447,14 @@
       order.reason = null;
 
       if (order.type === "attack" && isAdjacent(unit.x, unit.y, target.x, target.y)) {
+        order.movementBank = 0;
         changed = resolveAttack(gs, unit, target) || changed;
         break;
       }
 
       if (order.type === "poi" && unit.x === target.x && unit.y === target.y) {
         order.status = "awaiting-choice";
+        order.movementBank = 0;
         unit.moves = 0;
         unit.acted = true;
         centerCombat(target.x, target.y);
@@ -465,23 +476,23 @@
       }
 
       if(!credited){
-        const maxTerrainCost=Math.max.apply(null,Object.keys(TERRAIN).map(function(key){return Number(TERRAIN[key].movementCost)||0;}));
-        order.movementBank=Math.min(maxTerrainCost,Math.max(0,Number(order.movementBank)||0)+unit.moves);
+        order.movementBank=Math.max(0,Number(order.movementBank)||0)+unit.moves;
         unit.moves=0;unit.acted=true;credited=true;
       }
 
       const nextCost = movementCost(gs, unit, route.path[0]);
-      if (order.movementBank < nextCost) {
+      if (order.movementBank + 1e-9 < nextCost) {
         order.status = "waiting";
-        order.reason = "копит очки движения: нужно " + nextCost;
+        order.reason = "копит очки движения: нужно " + MOVEMENT.format(nextCost);
         break;
       }
-      if (!moveOne(gs, unit, route.path[0], order.movementBank)) {
+      const spent = moveOne(gs, unit, route.path[0], order.movementBank);
+      if (spent === null) {
         order.status = "waiting";
         order.reason = "маршрут изменился; будет пересчитан";
         break;
       }
-      order.movementBank -= nextCost;
+      order.movementBank = Math.max(0, Math.round((order.movementBank - spent) * 2) / 2);
       changed = true;
     }
 
@@ -577,6 +588,7 @@
       status: "active",
       reason: null,
       path: [],
+      movementBank: Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0),
       issuedTurn: gs.turn || 1
     };
 
@@ -585,6 +597,7 @@
     const route = pathForOrder(gs, unit, order);
 
     if (!route.target) {
+      releaseMovementBank(unit);
       unit.travelOrder = null;
       notify("Цель уже недоступна");
       return false;
@@ -618,6 +631,7 @@
     const gs = ensureState(currentState());
     const unit = gs && (gs.units || []).find(function (item) { return item.id === unitId; });
     if (!unit || !unit.travelOrder) return false;
+    releaseMovementBank(unit);
     unit.travelOrder = null;
     notify("Маршрут отменён");
     return true;

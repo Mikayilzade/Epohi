@@ -916,6 +916,12 @@
     return check;
   }
 
+  function movementLabel(unit) {
+    const stored = Math.max(0, Number(unit.travelOrder && unit.travelOrder.movementBank) || 0);
+    const remaining = Math.max(0, Number(unit.moves) || 0) + stored;
+    return window.EpohiMovement.format(remaining) + " / " + UNIT_DEFS[unit.type].maxMoves;
+  }
+
   function renderWorkerCard(unit, x, y) {
     const project = unit.workerProject;
     const territory = window.EpohiWorkerProjects.territoryCity(state, x, y);
@@ -933,7 +939,7 @@
       "Город: " + (city ? city.name : "не назначен"),
       "Клетка: X " + unit.x + ", Y " + unit.y +
         (project ? " · цель: X " + project.x + ", Y " + project.y : ""),
-      "Движение: " + unit.moves + " · действие: " + (unit.acted ? "потрачено" : "доступно")
+      "Движение: " + movementLabel(unit) + " · действие: " + (unit.acted ? "потрачено" : "доступно")
     ];
     if (project) {
       const name = project.type === "repair" ? "Ремонт" :
@@ -1061,7 +1067,7 @@
     const ownUnits = unitsAt(x,y);
     const ownUnit = ownUnits.find(function (unit) { return unit.id === selectedUnitId; }) || ownUnits[0];
     const ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
-    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextActions.dataset.unitOwner = ownUnit ? "player" : "rival"; contextTitle.textContent = def.icon+" "+(ownUnit && u.name ? u.name : def.name); contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+(ownUnit && u.name ? " · имя: "+u.name : "")+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · ходы: "+u.moves+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(ownUnit&&u.contractUntil?" · временный контракт: осталось "+Math.max(0,u.contractUntil-state.turn)+" ход.":ownUnit?" · постоянный отряд":"")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else { const attacker=getUnit(selectedUnitId), hostile=ru.civ.relation==='war', reason=!attacker?'нет выбранного отряда':attacker.acted?'отряд уже действовал':attacker.moves<=0?'нет очков движения':!hostile?'сначала объявите войну':''; appendContextActionOnce("attack",reason?'Атака<br>недоступна':'⚔️ Атаковать',"danger",function(){if(!reason&&window.EpohiHumansPathing)window.EpohiHumansPathing.assignTravelOrder(attacker.id,window.EpohiHumansPathing.targetFromTile(state,x,y));},!!reason); if(reason)contextText.textContent+=' · Атака недоступна: '+reason+'.'; appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); } return true; }
+    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextActions.dataset.unitOwner = ownUnit ? "player" : "rival"; contextTitle.textContent = def.icon+" "+(ownUnit && u.name ? u.name : def.name); contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+(ownUnit && u.name ? " · имя: "+u.name : "")+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · движение: "+movementLabel(u)+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(ownUnit&&u.contractUntil?" · временный контракт: осталось "+Math.max(0,u.contractUntil-state.turn)+" ход.":ownUnit?" · постоянный отряд":"")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else { const attacker=getUnit(selectedUnitId), hostile=ru.civ.relation==='war', reason=!attacker?'нет выбранного отряда':attacker.acted?'отряд уже действовал':attacker.moves<=0?'нет очков движения':!hostile?'сначала объявите войну':''; appendContextActionOnce("attack",reason?'Атака<br>недоступна':'⚔️ Атаковать',"danger",function(){if(!reason&&window.EpohiHumansPathing)window.EpohiHumansPathing.assignTravelOrder(attacker.id,window.EpohiHumansPathing.targetFromTile(state,x,y));},!!reason); if(reason)contextText.textContent+=' · Атака недоступна: '+reason+'.'; appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); } return true; }
     if (barb) { contextTitle.textContent="⚔ Варварский налётчик"; contextText.textContent="здоровье: "+Math.ceil(barb.hp)+"/"+barb.maxHp+" · атака: "+BARBARIAN.raiderAttack+" · защита: "+BARBARIAN.raiderDefense; return true; }
     return false;
   }
@@ -1109,7 +1115,7 @@
       const def = UNIT_DEFS[activeUnit.type];
       if (!inspected) {
         contextTitle.textContent = def.icon + " " + def.name;
-        contextText.textContent = def.description + " · здоровье: " + Math.ceil(activeUnit.hp) + "/" + activeUnit.maxHp + " · атака: " + (def.attack || 0) + " · защита: " + (def.defense || 0) + " · ходов осталось: " + activeUnit.moves;
+        contextText.textContent = def.description + " · здоровье: " + Math.ceil(activeUnit.hp) + "/" + activeUnit.maxHp + " · атака: " + (def.attack || 0) + " · защита: " + (def.defense || 0) + " · движение: " + movementLabel(activeUnit);
       }
 
       if (activeUnit.type === "worker") {

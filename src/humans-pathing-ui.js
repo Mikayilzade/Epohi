@@ -219,7 +219,7 @@
     const cost = CORE.pathCost(gs, unit, route.path);
     const turns = CORE.estimatePathTurns(gs, unit, route.path);
     const arrival = turns === 0 ? "прибытие в этом ходу" : "ещё примерно " + turns + " " + pluralTurns(turns);
-    return "Маршрут: " + steps + " шагов · осталось " + cost + " очк. движения · " + arrival + ".";
+    return "Маршрут: " + steps + " шагов · осталось " + window.EpohiMovement.format(cost) + " очк. движения · " + arrival + ".";
   }
 
   function injectWorkerPicker(unit, actions) {
@@ -255,7 +255,7 @@
     ].forEach(function (entry) {
       picker.appendChild(makeButton(entry[1], "worker-" + entry[0], function () {
         if (!window.EpohiHumansAutonomy) return;
-        unit.travelOrder = null;
+        if (unit.travelOrder) CORE.cancelTravelOrder(unit.id);
         const selectedCity = picker.querySelector("[data-worker-city]");
         window.EpohiHumansAutonomy.assignOrder(unit.id, "develop", {
           cityId:selectedCity ? selectedCity.value : defaultCityId,

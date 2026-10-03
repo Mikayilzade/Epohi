@@ -168,10 +168,11 @@
 
   function moveUnit(state, unit, point) {
     if (!point || unit.moves <= 0 || unit.acted) return false;
+    const cost = window.EpohiMovement.cost(state, point, true);
+    if (!window.EpohiMovement.spend(unit, cost)) return false;
     unit.x = point.x;
     unit.y = point.y;
-    unit.moves = Math.max(0, unit.moves - 1);
-    if (unit.moves <= 0) unit.acted = true;
+    if (unit.moves === 0) unit.acted = true;
     revealAround(state, unit.x, unit.y, unit.type === "scout" ? 1 + ((state.permanentBonuses || {}).scoutSight || 0) : 1);
     return true;
   }
@@ -202,6 +203,7 @@
     });
 
     const immediate = adjacent
+      .filter(function (point) { return window.EpohiMovement.cost(state, point) <= unit.moves; })
       .map(function (point) {
         return {
           point: point,
@@ -263,7 +265,10 @@
     }
 
     const beforeUnknown = countUnrevealed(state);
-    if (!moveUnit(state, unit, next)) return false;
+    if (!moveUnit(state, unit, next)) {
+      unit.order.reason = "недостаточно очков движения для следующей клетки";
+      return false;
+    }
     const discovered = Math.max(0, beforeUnknown - countUnrevealed(state));
     unit.order.steps = (unit.order.steps || 0) + 1;
     if (discovered > 0) {
@@ -336,22 +341,28 @@
   function nextKnownStep(state, unit, destination, requireTerritory) {
     const size = mapSize(state);
     const startKey = unit.x + "," + unit.y;
-    const queue = [{ x: unit.x, y: unit.y, first: null }];
-    const seen = new Set([startKey]);
+    const queue = [{ x: unit.x, y: unit.y, first: null, cost:0 }];
+    const distances = new Map([[startKey, 0]]);
 
     while (queue.length) {
+      queue.sort(function (a, b) {
+        return a.cost - b.cost || chebyshev(a.x, a.y, destination.x, destination.y)
+          - chebyshev(b.x, b.y, destination.x, destination.y);
+      });
       const current = queue.shift();
+      if (current.cost !== distances.get(current.x + "," + current.y)) continue;
+      if (current.x === destination.x && current.y === destination.y) return current.first;
       for (const next of neighborsOf(current.x, current.y, size)) {
         const key = next.x + "," + next.y;
-        if (seen.has(key)) continue;
-        seen.add(key);
         if (!passableForPlayer(state, unit, next.x, next.y, {
           requireKnown: true,
           requireTerritory: Boolean(requireTerritory)
         })) continue;
+        const cost = current.cost + window.EpohiMovement.cost(state, next);
+        if (cost >= (distances.get(key) ?? Infinity)) continue;
+        distances.set(key, cost);
         const first = current.first || next;
-        if (next.x === destination.x && next.y === destination.y) return first;
-        queue.push({ x: next.x, y: next.y, first: first });
+        queue.push({ x: next.x, y: next.y, first: first, cost:cost });
       }
     }
     return null;
@@ -371,7 +382,10 @@
       if (isAdjacent(unit.x, unit.y, threat.x, threat.y)) return attackHostile(state, unit, threat);
       const step = nextKnownStep(state, unit, threat, false);
       if (step) {
-        moveUnit(state, unit, step);
+        if (!moveUnit(state, unit, step)) {
+          order.reason = "недостаточно очков движения для следующей клетки";
+          return false;
+        }
         report(state, unit, unitDisplayName(unit) + " выдвинулся к угрозе в охраняемой области.", "guard-move");
         return true;
       }
@@ -381,8 +395,9 @@
     if (chebyshev(unit.x, unit.y, order.x, order.y) > 1) {
       const stepHome = nextKnownStep(state, unit, { x: order.x, y: order.y }, false);
       if (stepHome) {
-        moveUnit(state, unit, stepHome);
-        return true;
+        if (moveUnit(state, unit, stepHome)) return true;
+        order.reason = "недостаточно очков движения для следующей клетки";
+        return false;
       }
     }
     return false;
@@ -477,8 +492,9 @@
       return false;
     }
 
-    moveUnit(state, unit, step);
-    return true;
+    if (moveUnit(state, unit, step)) return true;
+    order.reason = "недостаточно очков движения для следующей клетки";
+    return false;
   }
 
   function processUnitOrder(state, unit) {
@@ -494,20 +510,16 @@
     ensureAutonomyState(state);
     const beforeReports = state.autonomyReports.length;
     (state.units || []).slice().forEach(function (unit) {
-      processUnitOrder(state, unit);
+      let steps = 0;
+      while (steps < 8 && processUnitOrder(state, unit)) steps += 1;
     });
-    (state.units || []).forEach(function (unit) { drainScoutMoves(state, unit); });
     return state.autonomyReports.length - beforeReports;
   }
 
   function drainScoutMoves(state, unit) {
     if (!unit || unit.type !== "scout" || !unit.order || unit.order.type !== "explore") return 0;
     let steps = 0;
-    while (steps < 8 && unit.order && unit.order.type === "explore" &&
-      unit.order.status !== "paused" && unit.moves > 0 && !unit.acted && unit.hp > 0) {
-      if (!processUnitOrder(state, unit)) break;
-      steps += 1;
-    }
+    while (steps < 8 && processUnitOrder(state, unit)) steps += 1;
     return steps;
   }
 
