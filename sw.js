@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-visual-polish-v2-2026-10-04";
+  "epohi-world-profiles-v3-2026-10-04";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -76,6 +76,10 @@ const APP_FILES = [
   "./assets/visual-canon-v2/mine-worked.webp",
   "./assets/visual-canon-v2/trading-post.webp",
   "./assets/visual-canon-v2/harbor.webp",
+  "./assets/visual-canon-v3/forest-grove-b.webp",
+  "./assets/visual-canon-v3/hill-ledges-b.webp",
+  "./assets/visual-canon-v3/dead-ash-a.webp",
+  "./assets/visual-canon-v3/swamp-pools-c.webp",
   "./src/humans-pathing-core.js",
   "./src/humans-pathing-ui.js",
   "./src/humans-strategy-ux.js",
