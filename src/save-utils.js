@@ -62,7 +62,7 @@
   function campaignFromState(gameState, name, id, createdAt, mapSize) {
     const now = new Date().toISOString();
     return { campaignId: id || makeCampaignId(), name: name || gameState.partyName || "Новая партия", createdAt: createdAt || now, lastPlayedAt: now,
-      mapSize: mapSize, mapSeed: gameState.mapSeed || null, status: gameState.victory ? "victory" : "active", gameVersion: GAME_VERSION, lastLoadedSaveId: null };
+      mapSize: mapSize, mapSeed: gameState.mapSeed ?? null, status: gameState.victory ? "victory" : "active", gameVersion: GAME_VERSION, lastLoadedSaveId: null };
   }
 
   function validateSaveState(candidate, migrateStateFn, mapSizeCellsFn) {

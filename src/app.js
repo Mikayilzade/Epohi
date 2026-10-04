@@ -245,10 +245,6 @@
   let suppressNextMapClick = false;
   let toastTimer = null;
 
-  function createTile(terrain) {
-    return { terrain: terrain, revealed: false, improvement: null, feature: null, poi: null, camp: null, pillaged: false };
-  }
-
   function mapSizeCells(targetState) {
     const source = targetState || state;
     if (source && source.mapSize) return source.mapSize;
@@ -256,69 +252,21 @@
     return DEFAULT_MAP_SIZE;
   }
 
-  function generateMap(size) {
-    size = size || DEFAULT_MAP_SIZE;
-    const grid = [];
-    for (let y = 0; y < size; y++) {
-      const row = [];
-      for (let x = 0; x < size; x++) {
-        const edge = x < 2 || y < 2 || x > size - 3 || y > size - 3;
-        const r = Math.random();
-        let terrain = edge && r < .55 ? "water" : (r < .16 ? "water" : r < .45 ? "plains" : r < .66 ? "forest" : r < .82 ? "hill" : r < .94 ? "desert" : (r < .97 ? "swamp" : "dead"));
-        row.push(createTile(terrain));
-      }
-      grid.push(row);
-    }
-    for (let pass = 0; pass < 4; pass++) {
-      const next = grid.map(function (row) { return row.map(function (tile) { return createTile(tile.terrain); }); });
-      for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) {
-        const counts = {};
-        neighborsOf(x, y, size).forEach(function (n) { counts[grid[n.y][n.x].terrain] = (counts[grid[n.y][n.x].terrain] || 0) + 1; });
-        const best = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0];
-        if (counts[best] >= (pass < 2 ? 4 : 5) && Math.random() < .72) next[y][x].terrain = best;
-      }
-      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) grid[y][x] = next[y][x];
-    }
-    for (let i = 0; i < Math.max(5, Math.floor(size / 4)); i++) {
-      let x = 2 + Math.floor(Math.random() * (size - 4));
-      let y = 2 + Math.floor(Math.random() * (size - 4));
-      for (let step = 0; step < Math.floor(size * .9); step++) {
-        grid[y][x].terrain = "hill";
-        x = clamp(x + randomChoice([-1, 0, 1]), 1, size - 2);
-        y = clamp(y + randomChoice([-1, 0, 1]), 1, size - 2);
-      }
-    }
-    const cx = Math.floor(size / 2), cy = Math.floor(size / 2);
-    [[0,0,"plains"],[-1,0,"forest"],[1,0,"hill"],[0,-1,"plains"],[0,1,"plains"],[-1,-1,"water"],[1,-1,"forest"],[-1,1,"hill"],[1,1,"desert"],[-2,0,"plains"],[0,2,"forest"],[2,0,"hill"]].forEach(function (i) { grid[cy+i[1]][cx+i[0]] = createTile(i[2]); });
-    grid[cy][cx - 1].feature = "ore"; grid[cy][cx + 1].feature = "ore"; grid[cy - 1][cx].feature = "wheat"; grid[cy - 1][cx - 1].feature = "fish";
-    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-      if (Math.abs(x - cx) <= 2 && Math.abs(y - cy) <= 2) continue;
-      const tile = grid[y][x], r = Math.random();
-      if (tile.terrain === "water" && r < .18) tile.feature = "fish";
-      else if (tile.terrain === "plains" && r < .13) tile.feature = "wheat";
-      else if (tile.terrain === "hill" && r < .17) tile.feature = "ore";
-      else if ((tile.terrain === "desert" || tile.terrain === "hill") && r < .055) tile.feature = "gems";
-    }
-    placePointsOfInterest(grid, size, cx, cy);
-    return grid;
+  function generateMap(size, options) {
+    return window.EpohiWorldGeneration.generate(Object.assign({ size: size || DEFAULT_MAP_SIZE, poiIds: Object.keys(INTEREST_TYPES) }, options));
   }
 
-  function poiTargetCount(size) { return Math.round(size * size / 39); }
+  function terrainName(tile) {
+    if (tile.terrain !== "water") return TERRAIN[tile.terrain].name;
+    return { coast: "Побережье", sea: "Море", lake: "Озеро", river: "Река" }[tile.waterKind] || TERRAIN.water.name;
+  }
+
   function barbarianRules(gs) { return BARBARIAN_ACTIVITY[(gs && gs.barbarianActivity) || "normal"] || BARBARIAN_ACTIVITY.normal; }
   function campTargetCount(size, activity) { const rules = BARBARIAN_ACTIVITY[activity||"normal"] || BARBARIAN_ACTIVITY.normal; if (!rules.camps) return 0; const base = size <= 20 ? 1 : (size < 24 ? 3 : size < 32 ? 5 : 7); return Math.min(4, Math.max(1, Math.round(base * rules.camps))); }
   function targetActiveCampCount(gs) { return campTargetCount(mapSizeCells(gs), (gs && gs.barbarianActivity) || "normal"); }
   function farFromExisting(grid, x, y, prop, minDist) {
     for (let yy = 0; yy < grid.length; yy++) for (let xx = 0; xx < grid.length; xx++) if (grid[yy][xx][prop] && chebyshev(x,y,xx,yy) < minDist) return false;
     return true;
-  }
-  function placePointsOfInterest(grid, size, cx, cy) {
-    const ids = Object.keys(INTEREST_TYPES); let placed = 0, tries = 0, target = poiTargetCount(size);
-    while (placed < target && tries++ < size * size * 4) {
-      const x = 2 + Math.floor(Math.random() * (size - 4)), y = 2 + Math.floor(Math.random() * (size - 4));
-      const tile = grid[y][x];
-      if (!passableTile(tile) || chebyshev(x,y,cx,cy) < 4 || !farFromExisting(grid,x,y,"poi",4)) continue;
-      tile.poi = { type: ids[placed % ids.length], used: false }; placed++;
-    }
   }
   function validCampTile(grid, x, y, cx, cy, minCapitalDistance, minCampDistance) {
     const tile = grid[y] && grid[y][x];
@@ -408,19 +356,20 @@
     ["scout","warrior"].forEach(function(type){ const spot=findStartUnitSpot(gs, city, list); if(!spot) return; const def=UNIT_DEFS[type]; const id=(civId ? "ru"+(gs.nextRivalUnitId++) : "u"+(gs.nextUnitId++)); const unit={id:id, civilizationId:civId, type:type, x:spot.x, y:spot.y, moves:def.maxMoves, acted:false, hp:def.maxHealth, maxHp:def.maxHealth}; if(!civId) ensureUnitName(unit); list.push(unit); });
   }
 
-  function createNewGame(size, rivalCount, barbarianActivity) {
+  function createNewGame(size, rivalCount, barbarianActivity, worldOptions) {
     size = size || DEFAULT_MAP_SIZE;
     rivalCount = Math.min(size <= 20 ? 1 : 2, Math.max(0, Number(rivalCount == null ? 1 : rivalCount)));
     const cx = Math.floor(size / 2), cy = Math.floor(size / 2);
+    const world = generateMap(size, worldOptions);
     const newState = {
-      version: STATE_VERSION, mapSize: size, turn: 1, map: generateMap(size), barbarianActivity: barbarianActivity || "normal",
+      version: STATE_VERSION, mapSize: size, turn: 1, map: world.map, mapSeed: world.seed, environmentProfile: world.profileId, barbarianActivity: barbarianActivity || "normal",
       city: { id:"player-cap", x: cx, y: cy, name: "Ардена", population: 1, food: 6, production: 14, buildings: [], queue: null, damage: 0, hp: 180, maxHp: 180, capital: true }, capitalCityId:"player-cap",
       units: [],
       barbarians: [], nextUnitId: 1, nextBarbarianId: 1, settlements: [], artifacts: [], permanentBonuses: {},
       resources: { food: 0, production: 0, gold: 8, science: 4 }, researched: [], currentResearch: "agriculture", victory: false, defeat: false, history: [], eventLog: [], eventCounter: 0, rivals: [], nextRivalUnitId: 1
     };
     newState.cities = [newState.city]; placeStartingUnits(newState, newState.city, newState.units);
-    newState.barbarianDirector = { nextCampSpawnTurn: null, lastCampDestroyedTurn: null, nextCampId: 1, lastMaintenanceTurn: null, lastDestroyedCamp: null }; revealAround(newState, newState.city.x, newState.city.y, 2); newState.units.forEach(function(u){ revealAround(newState, u.x, u.y, u.type === "scout" ? 1 : 0); }); initializeRivals(newState, rivalCount); placeCamps(newState, Math.random); assignMissingCampIds(newState);
+    newState.barbarianDirector = { nextCampSpawnTurn: null, lastCampDestroyedTurn: null, nextCampId: 1, lastMaintenanceTurn: null, lastDestroyedCamp: null }; revealAround(newState, newState.city.x, newState.city.y, 2); newState.units.forEach(function(u){ revealAround(newState, u.x, u.y, u.type === "scout" ? 1 : 0); }); initializeRivals(newState, rivalCount); placeCamps(newState, world.rng); assignMissingCampIds(newState);
     logEvent(newState, "civilization-founded", "Основана Ардена.", { x: cx, y: cy }, { actorType: "player", actorId: "player" });
     return initializeGameSystems(newState);
   }
@@ -445,7 +394,10 @@
         if (window.EpohiLivingCivilizations) window.EpohiLivingCivilizations.migrate(gameState);
       }
     });
-    if (migrated) window.EpohiWorkerProjects.migrate(migrated);
+    if (migrated) {
+      window.EpohiWorldGeneration.classifyWater(migrated.map, true);
+      window.EpohiWorkerProjects.migrate(migrated);
+    }
     return initializeGameSystems(migrated);
   }
 
@@ -747,7 +699,7 @@
         button.className = "tile";
         button.dataset.x = String(x);
         button.dataset.y = String(y);
-        button.setAttribute("aria-label", tile.revealed ? TERRAIN[tile.terrain].name : "Неизведанная земля");
+        button.setAttribute("aria-label", tile.revealed ? terrainName(tile) : "Неизведанная земля");
 
         if (!tile.revealed) {
           button.classList.add("fog");
@@ -1074,7 +1026,7 @@
     const tile = state.map[y][x];
     if (inspectLayer === "tile") {
       if (!tile.revealed) { contextTitle.textContent = "Неизведанная земля"; contextText.textContent = "Скрыто туманом войны."; return true; }
-      const terrainRule=TERRAIN[tile.terrain], yld = getTileYield(tile), parts = ["координаты: X "+x+", Y "+y, "местность: "+terrainRule.name, "владелец: "+ownerName(tile), "доход: 🍞 "+yld.food+" · 🔨 "+yld.production+" · 🪙 "+yld.gold+" · 🔬 "+yld.science, "движение: "+(terrainRule.passable===false?"непроходимо — "+terrainRule.impassableReason:terrainRule.movementCost+" очк."), "защита: "+(terrainRule.defenseModifier>=0?"+":"")+terrainRule.defenseModifier+"%"];
+      const terrainRule=TERRAIN[tile.terrain], yld = getTileYield(tile), parts = ["координаты: X "+x+", Y "+y, "местность: "+terrainName(tile), "владелец: "+ownerName(tile), "доход: 🍞 "+yld.food+" · 🔨 "+yld.production+" · 🪙 "+yld.gold+" · 🔬 "+yld.science, "движение: "+(terrainRule.passable===false?"непроходимо — "+terrainRule.impassableReason:terrainRule.movementCost+" очк."), "защита: "+(terrainRule.defenseModifier>=0?"+":"")+terrainRule.defenseModifier+"%"];
       if (tile.feature) parts.push("особенность: "+FEATURES[tile.feature].name);
       if (tile.improvement) parts.push("улучшение: "+IMPROVEMENTS[tile.improvement].name+(tile.pillaged?" (разграблено)":""));
       if (tile.poi && !tile.poi.used) parts.push("интерес: "+INTEREST_TYPES[tile.poi.type].name);
@@ -1150,7 +1102,7 @@
       if (playerKnowsCamp(state,x,y)) extras.push("Варварский лагерь " + tile.camp.hp + "/" + tile.camp.maxHp);
       if (tile.improvement) extras.push(IMPROVEMENTS[tile.improvement].name + (tile.pillaged ? " (разграблено)" : ""));
       if (outpost) extras.push(outpost.name);
-      contextTitle.textContent = TERRAIN[tile.terrain].icon + " " + TERRAIN[tile.terrain].name;
+      contextTitle.textContent = TERRAIN[tile.terrain].icon + " " + terrainName(tile);
       contextText.textContent = "Доход: " + yieldText(getTileYield(tile)) + (extras.length ? " · " + extras.join(" · ") : "");
     }
 
@@ -1663,7 +1615,7 @@
       renderScreen('<div class="screen-head"><h2>Новая игра</h2><button id="backMain" class="menu-primary ghost">Назад</button></div><div class="screen-form"><label class="field-label">Название партии<input id="partyName" placeholder="'+defName+'"><small id="nameWarn" class="wiki-mini"></small></label><label class="field-label">Размер карты<select id="partySize"><option value="small">маленькая — 20×20</option><option value="normal" selected>обычная — 28×28</option><option value="large">большая — 36×36</option></select></label><label class="field-label">Активность варваров<select id="barbarianActivity"><option value="low">низкая</option><option value="normal" selected>обычная</option><option value="high">высокая</option><option value="off">отключены</option></select></label><label class="field-label">Цивилизации-соперники<select id="rivalCount"><option value="0">0</option><option value="1" selected>1</option><option value="2">2</option></select><small class="wiki-mini">На 20×20 максимум один соперник; старые сохранения не получают ИИ задним числом.</small></label><button id="createParty" class="menu-primary">Создать мир</button></div>');
       document.getElementById("backMain").onclick = openMainMenu;
       document.getElementById("partyName").oninput = function(){ const input=this, value=input.value.trim(); getCampaigns().then(function(cs){ const warn=document.getElementById('nameWarn'); if(!warn || document.getElementById('partyName')!==input)return; warn.textContent = value && cs.some(function(c){ return c.name === value; }) ? 'Название уже используется; партия всё равно будет отдельной.' : ''; }).catch(function(){}); };
-      document.getElementById("createParty").onclick = function(){ const size=MAP_SIZES[document.getElementById('partySize').value]||DEFAULT_MAP_SIZE; const rivals=Math.min(size<=20?1:2, Number(document.getElementById('rivalCount').value)); const ns=createNewGame(size, rivals, document.getElementById('barbarianActivity').value); state=ns; if(window.EpohiHumansJourney)window.EpohiHumansJourney.sync({render:false}); const name=document.getElementById('partyName').value.trim()||defName; createCampaignForNewGame(ns, name).then(function(c){ return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){ startPlaying(ns, c.campaignId, activeSaveId); }); }); };
+      document.getElementById("createParty").onclick = function(){ const size=MAP_SIZES[document.getElementById('partySize').value]||DEFAULT_MAP_SIZE; const rivals=Math.min(size<=20?1:2, Number(document.getElementById('rivalCount').value)); const params=new URLSearchParams(location.search); const worldOptions={}; if(params.has('worldProfile')) worldOptions.profileId=params.get('worldProfile'); if(params.has('worldSeed')) worldOptions.seed=params.get('worldSeed'); const ns=createNewGame(size, rivals, document.getElementById('barbarianActivity').value, worldOptions); state=ns; if(window.EpohiHumansJourney)window.EpohiHumansJourney.sync({render:false}); const name=document.getElementById('partyName').value.trim()||defName; createCampaignForNewGame(ns, name).then(function(c){ return manualSave(1, 'Начало партии', c.campaignId+'-manual-1').then(function(){ return autoSave(true); }).then(function(){ startPlaying(ns, c.campaignId, activeSaveId); }); }); };
     const nameInput = document.getElementById("partyName");
     nextDefaultCampaignName().then(function (name) {
       if (document.getElementById("partyName") !== nameInput) return;

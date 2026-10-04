@@ -40,6 +40,7 @@ const APP_FILES = [
   "./src/territory.js",
   "./src/economy.js",
   "./src/progression.js",
+  "./src/humans-world-generation.js",
   "./src/app.js",
   "./src/humans-performance.js",
   "./src/humans-turn-label-stability.js",
