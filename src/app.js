@@ -793,6 +793,7 @@
           const shown = tileUnits.find(function (unit) { return unit.id === selectedUnitId; }) || tileUnits[0];
           const piece = document.createElement("span");
           piece.className = "piece unit unit-" + shown.type + (shown.id === selectedUnitId ? " is-selected" : "");
+          piece.dataset.unitId = shown.id;
           piece.textContent = UNIT_DEFS[shown.type].mapIcon;
           button.appendChild(piece);
           if (shown.hp < shown.maxHp) button.appendChild(healthBar(shown.hp, shown.maxHp));
@@ -827,6 +828,46 @@
       }
     }
     mapEl.appendChild(fragment);
+  }
+
+  // Selection changes keep the world nodes and their loaded artwork in place.
+  // Map mutations still use renderMap(), which rebuilds the authoritative tile tree.
+  function renderSelection() {
+    const active = getUnit(selectedUnitId);
+    const size = mapSizeCells();
+    const tileAt = function (x, y) { return mapEl.children[y * size + x]; };
+    // Only the old and new selection, plus at most eight adjacent targets, can change.
+    mapEl.querySelectorAll(".tile.selected, .tile.unit-active, .tile.attack-target").forEach(function (button) {
+      button.classList.remove("selected", "inspect-tile", "unit-active", "attack-target",
+        "inspect-layer-unit", "inspect-layer-city", "inspect-layer-camp", "inspect-layer-tile");
+      const piece = button.querySelector(".piece.unit.is-selected");
+      if (piece) piece.classList.remove("is-selected");
+    });
+    if (inspectedTile) {
+      const inspected = tileAt(inspectedTile.x, inspectedTile.y);
+      if (inspected) inspected.classList.add("selected", "inspect-tile", "inspect-layer-" + inspectLayer);
+    }
+    if (!active) return;
+    const button = tileAt(active.x, active.y);
+    if (button) {
+      button.classList.add("unit-active");
+      const piece = button.querySelector(".piece.unit");
+      if (piece && piece.dataset.unitId !== active.id) {
+        Array.from(piece.classList).filter(function (name) { return name.indexOf("unit-") === 0; })
+          .forEach(function (name) { piece.classList.remove(name); });
+        piece.classList.add("unit-" + active.type);
+        const label = piece.firstChild;
+        if (label && label.nodeType === Node.TEXT_NODE) label.nodeValue = UNIT_DEFS[active.type].mapIcon;
+        piece.dataset.unitId = active.id;
+        if (window.EpohiHumansVisuals && typeof window.EpohiHumansVisuals.decorateUnit === "function") {
+          window.EpohiHumansVisuals.decorateUnit(piece, active);
+        }
+      }
+      if (piece) piece.classList.add("is-selected");
+    }
+    neighborsOf(active.x, active.y, size).forEach(function (point) {
+      if (canAttack(active, point.x, point.y)) tileAt(point.x, point.y).classList.add("attack-target");
+    });
   }
 
   function resourceViewCity() {
@@ -993,7 +1034,8 @@
     selectedUnitId = list[(index + step + list.length) % list.length].id;
     selected = { x: x, y: y };
     inspectLayer = "unit";
-    render();
+    renderSelection();
+    renderContext();
   }
 
   function appendStackNavigationControls(x, y, units) {
@@ -1017,7 +1059,7 @@
   function renderInspectTabs(x, y, layers) {
     contextTabs.innerHTML = "";
     if (layers.length <= 1) return;
-    layers.forEach(function(layer){ const b=document.createElement("button"); b.className="inspect-tab"+(layer===inspectLayer?" active":""); b.dataset.inspectLayer=layer; b.textContent=layerName(layer); b.onclick=function(){ inspectLayer=layer; render(); }; contextTabs.appendChild(b); });
+    layers.forEach(function(layer){ const b=document.createElement("button"); b.className="inspect-tab"+(layer===inspectLayer?" active":""); b.dataset.inspectLayer=layer; b.textContent=layerName(layer); b.onclick=function(){ inspectLayer=layer; renderSelection(); renderContext(); }; contextTabs.appendChild(b); });
   }
   function ownerName(tile) {
     if (!tile.owner) return "нет";
@@ -1046,6 +1088,7 @@
       const rc = rivalCityAt(x,y); const item = own ? {city:own} : rc;
       if (!item) return false;
       const city=item.city, inc=own?cityIncome(city):null;
+      contextPanel.dataset.visualKind = city.capital ? "capital" : "city";
       contextTitle.textContent = (city.capital?"🏛️ ":"▣ ") + city.name;
       contextText.textContent = own ? ("Население: "+city.population+" · здоровье: "+Math.ceil(city.hp)+"/"+city.maxHp+" · локальные ресурсы: 🍞 "+Math.floor(city.food||0)+" 🔨 "+Math.floor(city.production||0)+" · очередь: "+(city.queue?projectLabel(city.queue):"пуста")+" · доход: "+yieldText(inc)) : ("Владелец: "+item.civ.name+" · население: "+city.population+" · здоровье: "+Math.ceil(city.hp)+"/"+city.maxHp+" · отношения: "+relationLabel(item.civ));
       if (own) appendContextActionOnce("open-city", "Открыть<br>город", "", function(){ selectedCityId=city.id; setResourceViewCity(city.id); openCity(); }, false);
@@ -1067,7 +1110,7 @@
     const ownUnits = unitsAt(x,y);
     const ownUnit = ownUnits.find(function (unit) { return unit.id === selectedUnitId; }) || ownUnits[0];
     const ru = rivalUnitAt(x,y), barb = barbarianAt(x,y);
-    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextActions.dataset.unitOwner = ownUnit ? "player" : "rival"; contextTitle.textContent = def.icon+" "+(ownUnit && u.name ? u.name : def.name); contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+(ownUnit && u.name ? " · имя: "+u.name : "")+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · движение: "+movementLabel(u)+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(ownUnit&&u.contractUntil?" · временный контракт: осталось "+Math.max(0,u.contractUntil-state.turn)+" ход.":ownUnit?" · постоянный отряд":"")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else { const attacker=getUnit(selectedUnitId), hostile=ru.civ.relation==='war', reason=!attacker?'нет выбранного отряда':attacker.acted?'отряд уже действовал':attacker.moves<=0?'нет очков движения':!hostile?'сначала объявите войну':''; appendContextActionOnce("attack",reason?'Атака<br>недоступна':'⚔️ Атаковать',"danger",function(){if(!reason&&window.EpohiHumansPathing)window.EpohiHumansPathing.assignTravelOrder(attacker.id,window.EpohiHumansPathing.targetFromTile(state,x,y));},!!reason); if(reason)contextText.textContent+=' · Атака недоступна: '+reason+'.'; appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); } return true; }
+    if (ownUnit || ru) { const u=ownUnit || ru.unit, def=UNIT_DEFS[u.type]; contextPanel.dataset.visualKind = u.type; contextActions.dataset.unitOwner = ownUnit ? "player" : "rival"; contextTitle.textContent = def.icon+" "+(ownUnit && u.name ? u.name : def.name); contextText.textContent = "Владелец: "+(ownUnit?"Ардена":ru.civ.name)+(ownUnit && u.name ? " · имя: "+u.name : "")+" · тип: "+def.name+" · здоровье: "+Math.ceil(u.hp)+"/"+u.maxHp+" · атака: "+(def.attack||0)+" · защита: "+(def.defense||0)+" · движение: "+movementLabel(u)+" · действовал: "+(u.acted?"да":"нет")+(ownUnit && ownUnits.length > 1 ? " · в отряде: " + (ownUnits.findIndex(function (unit) { return unit.id === ownUnit.id; }) + 1) + "/" + ownUnits.length : "")+(ownUnit&&u.contractUntil?" · временный контракт: осталось "+Math.max(0,u.contractUntil-state.turn)+" ход.":ownUnit?" · постоянный отряд":"")+(u.aiTarget?" · цель ИИ: "+JSON.stringify(u.aiTarget):"")+(ru?" · отношения: "+relationLabel(ru.civ):""); if(ownUnit) appendStackNavigationControls(x, y, ownUnits); else { const attacker=getUnit(selectedUnitId), hostile=ru.civ.relation==='war', reason=!attacker?'нет выбранного отряда':attacker.acted?'отряд уже действовал':attacker.moves<=0?'нет очков движения':!hostile?'сначала объявите войну':''; appendContextActionOnce("attack",reason?'Атака<br>недоступна':'⚔️ Атаковать',"danger",function(){if(!reason&&window.EpohiHumansPathing)window.EpohiHumansPathing.assignTravelOrder(attacker.id,window.EpohiHumansPathing.targetFromTile(state,x,y));},!!reason); if(reason)contextText.textContent+=' · Атака недоступна: '+reason+'.'; appendContextActionOnce("diplomacy", "Дипломатия", "alt", function(){ openDiplomacyFor(ru.civ.civilizationId); }, false); } return true; }
     if (barb) { contextTitle.textContent="⚔ Варварский налётчик"; contextText.textContent="здоровье: "+Math.ceil(barb.hp)+"/"+barb.maxHp+" · атака: "+BARBARIAN.raiderAttack+" · защита: "+BARBARIAN.raiderDefense; return true; }
     return false;
   }
@@ -1078,10 +1121,12 @@
     contextActions.innerHTML = "";
     contextText.classList.remove("worker-context");
     contextPanel.classList.remove("worker-context-panel");
+    contextPanel.dataset.visualKind = "";
     delete contextActions.dataset.unitOwner;
     const activeUnit = getUnit(selectedUnitId);
 
     if (!selected) {
+      if (activeUnit) contextPanel.dataset.visualKind = activeUnit.type;
       contextTitle.textContent = activeUnit ? UNIT_DEFS[activeUnit.type].icon + " " + UNIT_DEFS[activeUnit.type].name : "Карта мира";
       contextText.textContent = activeUnit
         ? "Выбран юнит. Нажми соседнюю клетку, чтобы приказать ему двигаться."
@@ -1112,6 +1157,7 @@
     const inspected = renderInspect(x, y);
 
     if (activeUnit && activeUnit.x === x && activeUnit.y === y) {
+      if (!inspected || inspectLayer === "unit") contextPanel.dataset.visualKind = activeUnit.type;
       const def = UNIT_DEFS[activeUnit.type];
       if (!inspected) {
         contextTitle.textContent = def.icon + " " + def.name;
@@ -1170,7 +1216,8 @@
       } else if (!activeHere) {
         appendContextActionOnce("select-unit", "Выбрать<br>юнит", "alt", function () {
           selectedUnitId = hereUnits[0].id;
-          render();
+          renderSelection();
+          renderContext();
         }, false);
       }
     }
@@ -1490,7 +1537,7 @@
     const currentNeed = growthNeed(wikiState.city.population);
     const resources = [
       wikiRow("🍞 Еда", "Копится между ходами. При достижении порога столица автоматически получает +1 население. Сейчас для роста нужно " + currentNeed + "."),
-      wikiRow("🔨 Производство", "Если очередь пуста, производство копится в запасе. Если выбран городской проект, весь доход 🔨 идёт в его шкалу. Запас можно вручную вложить в проект или потратить рабочим на улучшение клетки."),
+      wikiRow("🔨 Производство", "Если очередь пуста, производство копится в запасе. Городские проекты получают производство в конце хода. Рабочие строят улучшения своими действиями и не тратят производство города."),
       wikiRow("🪙 Золото", "Оплачивает часть проектов и улучшений. Для городского проекта золото списывается при постановке в очередь и возвращается при отмене."),
       wikiRow("🔬 Наука", "Идёт в выбранную технологию. Проверка завершения происходит в конце хода; остаток науки сохраняется.")
     ].join("");
@@ -1526,7 +1573,7 @@
 
     const units = Object.keys(UNIT_DEFS).map(function (id) {
       const def = UNIT_DEFS[id];
-      return '<article class="game-card"><div><h3>' + def.icon + ' ' + def.name + '</h3><p>' + def.description +
+      return '<article class="game-card wiki-unit-card" data-wiki-unit="' + id + '"><span class="wiki-unit-figure piece unit unit-' + id + '"></span><div><h3>' + def.name + '</h3><p>' + def.description +
         '<br>Ходов за раунд: ' + def.maxMoves + '<br>Условие: ' + techRequirement(def.tech) + ', население ' + def.population +
         '.</p></div><strong>' + formatCost(def.cost) + '</strong></article>';
     }).join("");
@@ -1544,9 +1591,9 @@
       '<div class="section-title">Юниты и карта</div>' +
       '<div class="wiki-list">' +
         wikiRow("Выбор юнита", "Нажми клетку с юнитом. Голубая рамка показывает активного юнита. Затем нажми соседнюю клетку и кнопку «Идти». Если юнитов несколько, используй «Другой юнит».") +
-        wikiRow("🧭 Разведчик", "Имеет 2 перемещения за ход. После каждого шага открывает область 3×3. Может исследовать древние руины.") +
-        wikiRow("🧑‍🔧 Рабочий", "Имеет 1 перемещение. Строит сухопутное улучшение под собой, а гавань — на соседней водной клетке. Строить можно только внутри территории и один раз за ход; цена списывается из общего запаса.") +
-        wikiRow("🛡️ Воин", "Имеет 1 перемещение, 100 здоровья и уверенно побеждает одиночных налётчиков, но получает ответный урон.") +
+        wikiRow("🧭 Разведчик", "Имеет 2 очка движения за ход. После каждого шага открывает область 3×3. Может исследовать древние руины.") +
+        wikiRow("🧑‍🔧 Рабочий", "Имеет 1 очко движения. Строит сухопутное улучшение под собой, а гавань — на соседней водной клетке. Проекты требуют действий рабочего; производство города не расходуется.") +
+        wikiRow("🛡️ Воин", "Имеет 1 очко движения, 100 здоровья и уверенно побеждает одиночных налётчиков, но получает ответный урон.") +
         wikiRow("⛺ Поселенец", "После технологии «Торговля» и при населении 4 может уйти за границы и основать форпост. Форпост даёт +1 🍞, +1 🔨, +1 🪙 и территорию радиусом 1.") +
         wikiRow("🏛️ Территория", "Радиус столицы: 1 клетка при населении 1–2, 2 при 3–5 и 3 при 6+. Каждый форпост добавляет собственный радиус 1.") +
       '</div>' +
@@ -1558,7 +1605,7 @@
       '<details class="wiki-details"><summary>Типы местности и бонусы</summary><div class="wiki-details-body"><div class="wiki-list">' + terrain + wikiRow("Защита", "Лес, холмы/горы и форпосты дают небольшой защитный бонус в бою.") + '</div></div></details>' +
       '<details class="wiki-details"><summary>Точки интереса</summary><div class="wiki-details-body"><div class="wiki-list">' + Object.keys(INTEREST_TYPES).map(function (id) { return wikiRow(INTEREST_TYPES[id].icon + " " + INTEREST_TYPES[id].name, "Скрыта туманом войны. Исследующий юнит активирует награду, выбор или засаду один раз."); }).join("") + '</div></div></details>' +
       '<details class="wiki-details"><summary>Артефакты</summary><div class="wiki-details-body"><div class="wiki-list">' + ARTIFACT_BONUSES.map(function (a) { return wikiRow("✦", a.name); }).join("") + '</div></div></details>' +
-      '<details class="wiki-details"><summary>Варвары, бой и грабёж</summary><div class="wiki-details-body"><div class="wiki-list">' + wikiRow("Лагеря", "На обычной новой карте появляется 4–7 лагерей вдали от столицы. Лагерь имеет 140 здоровья, создаёт налётчиков раз в 5–8 ходов и даёт золото за уничтожение.") + wikiRow("Порядок хода", "После кнопки «Завершить ход» сначала начисляются ресурсы игрока, затем лагеря и налётчики варваров выполняют короткий автоматический ход.") + wikiRow("Бой", "Атака по соседней вражеской клетке наносит урон; выживший защитник отвечает ослабленным ударом.") + wikiRow("Грабёж", "Налётчик на улучшении помечает его повреждённым. Рабочий восстанавливает разграбленное улучшение за 5 производства.") + '</div></div></details>' +
+      '<details class="wiki-details"><summary>Варвары, бой и грабёж</summary><div class="wiki-details-body"><div class="wiki-list">' + wikiRow("Лагеря", "На обычной новой карте появляется 4–7 лагерей вдали от столицы. Лагерь имеет 140 здоровья, создаёт налётчиков раз в 5–8 ходов и даёт золото за уничтожение.") + wikiRow("Порядок хода", "После кнопки «Завершить ход» сначала начисляются ресурсы игрока, затем лагеря и налётчики варваров выполняют короткий автоматический ход.") + wikiRow("Бой", "Атака по соседней вражеской клетке наносит урон; выживший защитник отвечает ослабленным ударом.") + wikiRow("Грабёж", "Налётчик на улучшении помечает его повреждённым. Рабочий восстанавливает его своими действиями.") + '</div></div></details>' +
       '<details class="wiki-details"><summary>Улучшения клеток</summary><div class="wiki-details-body"><div class="card-list">' + improvements + '</div></div></details>' +
       '<details class="wiki-details"><summary>Здания города</summary><div class="wiki-details-body"><div class="card-list">' + buildings + '</div></div></details>' +
       '<details class="wiki-details"><summary>Технологии</summary><div class="wiki-details-body"><div class="card-list">' + techs + '</div></div></details>' +
@@ -1971,7 +2018,7 @@
     // cycleUnitAt selects a unit layer for its direct picker callers. A map tap
     // must retain the layer chosen by the repeated-inspection cycle above.
     inspectLayer = nextLayer;
-    renderMap();
+    renderSelection();
     renderContext();
     rememberOwnUnitInspection(x, y);
     signalOwnUnitContextReady(x, y);
@@ -1984,7 +2031,8 @@
     selected = { x: x, y: y };
     inspectedTile = selected;
     inspectLayer = "unit";
-    render();
+    renderSelection();
+    renderContext();
     rememberOwnUnitInspection(x, y);
     signalOwnUnitContextReady(x, y);
     return true;

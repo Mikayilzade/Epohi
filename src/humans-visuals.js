@@ -113,10 +113,10 @@
   };
 
   const FEATURE = {
-    wheat: svg('<g filter="url(#shadow)" stroke="#6f5428" stroke-width="2" stroke-linecap="round"><path d="M24 57V14M34 57V9M43 57V18"/><path d="M24 22l-7-5m7 12l8-6m2-5l-7-5m7 13l8-7m1 8l-6-5m6 13l7-6"/><g fill="#e5bd55" stroke="none"><ellipse cx="18" cy="17" rx="4" ry="7"/><ellipse cx="31" cy="13" rx="4" ry="7"/><ellipse cx="40" cy="19" rx="4" ry="7"/><ellipse cx="49" cy="28" rx="4" ry="7"/></g></g>'),
-    ore: svg('<g filter="url(#shadow)"><path d="M10 51l10-29 18-8 17 21-8 20H21z" fill="#6d7375"/><path d="M20 22l8 14 10-22M28 36l19 19M38 14l2 23 15-2" fill="none" stroke="#b7c1c2" stroke-width="3"/><circle cx="27" cy="35" r="4" fill="#d0a958"/></g>'),
-    gems: svg('<g filter="url(#glow)"><path d="M32 7l20 18-20 32L12 25z" fill="#9459bc" stroke="#efd6ff" stroke-width="2"/><path d="M12 25h40M32 7l-8 18 8 32 9-32z" fill="none" stroke="#f6eaff" stroke-width="2"/></g>'),
-    fish: svg('<g filter="url(#shadow)"><path d="M12 34q15-20 35-3l10-9-1 20-10-7q-18 16-34-1z" fill="#dbe9df" stroke="#447d89" stroke-width="2"/><circle cx="23" cy="30" r="2" fill="#20383e"/><path d="M29 24l8-9 4 12" fill="#85aeb1"/></g>'),
+    wheat: svg('<g filter="url(#shadow)"><path d="M6 53q23-11 52 1l-5 5H9z" fill="#8a8547" opacity=".55"/><path d="M17 53V26m0 11l-6-7m6 12l6-8M28 55V18m0 13l-7-7m7 13l8-9M40 55V23m0 11l-7-8m7 12l7-10M49 55V33" stroke="#7b6734" stroke-width="2" stroke-linecap="round"/><g fill="#d4ab4e"><ellipse cx="17" cy="24" rx="3" ry="6"/><ellipse cx="28" cy="17" rx="3" ry="6"/><ellipse cx="40" cy="21" rx="3" ry="6"/><ellipse cx="49" cy="31" rx="2.5" ry="5"/><ellipse cx="10" cy="30" rx="2" ry="4"/><ellipse cx="36" cy="28" rx="2" ry="4"/></g><path d="M11 55l-5-7m45 7l7-7" stroke="#61834a" stroke-width="2"/></g>'),
+    ore: svg('<g filter="url(#shadow)"><path d="M4 52l13-15 11 3 8-18 13 6 11 26z" fill="#686c63"/><path d="M7 52l14-8 10 6 8-20 8 8 9 17" fill="#99998a"/><path d="M20 43l8-3 4 9m7-19l8 8-5 9" fill="none" stroke="#444e4d" stroke-width="2"/><path d="M17 49l4-7 6 2-1 7m21-12l5-2 3 8-5 4" fill="#a66d42" stroke="#d8a775" stroke-width="1"/><path d="M7 55h51" stroke="#566846" stroke-width="3"/></g>'),
+    gems: svg('<g filter="url(#shadow)"><path d="M5 54l11-16 11 2 9-12 12 5 12 21z" fill="#696c66"/><path d="M10 53l11-11 8 7 7-16 11 7 7 14" fill="#97988b"/><path d="M22 44l5-11 7 5-3 13zM38 39l4-13 7 8-5 15zM14 51l4-7 5 6z" fill="#786c92" stroke="#c4b6d1" stroke-width="1.2"/><path d="M26 35l3 4m13-12l3 7" stroke="#eee2ee" stroke-width="1"/><path d="M5 56h54" stroke="#607151" stroke-width="3"/></g>'),
+    fish: svg('<g opacity=".88"><path d="M5 43q9-4 18 0m19 0q9-5 18-1M10 52q14-6 27 0m4-29q8-4 17-1" fill="none" stroke="#b9d9d5" stroke-width="1.5" stroke-linecap="round"/><path d="M15 31q8-7 15 0l5-4-1 9-5-3q-8 5-14-2zM35 43q6-5 12 0l5-3v7l-5-3q-6 4-12-1z" fill="#8caeb0" stroke="#477c82" stroke-width="1.2"/><circle cx="20" cy="30" r="1" fill="#284c55"/><circle cx="39" cy="42" r=".8" fill="#284c55"/><path d="M29 24q5-2 10 0M8 35q3-2 6 0" stroke="#e5f0dd" stroke-width="1" fill="none"/></g>'),
     ruins: svg('<g filter="url(#shadow)"><path d="M10 53h45v6H10z" fill="#897e6a"/><path d="M16 48V20h9v28M37 48V13h10v35" fill="#aaa18d"/><path d="M13 20h15v5H13M34 13h16v5H34" fill="#c8bea5"/><path d="M8 52l11-8 9 8 12-6 15 7" fill="#746b5e"/></g>')
   };
 
@@ -156,6 +156,19 @@
     if (!element || !markup) return;
     element.classList.add(spriteClass(markup, "--art-sprite"));
     element.classList.add("has-art-sprite");
+  }
+
+  function decorateUnit(element, unit) {
+    if (!element || !unit || !(CANON && CANON.units[unit.type] || UNIT[unit.type])) return;
+    Array.from(element.classList).filter(function (name) {
+      return name.indexOf("art-sprite-ref-") === 0 || name.indexOf("canon-raster-") === 0;
+    }).forEach(function (name) { element.classList.remove(name); });
+    element.dataset.artKind = unit.type;
+    element.dataset.unitId = unit.id || "";
+    if (unit.type === "worker" || unit.type === "scout" || unit.type === "warrior") {
+      element.classList.add("canon-raster-" + unit.type);
+    }
+    setSprite(element, CANON && CANON.units[unit.type] || UNIT[unit.type]);
   }
 
   function visualVariant(x, y) {
@@ -223,7 +236,7 @@
         const markup = variants ? variants[visualVariant(x, y) % variants.length] : TERRAIN[tile.terrain];
         tileElement.classList.add(spriteClass(markup, "--terrain-sprite"));
         tileElement.dataset.visualId = tile.terrain + "-" + (visualVariant(x, y) % (variants ? variants.length : 1));
-        if (tile.terrain === "plains" || tile.terrain === "forest" || tile.terrain === "hill") {
+        if (tile.terrain === "plains" || tile.terrain === "forest" || tile.terrain === "hill" || tile.terrain === "swamp") {
           tileElement.classList.add("canon-raster-" + tile.terrain);
           tileElement.dataset.canonVariant = String(visualVariant(x, y) % 4);
         } else if (tile.terrain === "water") {
@@ -243,7 +256,7 @@
       const improvement = tileElement.querySelector(".improvement");
       if (improvement && tile.improvement && IMPROVEMENT[tile.improvement]) {
         improvement.dataset.artKind = tile.improvement;
-        if (tile.improvement === "farm") improvement.classList.add("canon-raster-farm");
+        if (["farm", "lumber", "mine", "tradingpost", "harbor"].includes(tile.improvement)) improvement.classList.add("canon-raster-" + tile.improvement);
         setSprite(improvement, CANON && CANON.landmarks[tile.improvement] || IMPROVEMENT[tile.improvement]);
       }
 
@@ -251,6 +264,7 @@
       if (poi && tile.poi && !tile.poi.used && POI[tile.poi.type]) {
         poi.dataset.artKind = tile.poi.type;
         poi.dataset.artLabel = SHORT_POI[tile.poi.type] || "Находка";
+        if (["depot", "grove", "mine", "caravan", "cave", "tower", "temple"].includes(tile.poi.type)) poi.classList.add("canon-raster-poi-" + tile.poi.type);
         setSprite(poi, CANON && CANON.landmarks[tile.poi.type] || POI[tile.poi.type]);
       }
 
@@ -276,10 +290,7 @@
       const ownPiece = tileElement.querySelector(".piece.unit");
       const ownUnit = playerUnitAt(gs, x, y, selectedId);
       if (ownPiece && ownUnit && UNIT[ownUnit.type]) {
-        ownPiece.dataset.artKind = ownUnit.type;
-        if (ownUnit.type === "worker" || ownUnit.type === "scout" || ownUnit.type === "warrior") ownPiece.classList.add("canon-raster-" + ownUnit.type);
-        ownPiece.dataset.unitId = ownUnit.id;
-        setSprite(ownPiece, CANON && CANON.units[ownUnit.type] || UNIT[ownUnit.type]);
+        decorateUnit(ownPiece, ownUnit);
         markArrival(ownPiece, ownUnit, tileSpan);
         currentPositions.set(ownUnit.id, { x: ownUnit.x, y: ownUnit.y });
       }
@@ -300,10 +311,6 @@
       if (enemy) setSprite(enemy, CANON && CANON.units.barbarian || OBJECT.barbarian);
     });
 
-    const context = document.getElementById("contextPanel");
-    const selectedUnit = (gs.units || []).find(function (unit) { return unit.id === selectedId; });
-    if (context) context.dataset.canonUnit = selectedUnit && ["worker", "scout", "warrior"].includes(selectedUnit.type) ? selectedUnit.type : "";
-
     previousPositions.clear();
     currentPositions.forEach(function (position, id) { previousPositions.set(id, position); });
     lastDecoratedTile = map.firstElementChild;
@@ -317,6 +324,7 @@
   window.EpohiHumansVisuals = {
     version: 2,
     decorate: decorate,
+    decorateUnit: decorateUnit,
     unitSprites: Object.keys(UNIT),
     terrainSprites: Object.keys(TERRAIN),
     poiSprites: Object.keys(POI),

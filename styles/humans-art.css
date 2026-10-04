@@ -114,7 +114,8 @@ body.open-map-mode .map-shell::after {
 /* Raster cutouts are original replaceable art; the cached SVG beneath remains a fallback. */
 .tile.canon-raster-plains::before,
 .tile.canon-raster-forest::before,
-.tile.canon-raster-hill::before {
+.tile.canon-raster-hill::before,
+.tile.canon-raster-swamp::before {
   content: "";
   position: absolute;
   z-index: 5;
@@ -136,17 +137,18 @@ body.open-map-mode .map-shell::after {
 }
 
 .tile.canon-raster-plains[data-canon-variant="1"]::before,
+.tile.canon-raster-plains[data-canon-variant="2"]::before,
 .tile.canon-raster-plains[data-canon-variant="3"]::before {
-  opacity: 0;
+  inset: -12% -14% -5%;
+  opacity: .58;
 }
+.tile.canon-raster-plains[data-canon-variant="1"]::before { background-image: url("../assets/visual-canon-v2/plains-a.webp"); }
+.tile.canon-raster-plains[data-canon-variant="2"]::before { background-image: url("../assets/visual-canon-v2/plains-b.webp"); opacity: .48; }
+.tile.canon-raster-plains[data-canon-variant="3"]::before { background-image: url("../assets/visual-canon-v2/plains-c.webp"); opacity: .52; }
 
 .tile.canon-raster-plains[data-canon-variant="1"]::after,
 .tile.canon-raster-plains[data-canon-variant="3"]::after {
   opacity: .24;
-}
-
-.tile.canon-raster-plains[data-canon-variant="2"]::before {
-  opacity: .4;
 }
 
 .tile.canon-raster-forest::before {
@@ -158,6 +160,16 @@ body.open-map-mode .map-shell::after {
   inset: -31% -24% -7%;
   background-image: url("../assets/visual-canon-v1/hill-relief.png");
 }
+
+.tile.canon-raster-swamp::before {
+  inset: -35% -28% -9%;
+  background-image: url("../assets/visual-canon-v2/swamp-a.webp");
+}
+.tile.canon-raster-swamp[data-canon-variant="1"]::before,
+.tile.canon-raster-swamp[data-canon-variant="3"]::before {
+  background-image: url("../assets/visual-canon-v2/swamp-b.webp");
+}
+.tile.canon-raster-swamp::after { opacity: .2; }
 
 .tile[data-canon-variant="1"]::before { transform: scaleX(-1); }
 .tile[data-canon-variant="2"]::before { transform: scale(.9); }
@@ -288,12 +300,28 @@ body.open-map-mode .map-shell::after {
 .piece.canon-raster-worker::before { background-image: url("../assets/visual-canon-v1/worker.png"); }
 .piece.canon-raster-scout::before { background-image: url("../assets/visual-canon-v1/scout.png"); }
 .piece.canon-raster-warrior::before { background-image: url("../assets/visual-canon-v1/warrior.png"); }
+.piece.canon-raster-poi-depot::before { background-image: url("../assets/visual-canon-v2/depot.webp"); }
+.piece.canon-raster-poi-grove::before { background-image: url("../assets/visual-canon-v2/grove.webp"); }
+.piece.canon-raster-poi-mine::before { background-image: url("../assets/visual-canon-v2/old-mine.webp"); }
+.piece.canon-raster-poi-caravan::before { background-image: url("../assets/visual-canon-v2/caravan.webp"); }
+.piece.canon-raster-poi-cave::before { background-image: url("../assets/visual-canon-v2/cave.webp"); }
+.piece.canon-raster-poi-tower::before { background-image: url("../assets/visual-canon-v2/tower.webp"); }
+.piece.canon-raster-poi-temple::before { background-image: url("../assets/visual-canon-v2/temple.webp"); }
+.improvement.canon-raster-lumber::before { background-image: url("../assets/visual-canon-v2/lumber.webp"); }
+.improvement.canon-raster-mine::before { background-image: url("../assets/visual-canon-v2/mine-worked.webp"); }
+.improvement.canon-raster-tradingpost::before { background-image: url("../assets/visual-canon-v2/trading-post.webp"); }
+.improvement.canon-raster-harbor::before { background-image: url("../assets/visual-canon-v2/harbor.webp"); }
 
 .piece.canon-raster-city::before,
 .improvement.canon-raster-farm::before,
 .piece.canon-raster-worker::before,
 .piece.canon-raster-scout::before,
-.piece.canon-raster-warrior::before {
+.piece.canon-raster-warrior::before,
+.piece[class*="canon-raster-poi-"]::before,
+.improvement.canon-raster-lumber::before,
+.improvement.canon-raster-mine::before,
+.improvement.canon-raster-tradingpost::before,
+.improvement.canon-raster-harbor::before {
   background-size: contain;
 }
 
@@ -501,9 +529,11 @@ body.open-map-mode .map-shell::after {
 }
 
 @media (min-width: 1100px) and (min-height: 650px) {
-  .context[data-canon-unit="worker"]::after,
-  .context[data-canon-unit="scout"]::after,
-  .context[data-canon-unit="warrior"]::after {
+  .context[data-visual-kind="worker"]::after,
+  .context[data-visual-kind="scout"]::after,
+  .context[data-visual-kind="warrior"]::after,
+  .context[data-visual-kind="capital"]::after,
+  .context[data-visual-kind="city"]::after {
     content: "";
     position: absolute;
     top: 35px;
@@ -515,10 +545,16 @@ body.open-map-mode .map-shell::after {
     background-position: center bottom;
     pointer-events: none;
   }
-  .context[data-canon-unit="worker"]::after { background-image: url("../assets/visual-canon-v1/worker.png"); }
-  .context[data-canon-unit="scout"]::after { background-image: url("../assets/visual-canon-v1/scout.png"); }
-  .context[data-canon-unit="warrior"]::after { background-image: url("../assets/visual-canon-v1/warrior.png"); }
-  .context[data-canon-unit]:not([data-canon-unit=""]) .context-copy {
+  .context[data-visual-kind="worker"]::after { background-image: url("../assets/visual-canon-v1/worker.png"); }
+  .context[data-visual-kind="scout"]::after { background-image: url("../assets/visual-canon-v1/scout.png"); }
+  .context[data-visual-kind="warrior"]::after { background-image: url("../assets/visual-canon-v1/warrior.png"); }
+  .context[data-visual-kind="capital"]::after,
+  .context[data-visual-kind="city"]::after { background-image: url("../assets/visual-canon-v1/city-center.png"); }
+  .context[data-visual-kind="worker"] .context-copy,
+  .context[data-visual-kind="scout"] .context-copy,
+  .context[data-visual-kind="warrior"] .context-copy,
+  .context[data-visual-kind="capital"] .context-copy,
+  .context[data-visual-kind="city"] .context-copy {
     min-height: 118px;
     padding-right: 112px;
   }
@@ -577,6 +613,67 @@ body.open-map-mode .map-shell::after {
   border: 2px solid #c6a55d;
   color: #fff0bf;
   box-shadow: inset 0 1px rgba(255,255,255,.16), 0 4px 10px rgba(0,0,0,.28);
+}
+
+.unit-atlas {
+  margin: 14px 0 20px;
+  padding: 14px;
+  border: 1px solid rgba(210, 176, 104, .32);
+  border-radius: 14px;
+  background: #233a2d;
+  color: #f5e8c8;
+}
+.unit-atlas h3 { margin: 0 0 4px; font: 700 23px Georgia, serif; color: #f4d892; }
+.unit-atlas > p { margin: 0 0 12px; font-size: 12px; color: #cbd5bf; }
+.unit-atlas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 9px; }
+.unit-atlas-card {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 7px;
+  align-items: center;
+  min-height: 100px;
+  padding: 7px;
+  border: 1px solid rgba(231, 197, 126, .22);
+  border-radius: 9px;
+  background: rgba(255, 246, 211, .07);
+}
+.unit-atlas-preview {
+  position: relative;
+  display: block;
+  width: 78px;
+  height: 86px;
+  border-radius: 8px;
+  background: radial-gradient(ellipse at center 80%, #729367 0%, #486f58 55%, #304d3b 100%);
+}
+.unit-atlas-preview .piece.unit,
+.wiki-unit-figure.piece.unit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.unit-atlas-card strong,
+.unit-atlas-card code,
+.unit-atlas-card small,
+.unit-atlas-status { display: block; }
+.unit-atlas-card strong { font: 700 16px Georgia, serif; }
+.unit-atlas-card code { margin: 3px 0; color: #d7c493; font-size: 11px; }
+.unit-atlas-card small { margin-top: 4px; color: #d5decf; font-size: 10px; line-height: 1.3; }
+.unit-atlas-status { color: #edd49a; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+.wiki-unit-card { display: flex; align-items: center; gap: 12px; }
+.wiki-unit-card .wiki-unit-figure {
+  position: relative;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 65px;
+  background: radial-gradient(ellipse at center 80%, #7a9a6c, #526e51);
+  border-radius: 8px;
+}
+@media (max-width: 620px) {
+  .unit-atlas { padding: 10px; }
+  .unit-atlas-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 }
 
 .observer-option {

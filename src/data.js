@@ -82,7 +82,7 @@
     worker: {
       name: "Рабочий", icon: "🧑‍🔧", mapIcon: "🔨", tech: null, population: 1,
       cost: { production: 22 }, maxMoves: 1, maxHealth: 70, attack: 4, defense: 4,
-      description: "Строит улучшения только на клетке, где стоит"
+      description: "Строит улучшения действиями рабочего; гавань — на соседней водной клетке"
     },
     scout: {
       name: "Разведчик", icon: "🧭", mapIcon: "🧭", tech: null, population: 1,

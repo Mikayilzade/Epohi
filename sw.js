@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-visual-canon-v1-2026-10-04";
+  "epohi-visual-polish-v2-2026-10-04";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -51,6 +51,7 @@ const APP_FILES = [
   "./src/humans-observer.js",
   "./src/humans-canon-art.js",
   "./src/humans-visuals.js",
+  "./src/humans-unit-atlas.js",
   "./assets/visual-canon-v1/plains-detail.png",
   "./assets/visual-canon-v1/forest-cluster.png",
   "./assets/visual-canon-v1/hill-relief.png",
@@ -59,6 +60,22 @@ const APP_FILES = [
   "./assets/visual-canon-v1/worker.png",
   "./assets/visual-canon-v1/scout.png",
   "./assets/visual-canon-v1/warrior.png",
+  "./assets/visual-canon-v2/plains-a.webp",
+  "./assets/visual-canon-v2/plains-b.webp",
+  "./assets/visual-canon-v2/plains-c.webp",
+  "./assets/visual-canon-v2/swamp-a.webp",
+  "./assets/visual-canon-v2/swamp-b.webp",
+  "./assets/visual-canon-v2/depot.webp",
+  "./assets/visual-canon-v2/grove.webp",
+  "./assets/visual-canon-v2/old-mine.webp",
+  "./assets/visual-canon-v2/caravan.webp",
+  "./assets/visual-canon-v2/cave.webp",
+  "./assets/visual-canon-v2/tower.webp",
+  "./assets/visual-canon-v2/temple.webp",
+  "./assets/visual-canon-v2/lumber.webp",
+  "./assets/visual-canon-v2/mine-worked.webp",
+  "./assets/visual-canon-v2/trading-post.webp",
+  "./assets/visual-canon-v2/harbor.webp",
   "./src/humans-pathing-core.js",
   "./src/humans-pathing-ui.js",
   "./src/humans-strategy-ux.js",

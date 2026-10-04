@@ -1,5 +1,17 @@
 # AUTONOMY STATUS — CURRENT
 
+Updated: 2026-10-04. State: VISUAL_POLISH_V2_AWAITING_HUMAN_REVIEW.
+
+## Current checkpoint
+- **TARGET:** `rework/epohi-next`; `stable` untouched.
+- **DONE:** Visual Polish V2 addresses city context art, selection redraw, plains/swamp/features, POIs/improvements and the Wiki Unit Atlas. See `docs/VISUAL_POLISH_STATUS_V2.md`.
+- **EVIDENCE:** Desktop Chromium 25/25 focused tests plus 6/6 Open Map/art tests; mobile Chromium 9/9 relevant tests; six V2 desktop/mobile tests after final selection optimization. Syntax and diff checks passed. Normal Chrome preview open at `http://127.0.0.1:8000/`.
+- **NEXT:** Wait for human visual review; do not start V3 or change gameplay/stable.
+
+---
+
+## Historical checkpoint
+
 Updated: 2026-09-28 UTC. State: ARCHITECTURE_CLEANUP_COMPLETE.
 
 ## Current checkpoint
