@@ -1573,7 +1573,7 @@
 
     const units = Object.keys(UNIT_DEFS).map(function (id) {
       const def = UNIT_DEFS[id];
-      return '<article class="game-card wiki-unit-card" data-wiki-unit="' + id + '"><span class="wiki-unit-figure piece unit unit-' + id + '"></span><div><h3>' + def.name + '</h3><p>' + def.description +
+      return '<article class="game-card wiki-unit-card"><div><h3>' + def.icon + ' ' + def.name + '</h3><p>' + def.description +
         '<br>Ходов за раунд: ' + def.maxMoves + '<br>Условие: ' + techRequirement(def.tech) + ', население ' + def.population +
         '.</p></div><strong>' + formatCost(def.cost) + '</strong></article>';
     }).join("");

@@ -58,11 +58,6 @@
     });
     section.appendChild(grid);
     wiki.prepend(section);
-    wiki.querySelectorAll("[data-wiki-unit]").forEach(function (card) {
-      const type = card.dataset.wikiUnit;
-      const figure = card.querySelector(".wiki-unit-figure");
-      if (figure) window.EpohiHumansVisuals.decorateUnit(figure, { type: type, id: "wiki-" + type });
-    });
   }
 
   document.addEventListener("epohi:wiki-rendered", render);

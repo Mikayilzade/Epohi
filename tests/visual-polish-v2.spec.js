@@ -55,7 +55,8 @@ test('Wiki Unit Atlas shares map sprites and distinguishes future and legacy art
   await expect(page.locator('#unitAtlas [data-visual-id="archer"]')).toContainText('PLACEHOLDER');
   await expect(page.locator('#unitAtlas [data-visual-id="rider"]')).toContainText('LEGACY');
   await expect(page.locator('#unitAtlas [data-visual-id="worker"] .piece.unit')).toHaveClass(/canon-raster-worker/);
-  await expect(page.locator('#wikiContent .wiki-unit-card .has-art-sprite')).toHaveCount(6);
+  await expect(page.locator('#wikiContent .wiki-unit-card .has-art-sprite')).toHaveCount(0);
+  await expect(page.locator('#wikiContent .wiki-unit-card').first()).toContainText('Рабочий');
   await expect(page.locator('#wikiContent')).toContainText('не тратят производство города');
 });
 
