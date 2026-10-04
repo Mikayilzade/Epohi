@@ -4,6 +4,7 @@
   const CACHE = new Map();
   const SPRITE_CLASSES = new Map();
   const previousPositions = new Map();
+  const CANON = window.EpohiCanonArt;
   let spriteStyle = null;
 
   function svg(body, viewBox) {
@@ -157,6 +158,11 @@
     element.classList.add("has-art-sprite");
   }
 
+  function visualVariant(x, y) {
+    // Coordinate-only selection keeps screenshots and saved games visually stable.
+    return (Math.imul(x + 17, 73856093) ^ Math.imul(y + 31, 19349663)) >>> 0;
+  }
+
   function playerUnitAt(gs, x, y, selectedId) {
     const list = (gs.units || []).filter(function (unit) { return unit.x === x && unit.y === y && unit.hp > 0; });
     return list.find(function (unit) { return unit.id === selectedId; }) || list[0] || null;
@@ -201,7 +207,8 @@
     if (map.firstElementChild && map.firstElementChild === lastDecoratedTile) return;
 
     const selectedId = typeof debug.getSelectedUnitId === "function" ? debug.getSelectedUnitId() : null;
-    const tileSpan = 47;
+    const firstTile = map.firstElementChild;
+    const tileSpan = firstTile ? firstTile.offsetWidth + (parseFloat(getComputedStyle(map).columnGap) || 0) : 47;
     const currentPositions = new Map();
 
     map.querySelectorAll(".tile").forEach(function (tileElement) {
@@ -212,7 +219,19 @@
 
       tileElement.classList.add("painted-tile");
       if (tile.revealed && TERRAIN[tile.terrain]) {
-        tileElement.classList.add(spriteClass(TERRAIN[tile.terrain], "--terrain-sprite"));
+        const variants = CANON && CANON.terrain[tile.terrain];
+        const markup = variants ? variants[visualVariant(x, y) % variants.length] : TERRAIN[tile.terrain];
+        tileElement.classList.add(spriteClass(markup, "--terrain-sprite"));
+        tileElement.dataset.visualId = tile.terrain + "-" + (visualVariant(x, y) % (variants ? variants.length : 1));
+        if (tile.terrain === "plains" || tile.terrain === "forest" || tile.terrain === "hill") {
+          tileElement.classList.add("canon-raster-" + tile.terrain);
+          tileElement.dataset.canonVariant = String(visualVariant(x, y) % 4);
+        } else if (tile.terrain === "water") {
+          [[0, -1, "n"], [1, 0, "e"], [0, 1, "s"], [-1, 0, "w"]].forEach(function (edge) {
+            const neighbor = gs.map[y + edge[1]] && gs.map[y + edge[1]][x + edge[0]];
+            if (neighbor && neighbor.revealed && neighbor.terrain !== "water") tileElement.classList.add("canon-shore-" + edge[2]);
+          });
+        }
       }
 
       const feature = tileElement.querySelector(".feature");
@@ -224,14 +243,15 @@
       const improvement = tileElement.querySelector(".improvement");
       if (improvement && tile.improvement && IMPROVEMENT[tile.improvement]) {
         improvement.dataset.artKind = tile.improvement;
-        setSprite(improvement, IMPROVEMENT[tile.improvement]);
+        if (tile.improvement === "farm") improvement.classList.add("canon-raster-farm");
+        setSprite(improvement, CANON && CANON.landmarks[tile.improvement] || IMPROVEMENT[tile.improvement]);
       }
 
       const poi = tileElement.querySelector(".piece.poi");
       if (poi && tile.poi && !tile.poi.used && POI[tile.poi.type]) {
         poi.dataset.artKind = tile.poi.type;
         poi.dataset.artLabel = SHORT_POI[tile.poi.type] || "Находка";
-        setSprite(poi, POI[tile.poi.type]);
+        setSprite(poi, CANON && CANON.landmarks[tile.poi.type] || POI[tile.poi.type]);
       }
 
       const camp = tileElement.querySelector(".piece.camp");
@@ -241,9 +261,15 @@
       }
 
       const city = tileElement.querySelector(".piece.city");
-      if (city) setSprite(city, city.classList.contains("player-capital") ? OBJECT.capital : OBJECT.city);
+      if (city) {
+        setSprite(city, city.classList.contains("player-capital") ? (CANON && CANON.landmarks.capital || OBJECT.capital) : (CANON && CANON.landmarks.city || OBJECT.city));
+        city.classList.add("canon-raster-city");
+      }
       const aiCity = tileElement.querySelector(".piece.ai-city");
-      if (aiCity) setSprite(aiCity, aiCity.classList.contains("ai-capital") ? OBJECT.capital : OBJECT.city);
+      if (aiCity) {
+        setSprite(aiCity, aiCity.classList.contains("ai-capital") ? (CANON && CANON.landmarks.capital || OBJECT.capital) : (CANON && CANON.landmarks.city || OBJECT.city));
+        aiCity.classList.add("canon-raster-city");
+      }
       const outpost = tileElement.querySelector(".piece.outpost");
       if (outpost) setSprite(outpost, OBJECT.outpost);
 
@@ -251,8 +277,9 @@
       const ownUnit = playerUnitAt(gs, x, y, selectedId);
       if (ownPiece && ownUnit && UNIT[ownUnit.type]) {
         ownPiece.dataset.artKind = ownUnit.type;
+        if (ownUnit.type === "worker" || ownUnit.type === "scout" || ownUnit.type === "warrior") ownPiece.classList.add("canon-raster-" + ownUnit.type);
         ownPiece.dataset.unitId = ownUnit.id;
-        setSprite(ownPiece, UNIT[ownUnit.type]);
+        setSprite(ownPiece, CANON && CANON.units[ownUnit.type] || UNIT[ownUnit.type]);
         markArrival(ownPiece, ownUnit, tileSpan);
         currentPositions.set(ownUnit.id, { x: ownUnit.x, y: ownUnit.y });
       }
@@ -261,16 +288,21 @@
       const rival = rivalUnitAt(gs, x, y);
       if (aiPiece && rival && UNIT[rival.unit.type]) {
         aiPiece.dataset.artKind = rival.unit.type;
+        if (rival.unit.type === "worker" || rival.unit.type === "scout" || rival.unit.type === "warrior") aiPiece.classList.add("canon-raster-" + rival.unit.type);
         aiPiece.dataset.unitId = rival.unit.id;
         aiPiece.style.setProperty("--faction-color", rival.civ.color || "#bd5b4d");
-        setSprite(aiPiece, UNIT[rival.unit.type]);
+        setSprite(aiPiece, CANON && CANON.units[rival.unit.type] || UNIT[rival.unit.type]);
         markArrival(aiPiece, rival.unit, tileSpan);
         currentPositions.set(rival.unit.id, { x: rival.unit.x, y: rival.unit.y });
       }
 
       const enemy = tileElement.querySelector(".piece.enemy");
-      if (enemy) setSprite(enemy, OBJECT.barbarian);
+      if (enemy) setSprite(enemy, CANON && CANON.units.barbarian || OBJECT.barbarian);
     });
+
+    const context = document.getElementById("contextPanel");
+    const selectedUnit = (gs.units || []).find(function (unit) { return unit.id === selectedId; });
+    if (context) context.dataset.canonUnit = selectedUnit && ["worker", "scout", "warrior"].includes(selectedUnit.type) ? selectedUnit.type : "";
 
     previousPositions.clear();
     currentPositions.forEach(function (position, id) { previousPositions.set(id, position); });

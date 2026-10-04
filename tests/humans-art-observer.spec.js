@@ -27,6 +27,18 @@ async function createConfiguredGame(page, options = {}) {
 }
 
 test.describe('Визуальная демка и режим наблюдения', () => {
+  test('Open Map is selectable when creating a new game', async ({ page }) => {
+    await clearStorage(page);
+    await page.goto('/');
+    await page.locator('#newGameScreenBtn').click();
+    await expect(page.locator('#openMapMode')).toBeVisible();
+    await page.locator('#openMapMode').check();
+    await page.locator('#partyName').fill('Open Map setup');
+    await page.locator('#createParty').click();
+    await expect(page.locator('#gameApp')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.__epohiDebug().state.openMapMode)).toBe(true);
+  });
+
   test('авторазведчик использует оба очка движения за один ход', async ({ page }) => {
     const problems = watchConsole(page);
     await createConfiguredGame(page, { size: 'small', rivals: 0, barbarians: 'off' });

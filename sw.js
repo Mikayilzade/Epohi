@@ -1,5 +1,5 @@
 const CACHE_NAME =
-  "epohi-playable-2026-10-03";
+  "epohi-visual-canon-v1-2026-10-04";
 const APP_FILES = [
   "./",
   "./index.html",
@@ -49,7 +49,16 @@ const APP_FILES = [
   "./src/humans-journey-core.js",
   "./src/humans-journey-ui.js",
   "./src/humans-observer.js",
+  "./src/humans-canon-art.js",
   "./src/humans-visuals.js",
+  "./assets/visual-canon-v1/plains-detail.png",
+  "./assets/visual-canon-v1/forest-cluster.png",
+  "./assets/visual-canon-v1/hill-relief.png",
+  "./assets/visual-canon-v1/city-center.png",
+  "./assets/visual-canon-v1/farm.png",
+  "./assets/visual-canon-v1/worker.png",
+  "./assets/visual-canon-v1/scout.png",
+  "./assets/visual-canon-v1/warrior.png",
   "./src/humans-pathing-core.js",
   "./src/humans-pathing-ui.js",
   "./src/humans-strategy-ux.js",

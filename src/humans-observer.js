@@ -145,6 +145,13 @@
   function install() {
     const menu = document.getElementById("menuModal");
 
+    // The setup screen is built only after this button runs its own click handler.
+    // Schedule the existing bounded sync for that transition so Open Map is offered
+    // before the player creates a game, including on a fresh browser profile.
+    document.addEventListener("click", function (event) {
+      if (event.target && event.target.closest("#newGameScreenBtn")) schedule("new-game-screen");
+    });
+
     document.addEventListener("epohi:ui-rendered", function () {
       runtimeStats.turnSignals += 1;
       schedule("ui-rendered");
