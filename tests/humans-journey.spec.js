@@ -220,10 +220,11 @@ test.describe('Сага Ардены, сценарии и визуальный �
       const map = document.querySelector('.map-shell').getBoundingClientRect();
       const bar = document.querySelector('#humansJourneyBar').getBoundingClientRect();
       const toolbar = document.querySelector('.toolbar').getBoundingClientRect();
-      const style = getComputedStyle(tile);
+      const foreground = getComputedStyle(tile, '::before');
+      const terrainArt = getComputedStyle(tile, '::after');
       return {
         variant: tile.dataset.variant,
-        backgroundImage: style.backgroundImage,
+        layeredArt: [foreground.backgroundImage, terrainArt.backgroundImage].some(image => image !== 'none'),
         mapHeight: map.height,
         barHeight: bar.height,
         toolbarBottom: toolbar.bottom,
@@ -232,7 +233,7 @@ test.describe('Сага Ардены, сценарии и визуальный �
     });
 
     expect(['0', '1', '2', '3']).toContain(metrics.variant);
-    expect(metrics.backgroundImage).not.toBe('none');
+    expect(metrics.layeredArt).toBe(true);
     expect(metrics.mapHeight).toBeGreaterThan(50);
     expect(metrics.barHeight).toBeGreaterThanOrEqual(35);
     expect(metrics.toolbarBottom).toBeLessThanOrEqual(metrics.viewportHeight);

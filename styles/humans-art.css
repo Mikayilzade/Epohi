@@ -156,18 +156,22 @@ body.open-map-mode .map-shell::after {
   inset: -40% -29% -9%;
   background-image: url("../assets/visual-canon-v1/forest-cluster.png");
 }
-.tile.canon-raster-forest[data-canon-variant="1"]::before,
-.tile.canon-raster-forest[data-canon-variant="3"]::before {
+.tile.canon-raster-forest[data-canon-variant="1"]::before {
   background-image: url("../assets/visual-canon-v3/forest-grove-b.webp");
+}
+.tile.canon-raster-forest[data-canon-variant="2"]::before {
+  background-image: url("../assets/visual-canon-v3/forest-grove-c.webp");
 }
 
 .tile.canon-raster-hill::before {
   inset: -31% -24% -7%;
   background-image: url("../assets/visual-canon-v1/hill-relief.png");
 }
-.tile.canon-raster-hill[data-canon-variant="1"]::before,
-.tile.canon-raster-hill[data-canon-variant="3"]::before {
+.tile.canon-raster-hill[data-canon-variant="1"]::before {
   background-image: url("../assets/visual-canon-v3/hill-ledges-b.webp");
+}
+.tile.canon-raster-hill[data-canon-variant="2"]::before {
+  background-image: url("../assets/visual-canon-v3/hill-ridge-c.webp");
 }
 
 .tile.canon-raster-swamp::before {
@@ -187,6 +191,10 @@ body.open-map-mode .map-shell::after {
   inset: -32% -22% -8%;
   background-image: url("../assets/visual-canon-v3/dead-ash-a.webp");
 }
+.tile.canon-raster-dead[data-canon-variant="1"]::before,
+.tile.canon-raster-dead[data-canon-variant="3"]::before {
+  background-image: url("../assets/visual-canon-v3/dead-stump-b.webp");
+}
 .tile.canon-raster-dead::after { opacity: .14; }
 
 .tile[data-canon-variant="1"]::before { transform: scaleX(-1); }
@@ -195,6 +203,8 @@ body.open-map-mode .map-shell::after {
 .tile.canon-raster-forest::before,
 .tile.canon-raster-hill::before,
 .tile.canon-raster-dead::before { transform: none; }
+.tile.canon-raster-forest[data-canon-variant="3"]::before,
+.tile.canon-raster-hill[data-canon-variant="3"]::before { transform: scaleX(-1) scale(.94); }
 
 .tile.fog::after {
   opacity: .08;
